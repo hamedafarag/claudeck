@@ -1,0 +1,268 @@
+/* ── Slash Autocomplete ───────────────────────────────── */
+.slash-autocomplete {
+  position: absolute;
+  bottom: 100%;
+  left: 24px;
+  right: 24px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5), var(--glow);
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 50;
+  animation: slideUp 0.1s ease;
+}
+
+.slash-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+
+.slash-autocomplete-item .cmd-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 110px;
+  flex-shrink: 0;
+}
+
+.slash-autocomplete-item .cmd-category {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.slash-autocomplete-item .cmd-category[data-cat="app"]     { color: var(--purple); background: rgba(210, 168, 255, 0.1); }
+.slash-autocomplete-item .cmd-category[data-cat="project"] { color: #e06c75; background: rgba(224, 108, 117, 0.1); }
+.slash-autocomplete-item .cmd-category[data-cat="skill"]   { color: #61afef; background: rgba(97, 175, 239, 0.1); }
+.slash-autocomplete-item .cmd-category[data-cat="cli"]     { color: var(--success); background: rgba(63, 185, 80, 0.1); }
+.slash-autocomplete-item .cmd-category[data-cat="prompt"]  { color: var(--warning); background: rgba(210, 153, 34, 0.1); }
+
+.slash-autocomplete-item .cmd-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slash-autocomplete-item.active,
+.slash-autocomplete-item:hover {
+  background: var(--accent-dim);
+}
+
+.slash-autocomplete-item.active .cmd-name {
+  color: var(--text);
+}
+
+/* ── CLI Output Block ─────────────────────────────────── */
+.cli-output {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  margin: 4px 0;
+  overflow: hidden;
+}
+
+.cli-output-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cli-output-header .cli-icon {
+  font-weight: 600;
+}
+
+.cli-output-header .cli-icon.success { color: var(--success); }
+.cli-output-header .cli-icon.error   { color: var(--error); }
+
+.cli-output-header .cli-cmd {
+  flex: 1;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cli-output-header .cli-exit {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.cli-output-body {
+  padding: 10px 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.cli-output-body pre {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+.cli-output-stderr {
+  color: var(--error) !important;
+}
+
+/* ── Workflow Progress ────────────────────────────────── */
+.workflow-header {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 4px 0;
+}
+
+.workflow-title {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.workflow-progress {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workflow-step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.workflow-step-dot.pending {
+  background: var(--border);
+}
+
+.workflow-step-dot.running {
+  background: var(--warning);
+  box-shadow: 0 0 6px var(--warning);
+  animation: blink 1s infinite;
+}
+
+.workflow-step-dot.completed {
+  background: var(--success);
+  box-shadow: 0 0 4px var(--success);
+}
+
+.workflow-step-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+/* Workflow autocomplete category */
+.slash-autocomplete-item .cmd-category[data-cat="workflow"] {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ── Diff View ────────────────────────────────────────── */
+.diff-view {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 4px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.diff-header {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-body {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.diff-line {
+  display: flex;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.diff-gutter {
+  width: 40px;
+  min-width: 40px;
+  text-align: right;
+  padding: 0 8px 0 4px;
+  color: var(--text-dim);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.diff-sign {
+  width: 16px;
+  min-width: 16px;
+  text-align: center;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.diff-content {
+  flex: 1;
+  padding-right: 12px;
+}
+
+.diff-line.diff-added {
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--success);
+}
+
+.diff-line.diff-added .diff-sign { color: var(--success); }
+
+.diff-line.diff-removed {
+  background: rgba(248, 81, 73, 0.12);
+  color: var(--error);
+}
+
+.diff-line.diff-removed .diff-sign { color: var(--error); }
+
+.diff-line.diff-context {
+  color: var(--text-secondary);
+}

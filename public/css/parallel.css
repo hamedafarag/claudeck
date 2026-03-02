@@ -1,0 +1,208 @@
+/* ── Chat Grid (Parallel Mode) ───────────────────────── */
+.chat-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  min-width: 0;
+}
+
+/* ── Chat Pane ───────────────────────────────────────── */
+.chat-pane {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+.chat-pane-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.chat-pane-label {
+  color: var(--accent);
+}
+
+.chat-pane-status {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.chat-pane-status.streaming {
+  color: var(--success);
+}
+
+.chat-pane .messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-pane .messages:empty::after {
+  content: "Send a message...";
+  color: var(--text-dim);
+  font-size: 13px;
+  text-align: center;
+  margin: auto;
+  opacity: 0.6;
+}
+
+.chat-pane .msg {
+  max-width: 100%;
+}
+
+.chat-pane .msg-user {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.chat-pane .msg-assistant {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.chat-pane .tool-indicator {
+  font-size: 11px;
+  padding: 6px 10px;
+}
+
+.chat-pane .status {
+  font-size: 11px;
+  padding: 4px;
+}
+
+.chat-pane .thinking-bar {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.chat-pane .input-bar {
+  position: relative;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  max-width: 100%;
+}
+
+.chat-pane .input-bar textarea {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  resize: none;
+  outline: none;
+  max-height: 80px;
+  line-height: 1.4;
+  transition: border-color 0.15s;
+}
+
+.chat-pane .input-bar textarea:focus {
+  border-color: var(--accent);
+}
+
+.chat-pane .input-bar button {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.chat-pane .input-bar .pane-send-btn {
+  background: var(--accent-solid);
+  color: #fff;
+}
+
+.chat-pane .input-bar .pane-send-btn:hover {
+  background: var(--accent);
+}
+
+.chat-pane .input-bar .pane-stop-btn {
+  background: var(--error);
+  color: #fff;
+}
+
+.chat-pane .input-bar .pane-stop-btn:hover {
+  opacity: 0.85;
+}
+
+.chat-pane:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Chat-pane compact overrides for CLI output */
+.chat-pane .cli-output-header {
+  font-size: 11px;
+  padding: 6px 10px;
+}
+
+.chat-pane .cli-output-body pre {
+  font-size: 11px;
+}
+
+/* Chat-pane compact overrides for diff */
+.chat-pane .diff-view {
+  font-size: 11px;
+}
+
+.chat-pane .diff-body {
+  max-height: 250px;
+}
+
+.chat-pane .diff-gutter {
+  width: 32px;
+  min-width: 32px;
+}
+
+/* Chat-pane overrides for autocomplete */
+.chat-pane .slash-autocomplete {
+  left: 12px;
+  right: 12px;
+}
+
+.chat-pane .slash-autocomplete .cmd-name {
+  font-size: 11px;
+  min-width: 80px;
+}
+
+.chat-pane .slash-autocomplete .cmd-desc {
+  font-size: 11px;
+}
+
+/* Terminal prompt prefix in empty messages area */
+.chat-pane .messages:empty::after {
+  content: "> waiting for input...";
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}

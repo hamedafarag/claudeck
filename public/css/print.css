@@ -1,0 +1,18 @@
+/* ── Print Styles ───────────────────────────────────── */
+@media print {
+  .sidebar, .top-header, .input-bar, .toolbox-panel,
+  .workflow-panel, .thinking-bar, .modal-overlay,
+  .code-copy-btn, .tool-indicator, .session-delete,
+  #send-btn, #stop-btn, .mode-toggle { display: none !important; }
+
+  .layout { display: block; }
+  .chat-area { width: 100%; }
+  .messages { padding: 0; overflow: visible; }
+  .msg { max-width: 100%; break-inside: avoid; }
+  .msg-user { background: #f0f0f0; border: 1px solid #ddd; color: #333; }
+  .msg-assistant { color: #222; }
+  .msg-assistant .text-content pre { background: #f5f5f5; border: 1px solid #ddd; }
+  .msg-assistant .text-content code { background: #eee; }
+
+  body { background: #fff; color: #222; overflow: visible; height: auto; }
+}

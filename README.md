@@ -26,7 +26,7 @@ Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth lo
 | Backend   | Express 4, WebSocket (ws 8)                                      |
 | AI SDK    | @anthropic-ai/claude-code ^1                                     |
 | Database  | SQLite 3 via better-sqlite3 ^11, WAL mode, prepared statements   |
-| Frontend  | Vanilla JavaScript (no frameworks), CSS custom properties         |
+| Frontend  | Vanilla JavaScript ES modules (no bundler), CSS custom properties |
 | Rendering | highlight.js 11.9 (syntax), Mermaid 10 (diagrams) — both via CDN |
 
 ## Architecture
@@ -34,14 +34,23 @@ Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth lo
 ```
 browser ──────── WebSocket ──────── server.js ──────── Claude Code SDK
    |                                    |
-   ├── app.js (2,300 lines)           ├── db.js (SQLite)
-   ├── style.css (1,950 lines)        ├── folders.json (projects)
-   └── index.html                      ├── prompts.json (16 templates)
-                                       └── workflows.json (3 workflows)
+   ├── js/main.js (entry point)       ├── server/routes/ (8 route modules)
+   │   ├── store.js (reactive state)  ├── server/ws-handler.js
+   │   ├── ws.js (WebSocket client)   ├── db.js (SQLite)
+   │   ├── api.js (fetch calls)       ├── folders.json (projects)
+   │   ├── chat.js, messages.js ...   ├── prompts.json (16 templates)
+   │   └── 16 more modules            └── workflows.json (3 workflows)
+   ├── css/ (13 focused stylesheets)
+   └── index.html
 ```
 
 - **WebSocket** streams assistant text, tool calls, and results in real time
+- **Modular frontend** — 22 ES modules (`<script type="module">`) with no bundler
+- **Reactive store** — centralized pub/sub state management across modules
+- **Event bus** — decoupled cross-module communication
+- **Modular backend** — 8 Express Router modules + shared WS handler
 - **SQLite + WAL** persists sessions, messages, costs, and Claude session mappings
+- **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
 - **Prepared statements** for all DB queries (no SQL injection risk)
 - **Session resumption** via stored Claude session IDs (survives page reloads)
 - **AbortController** for mid-stream cancellation
@@ -385,7 +394,7 @@ Supports `{{variable}}` placeholders that show a fill-in form.
 - 4px border radius for sharp terminal feel
 
 ### Theming
-All colors are CSS custom properties on `:root`. The light theme overrides them via `html[data-theme="light"]`. No page reload required.
+All colors are CSS custom properties on `:root` (defined in `css/variables.css`). The light theme overrides them via `html[data-theme="light"]`. No page reload required.
 
 ### Layout
 - **Header** (36px): connection status, account info, active project name (centered), cost display, token counter
@@ -398,18 +407,65 @@ All colors are CSS custom properties on `:root`. The light theme overrides them 
 
 ```
 shawkat-ai/
-├── server.js           Express + WebSocket server (719 lines)
-├── db.js               SQLite layer with prepared statements (302 lines)
-├── package.json        4 dependencies
-├── folders.json        Project configurations
-├── prompts.json        16 prompt templates
-├── workflows.json      3 multi-step workflows
-├── RECOMMENDATIONS.md  Feature tracking
-├── data.db             SQLite database (auto-created)
+├── server.js              Express entry point (~70 lines)
+├── db.js                  SQLite layer with indexes + prepared statements
+├── server/
+│   ├── ws-handler.js      WebSocket handler with shared processSdkStream()
+│   └── routes/
+│       ├── projects.js    Project CRUD + system prompts + commands
+│       ├── sessions.js    Session CRUD + pin/unpin
+│       ├── messages.js    Message queries (all, by chat, single-mode)
+│       ├── prompts.js     Prompt template CRUD
+│       ├── stats.js       Cost stats + dashboard + account info
+│       ├── files.js       File listing + content reading
+│       ├── workflows.js   Workflow listing
+│       └── exec.js        Shell command execution
+├── package.json           4 dependencies
+├── folders.json           Project configurations
+├── prompts.json           16 prompt templates
+├── workflows.json         3 multi-step workflows
+├── data.db                SQLite database (auto-created)
 └── public/
-    ├── index.html      HTML structure + modals
-    ├── app.js          Frontend logic (2,299 lines)
-    └── style.css       Terminal-style CSS (1,947 lines)
+    ├── index.html         HTML structure + modals
+    ├── style.css          CSS entry point (@import hub)
+    ├── css/
+    │   ├── variables.css      CSS custom properties + light theme
+    │   ├── reset.css          Box-sizing reset + body
+    │   ├── layout.css         Header bar + main layout
+    │   ├── sessions.css       Sidebar, folder picker, session list, mode toggle
+    │   ├── messages.css       Chat area, messages, tools, input bar, code blocks
+    │   ├── parallel.css       2x2 chat grid + pane overrides
+    │   ├── modals.css         Modal overlay + form styles
+    │   ├── toolbox.css        Toolbox panel + prompt variables form
+    │   ├── commands.css       Slash autocomplete, CLI output, workflows, diff view
+    │   ├── file-picker.css    File picker modal + attach badge
+    │   ├── cost-dashboard.css Cost dashboard cards, table, chart
+    │   ├── theme.css          Scanline overlay, animations, scrollbar
+    │   └── print.css          Print-friendly styles
+    └── js/
+        ├── main.js            Entry point — imports all modules, boot sequence
+        ├── store.js           Centralized reactive state (pub/sub)
+        ├── dom.js             DOM element references
+        ├── constants.js       Shared constants (CHAT_IDS, limits)
+        ├── events.js          Event bus for cross-module communication
+        ├── utils.js           Pure utilities (escapeHtml, slugify, etc.)
+        ├── formatting.js      Markdown rendering, syntax highlighting, mermaid
+        ├── diff.js            LCS-based diff algorithm + diff view renderer
+        ├── export.js          Export as Markdown / HTML
+        ├── theme.js           Dark/light theme toggle + persistence
+        ├── api.js             All fetch() calls as named async functions
+        ├── ws.js              WebSocket connection + reconnection
+        ├── commands.js        Slash command registry + autocomplete
+        ├── messages.js        Message rendering (user, assistant, tool, status)
+        ├── parallel.js        Parallel mode (2x2 pane grid)
+        ├── sessions.js        Session list, search, load, delete, rename
+        ├── projects.js        Project selection, system prompts, commands
+        ├── attachments.js     File picker + attachment management
+        ├── prompts.js         Prompt toolbox + variable templates
+        ├── workflows.js       Workflow panel + execution
+        ├── cost-dashboard.js  Cost dashboard (cards, table, bar chart)
+        ├── shortcuts.js       Global keyboard shortcuts
+        └── chat.js            Send/stop logic, WS message handler, boot
 ```
 
 ---

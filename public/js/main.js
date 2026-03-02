@@ -1,0 +1,23 @@
+// Entry point — imports all modules and runs boot sequence
+import './store.js';
+import './dom.js';
+import './constants.js';
+import './events.js';
+import './utils.js';
+import './formatting.js';
+import './diff.js';
+import './export.js';
+import './theme.js';
+import './api.js';
+import './ws.js';
+import './commands.js';
+import './messages.js';
+import './parallel.js';
+import './sessions.js';
+import './projects.js';
+import './attachments.js';
+import './prompts.js';
+import './workflows.js';
+import './cost-dashboard.js';
+import './shortcuts.js';
+import './chat.js';

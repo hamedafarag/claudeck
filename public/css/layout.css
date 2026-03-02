@@ -1,0 +1,90 @@
+/* ── Header Bar ───────────────────────────────────────── */
+.top-header {
+  height: var(--header-h);
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  flex-shrink: 0;
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+.term-project-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.term-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.term-prompt   { color: var(--success); font-weight: 700; }
+.term-cmd      { color: var(--accent); font-weight: 600; }
+.term-sep      { color: var(--border); }
+.term-user     { color: var(--text); }
+.term-plan     { color: var(--purple); font-size: 11px; }
+
+.term-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--error);
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--error), 0 0 2px var(--error);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.term-dot.connected    { background: var(--success); box-shadow: 0 0 8px var(--success), 0 0 2px var(--success); }
+.term-dot.reconnecting { background: var(--warning); box-shadow: 0 0 8px var(--warning), 0 0 2px var(--warning); animation: blink 1s infinite; }
+
+.term-status          { color: var(--text-dim); font-size: 12px; }
+.term-status.ok       { color: var(--success); }
+
+.term-costs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.term-costs:hover {
+  opacity: 0.8;
+}
+
+.streaming-tokens {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 4px;
+  animation: tokenPulse 2s ease-in-out infinite;
+}
+
+@keyframes tokenPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
+.term-cost-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.term-cost-value { color: var(--success); font-weight: 600; }
+.term-cost-pipe  { color: var(--border); margin: 0 2px; }
+
+/* ── Layout ───────────────────────────────────────────── */
+.layout {
+  display: flex;
+  height: calc(100vh - var(--header-h));
+}

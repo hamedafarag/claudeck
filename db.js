@@ -46,20 +46,31 @@ db.exec(`
   );
 `);
 
-// Migration: add chat_id column to messages if it doesn't exist
-try {
-  db.exec(`ALTER TABLE messages ADD COLUMN chat_id TEXT DEFAULT NULL`);
-} catch (e) { /* column already exists */ }
+// Migrations
+try { db.exec(`ALTER TABLE messages ADD COLUMN chat_id TEXT DEFAULT NULL`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE sessions ADD COLUMN title TEXT DEFAULT NULL`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE sessions ADD COLUMN pinned INTEGER DEFAULT 0`); } catch { /* exists */ }
 
-// Migration: add title column to sessions if it doesn't exist
-try {
-  db.exec(`ALTER TABLE sessions ADD COLUMN title TEXT DEFAULT NULL`);
-} catch (e) { /* column already exists */ }
+// Indexes for query performance
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id);
+  CREATE INDEX IF NOT EXISTS idx_messages_session_chat ON messages(session_id, chat_id);
+  CREATE INDEX IF NOT EXISTS idx_costs_session_id ON costs(session_id);
+  CREATE INDEX IF NOT EXISTS idx_costs_created_at ON costs(created_at);
+  CREATE INDEX IF NOT EXISTS idx_sessions_project_path ON sessions(project_path);
+  CREATE INDEX IF NOT EXISTS idx_sessions_pinned_last_used ON sessions(pinned DESC, last_used_at DESC);
+`);
 
-// Migration: add pinned column to sessions if it doesn't exist
-try {
-  db.exec(`ALTER TABLE sessions ADD COLUMN pinned INTEGER DEFAULT 0`);
-} catch (e) { /* column already exists */ }
+// Deduplicated mode CASE subquery — used in 4 session listing queries
+const MODE_CASE = `
+  CASE
+    WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
+         AND EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NULL)
+      THEN 'both'
+    WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
+      THEN 'parallel'
+    ELSE 'single'
+  END AS mode`;
 
 // Prepared statements
 const stmts = {
@@ -72,27 +83,11 @@ const stmts = {
   ),
   getSession: db.prepare(`SELECT * FROM sessions WHERE id = ?`),
   listSessions: db.prepare(
-    `SELECT s.*,
-       CASE
-         WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
-              AND EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NULL)
-           THEN 'both'
-         WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
-           THEN 'parallel'
-         ELSE 'single'
-       END AS mode
+    `SELECT s.*, ${MODE_CASE}
      FROM sessions s ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
   ),
   listSessionsByProject: db.prepare(
-    `SELECT s.*,
-       CASE
-         WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
-              AND EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NULL)
-           THEN 'both'
-         WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
-           THEN 'parallel'
-         ELSE 'single'
-       END AS mode
+    `SELECT s.*, ${MODE_CASE}
      FROM sessions s WHERE s.project_path = ? ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
   ),
   touchSession: db.prepare(
@@ -135,27 +130,11 @@ const stmts = {
     `UPDATE sessions SET pinned = CASE WHEN pinned = 1 THEN 0 ELSE 1 END WHERE id = ?`
   ),
   searchSessions: db.prepare(
-    `SELECT s.*,
-       CASE
-         WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
-              AND EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NULL)
-           THEN 'both'
-         WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
-           THEN 'parallel'
-         ELSE 'single'
-       END AS mode
+    `SELECT s.*, ${MODE_CASE}
      FROM sessions s WHERE s.project_path = ? AND s.title LIKE ? ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
   ),
   searchSessionsAll: db.prepare(
-    `SELECT s.*,
-       CASE
-         WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
-              AND EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NULL)
-           THEN 'both'
-         WHEN EXISTS (SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.chat_id IS NOT NULL)
-           THEN 'parallel'
-         ELSE 'single'
-       END AS mode
+    `SELECT s.*, ${MODE_CASE}
      FROM sessions s WHERE s.title LIKE ? ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
   ),
   getSessionCosts: db.prepare(
