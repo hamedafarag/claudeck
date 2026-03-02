@@ -11,7 +11,7 @@ A terminal-style web UI for Claude Code. Chat with Claude, run workflows, manage
 ```bash
 npm install
 npm start
-# Open http://localhost:3001
+# Open http://localhost:9009
 ```
 
 Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth login`).
@@ -112,10 +112,11 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | GET    | /api/sessions/:id/messages-single | Single-mode messages only       |
 
 ### Projects & Configuration
-| Method | Path                          | Description                     |
-| ------ | ----------------------------- | ------------------------------- |
-| GET    | /api/projects                 | List projects from folders.json |
-| PUT    | /api/projects/system-prompt   | Save per-project system prompt  |
+| Method | Path                          | Description                                  |
+| ------ | ----------------------------- | -------------------------------------------- |
+| GET    | /api/projects                 | List projects from folders.json              |
+| PUT    | /api/projects/system-prompt   | Save per-project system prompt               |
+| GET    | /api/projects/commands        | Load commands & skills from project `.claude/`|
 
 ### Prompts
 | Method | Path                 | Description           |
@@ -171,6 +172,7 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 - Edit via sidebar gear icon or `/system-prompt` command
 - SP badge indicates when a prompt is configured
 - Injected into every query for that project
+- Hint in modal: if a `CLAUDE.md` file exists in the project root, the SDK includes it automatically
 
 ### 3. AI Workflows
 Three pre-built multi-step workflows:
@@ -246,7 +248,20 @@ Each workflow chains prompts sequentially with context passing and step progress
 - Pulsing accent-colored animation
 - Auto-hides on stream completion
 
-### 14. Dark/Light Theme Toggle
+### 15. Project Commands & Skills
+- Automatically reads `.claude/commands/*.md` and `.claude/skills/*/SKILL.md` from the selected project
+- Registered as slash commands with `project` (red) and `skill` (blue) badges in autocomplete
+- Commands with `$ARGUMENTS` wait for user input (e.g. `/deploy testing`)
+- Skills with YAML frontmatter are parsed for `name`, `description`, and `argument-hint`
+- Commands reload on project switch — each project gets its own set
+- Project/skill commands sort first in autocomplete for quick access
+
+### 16. Active Project in Header
+- Selected project name displayed bold and centered in the header bar
+- Uppercase accent-colored text
+- Updates dynamically on project switch
+
+### 17. Dark/Light Theme Toggle
 - Sun/moon toggle button in sidebar header
 - Dark theme: deep blacks (#050508) with terminal green (#33d17a) accents
 - Light theme: warm off-white (#fafaf8) with muted greens
@@ -305,7 +320,14 @@ Each workflow chains prompts sequentially with context passing and step progress
 | /env-setup         | Verify environment setup       |
 | /quick-fix         | Fix linting errors             |
 
-Autocomplete triggers on `/` with keyboard navigation (arrow keys, Tab, Enter).
+### Project Commands & Skills (auto-discovered)
+Loaded from the selected project's `.claude/` directory:
+- `.claude/commands/*.md` → registered as `project` commands
+- `.claude/skills/*/SKILL.md` → registered as `skill` commands
+- Supports `$ARGUMENTS` for parameterized commands (e.g. `/deploy testing`)
+- Reload automatically on project switch
+
+Autocomplete triggers on `/` with keyboard navigation (arrow keys, Tab, Enter). Project commands and skills sort first.
 
 ---
 
@@ -366,7 +388,7 @@ Supports `{{variable}}` placeholders that show a fill-in form.
 All colors are CSS custom properties on `:root`. The light theme overrides them via `html[data-theme="light"]`. No page reload required.
 
 ### Layout
-- **Header** (36px): connection status, account info, cost display, token counter
+- **Header** (36px): connection status, account info, active project name (centered), cost display, token counter
 - **Sidebar** (272px): project selector, session search, session list, parallel toggle
 - **Main area**: messages (820px max-width), input bar, toolbox/workflow panels
 
@@ -382,7 +404,7 @@ shawkat-ai/
 ├── folders.json        Project configurations
 ├── prompts.json        16 prompt templates
 ├── workflows.json      3 multi-step workflows
-├── RECOMMENDATIONS.md  Feature tracking (14/14 complete)
+├── RECOMMENDATIONS.md  Feature tracking
 ├── data.db             SQLite database (auto-created)
 └── public/
     ├── index.html      HTML structure + modals

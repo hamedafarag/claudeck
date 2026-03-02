@@ -23,6 +23,7 @@ const accountEmail = document.getElementById("account-email");
 const accountPlan = document.getElementById("account-plan");
 const totalCostEl = document.getElementById("total-cost");
 const projectCostEl = document.getElementById("project-cost");
+const headerProjectName = document.getElementById("header-project-name");
 
 // Toolbox
 const toolboxBtn = document.getElementById("toolbox-btn");
@@ -300,12 +301,12 @@ function handleSlashAutocomplete(pane) {
   const matches = Object.entries(commandRegistry)
     .filter(([name]) => name.startsWith(partial))
     .sort((a, b) => {
-      const catOrder = { app: 0, cli: 1, workflow: 2, prompt: 3 };
+      const catOrder = { project: 0, skill: 1, app: 2, cli: 3, workflow: 4, prompt: 5 };
       const ca = catOrder[a[1].category] ?? 3;
       const cb = catOrder[b[1].category] ?? 3;
       return ca - cb || a[0].localeCompare(b[0]);
     })
-    .slice(0, 10);
+    .slice(0, 20);
 
   if (matches.length === 0) {
     dismissAutocomplete(pane);
@@ -325,13 +326,10 @@ function handleSlashAutocomplete(pane) {
     `;
     item.addEventListener("mousedown", (e) => {
       e.preventDefault(); // prevent blur
-      const needsArgs = name === "run";
+      const needsArgs = name === "run" || cmd.needsArgs;
       pane.messageInput.value = `/${name}${needsArgs ? " " : ""}`;
       dismissAutocomplete(pane);
       pane.messageInput.focus();
-      if (!needsArgs) {
-        // Execute immediately for commands without args
-      }
     });
     el.appendChild(item);
   });
@@ -376,7 +374,8 @@ function handleAutocompleteKeydown(e, pane) {
     const active = items[pane._autocompleteIndex];
     if (active) {
       const cmdName = active.dataset.cmd;
-      const needsArgs = cmdName === "run";
+      const cmdDef = commandRegistry[cmdName];
+      const needsArgs = cmdName === "run" || (cmdDef && cmdDef.needsArgs);
       pane.messageInput.value = `/${cmdName}${needsArgs ? " " : ""}`;
       dismissAutocomplete(pane);
       pane.messageInput.focus();
@@ -1171,6 +1170,8 @@ async function loadProjects() {
       projectSelect.value = saved;
     }
     updateSystemPromptIndicator();
+    updateHeaderProjectName();
+    loadProjectCommands();
   } catch (err) {
     console.error("Failed to load projects:", err);
   }
@@ -1643,10 +1644,59 @@ sessionSearchInput.addEventListener("input", () => {
   }, 200);
 });
 
+function updateHeaderProjectName() {
+  const opt = projectSelect.options[projectSelect.selectedIndex];
+  headerProjectName.textContent = opt && opt.value ? opt.textContent : "";
+}
+
+// Project commands (commands.json)
+async function loadProjectCommands() {
+  // Remove old project commands and skills
+  for (const [name, cmd] of Object.entries(commandRegistry)) {
+    if (cmd.category === "project" || cmd.category === "skill") delete commandRegistry[name];
+  }
+
+  const cwd = projectSelect.value;
+  if (!cwd) return;
+
+  try {
+    const res = await fetch(`/api/projects/commands?path=${encodeURIComponent(cwd)}`);
+    const commands = await res.json();
+    if (!Array.isArray(commands) || commands.length === 0) return;
+
+    for (const c of commands) {
+      const slug = c.command; // preserve original name (e.g. "speckit.analyze")
+      if (!slug || commandRegistry[slug]) continue; // skip conflicts
+      const hasArgs = c.prompt.includes("$ARGUMENTS");
+      const label = c.source === "skill" ? `${c.description}` : (c.description || c.command);
+      registerCommand(slug, {
+        category: c.source === "skill" ? "skill" : "project",
+        description: label,
+        needsArgs: hasArgs,
+        argumentHint: c.argumentHint || "",
+        execute(args, pane) {
+          let prompt = c.prompt;
+          if (hasArgs) {
+            prompt = prompt.replace(/\$ARGUMENTS/g, args || "");
+          }
+          pane.messageInput.value = prompt;
+          pane.messageInput.style.height = "auto";
+          pane.messageInput.style.height = Math.min(pane.messageInput.scrollHeight, 200) + "px";
+          sendMessage(pane);
+        },
+      });
+    }
+  } catch (err) {
+    console.error("Failed to load project commands:", err);
+  }
+}
+
 projectSelect.addEventListener("change", () => {
   localStorage.setItem("shawkat-ai-cwd", projectSelect.value);
   sessionId = null;
   updateSystemPromptIndicator();
+  updateHeaderProjectName();
+  loadProjectCommands();
   if (parallelMode) {
     for (const chatId of CHAT_IDS) {
       const pane = panes.get(chatId);

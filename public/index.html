@@ -18,6 +18,7 @@
       <span class="term-user" id="account-email">---</span>
       <span class="term-plan" id="account-plan"></span>
     </div>
+    <span class="term-project-name" id="header-project-name"></span>
     <div class="term-costs">
       <span id="streaming-tokens" class="streaming-tokens hidden">~0 tokens</span>
       <span class="term-cost-label">proj</span>
@@ -140,6 +141,7 @@
       </div>
       <form id="system-prompt-form">
         <label for="sp-textarea">Custom instructions for Claude in this project</label>
+        <p class="sp-hint">If a <code>CLAUDE.md</code> file exists in the project root, it is automatically included by the SDK — no need to duplicate it here.</p>
         <textarea id="sp-textarea" rows="8" placeholder="e.g., You are an expert in React + TypeScript. This is a monorepo..."></textarea>
         <div class="modal-actions">
           <button type="button" id="sp-clear-btn" class="modal-btn-cancel">Clear</button>

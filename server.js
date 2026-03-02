@@ -387,6 +387,64 @@ app.get("/api/files/content", async (req, res) => {
   }
 });
 
+// Read project commands from .claude/commands/*.md and .claude/skills/*/SKILL.md
+app.get("/api/projects/commands", async (req, res) => {
+  const projectPath = req.query.path;
+  if (!projectPath) return res.status(400).json({ error: "path is required" });
+
+  const { readdir, stat } = await import("fs/promises");
+  const commands = [];
+
+  // 1. Read .claude/commands/*.md
+  const commandsDir = join(projectPath, ".claude", "commands");
+  try {
+    const files = await readdir(commandsDir);
+    for (const file of files.filter(f => f.endsWith(".md"))) {
+      try {
+        const filePath = join(commandsDir, file);
+        if (!filePath.startsWith(commandsDir)) continue;
+        const content = await readFile(filePath, "utf-8");
+        const name = file.replace(/\.md$/, "");
+        const titleMatch = content.match(/^#\s+(.+)$/m);
+        const description = titleMatch ? titleMatch[1].trim() : name;
+        commands.push({ command: name, description, prompt: content, source: "command" });
+      } catch { /* skip unreadable files */ }
+    }
+  } catch { /* .claude/commands/ doesn't exist */ }
+
+  // 2. Read .claude/skills/*/SKILL.md
+  const skillsDir = join(projectPath, ".claude", "skills");
+  try {
+    const entries = await readdir(skillsDir);
+    for (const entry of entries) {
+      try {
+        const entryPath = join(skillsDir, entry);
+        const s = await stat(entryPath);
+        if (!s.isDirectory()) continue;
+        const skillFile = join(entryPath, "SKILL.md");
+        const content = await readFile(skillFile, "utf-8");
+        // Parse YAML frontmatter
+        let name = entry;
+        let description = entry;
+        let argumentHint = "";
+        const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        if (fmMatch) {
+          const fm = fmMatch[1];
+          const nameMatch = fm.match(/^name:\s*(.+)$/m);
+          const descMatch = fm.match(/^description:\s*(.+)$/m);
+          const argMatch = fm.match(/^argument-hint:\s*"?(.+?)"?\s*$/m);
+          if (nameMatch) name = nameMatch[1].trim();
+          if (descMatch) description = descMatch[1].trim();
+          if (argMatch) argumentHint = argMatch[1].trim();
+        }
+        commands.push({ command: name, description, prompt: content, source: "skill", argumentHint });
+      } catch { /* skip unreadable skill dirs */ }
+    }
+  } catch { /* .claude/skills/ doesn't exist */ }
+
+  res.json(commands);
+});
+
 wss.on("connection", (ws) => {
   const activeQueries = new Map(); // queryKey -> { abort }
 
@@ -713,7 +771,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 9009;
 server.listen(PORT, () => {
   console.log(`shawkat-ai running at http://localhost:${PORT}`);
 });
