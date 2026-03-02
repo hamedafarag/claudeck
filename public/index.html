@@ -14,6 +14,10 @@
       <span class="term-cmd">claude</span>
       <span class="term-dot" id="connection-dot"></span>
       <span class="term-status" id="connection-text">connecting</span>
+      <span class="bg-session-indicator hidden" id="bg-session-indicator">
+        <span class="bg-dot-blink"></span>
+        <span id="bg-session-badge">0</span> bg
+      </span>
       <span class="term-sep">&middot;</span>
       <span class="term-user" id="account-email">---</span>
       <span class="term-plan" id="account-plan"></span>
@@ -216,6 +220,25 @@
       </div>
     </div>
   </div>
+
+  <!-- Background Session Confirmation Dialog -->
+  <div id="bg-confirm-modal" class="modal-overlay hidden">
+    <div class="modal bg-confirm-modal">
+      <div class="modal-header">
+        <h3>Session In Progress</h3>
+        <button id="bg-confirm-close" class="modal-close">&times;</button>
+      </div>
+      <p class="bg-confirm-text">Claude is still responding in this session. What would you like to do?</p>
+      <div class="modal-actions bg-confirm-actions">
+        <button id="bg-confirm-cancel" class="modal-btn-cancel">Cancel</button>
+        <button id="bg-confirm-abort" class="modal-btn-cancel bg-confirm-abort-btn">Abort Session</button>
+        <button id="bg-confirm-background" class="modal-btn-save">Continue in Background</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>

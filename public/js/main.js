@@ -13,6 +13,7 @@ import './ws.js';
 import './commands.js';
 import './messages.js';
 import './parallel.js';
+import './background-sessions.js';
 import './sessions.js';
 import './projects.js';
 import './attachments.js';

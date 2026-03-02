@@ -28,6 +28,8 @@ export async function loadProjects() {
     updateSystemPromptIndicator();
     updateHeaderProjectName();
     loadProjectCommands();
+    // Load sessions after project dropdown is populated so they filter correctly
+    loadSessions();
   } catch (err) {
     console.error("Failed to load projects:", err);
   }
@@ -134,40 +136,46 @@ $.spModal.addEventListener("click", (e) => {
 });
 
 // Project change handler
-$.projectSelect.addEventListener("change", () => {
-  localStorage.setItem("shawkat-ai-cwd", $.projectSelect.value);
-  setState("sessionId", null);
-  updateSystemPromptIndicator();
-  updateHeaderProjectName();
-  loadProjectCommands();
-  if (getState("parallelMode")) {
-    for (const chatId of CHAT_IDS) {
-      const pane = panes.get(chatId);
-      if (pane) pane.messagesDiv.innerHTML = "";
+$.projectSelect.addEventListener("change", async () => {
+  const { guardSwitch } = await import('./background-sessions.js');
+  guardSwitch(() => {
+    localStorage.setItem("shawkat-ai-cwd", $.projectSelect.value);
+    setState("sessionId", null);
+    updateSystemPromptIndicator();
+    updateHeaderProjectName();
+    loadProjectCommands();
+    if (getState("parallelMode")) {
+      for (const chatId of CHAT_IDS) {
+        const pane = panes.get(chatId);
+        if (pane) pane.messagesDiv.innerHTML = "";
+      }
+    } else {
+      $.messagesDiv.innerHTML = "";
     }
-  } else {
-    $.messagesDiv.innerHTML = "";
-  }
-  loadSessions();
-  loadStats();
+    loadSessions();
+    loadStats();
+  });
 });
 
 // New session button
-$.newSessionBtn.addEventListener("click", () => {
-  setState("sessionId", null);
-  if (getState("parallelMode")) {
-    for (const chatId of CHAT_IDS) {
-      const pane = panes.get(chatId);
-      if (pane) {
-        pane.messagesDiv.innerHTML = "";
-        pane.currentAssistantMsg = null;
+$.newSessionBtn.addEventListener("click", async () => {
+  const { guardSwitch } = await import('./background-sessions.js');
+  guardSwitch(() => {
+    setState("sessionId", null);
+    if (getState("parallelMode")) {
+      for (const chatId of CHAT_IDS) {
+        const pane = panes.get(chatId);
+        if (pane) {
+          pane.messagesDiv.innerHTML = "";
+          pane.currentAssistantMsg = null;
+        }
       }
+    } else {
+      $.messagesDiv.innerHTML = "";
     }
-  } else {
-    $.messagesDiv.innerHTML = "";
-  }
-  loadSessions();
-  if (!getState("parallelMode")) $.messageInput.focus();
+    loadSessions();
+    if (!getState("parallelMode")) $.messageInput.focus();
+  });
 });
 
 // Parallel mode toggle

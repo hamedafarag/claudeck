@@ -8,6 +8,7 @@ import { getPane } from './parallel.js';
 
 export function addUserMessage(text, pane) {
   pane = pane || getPane(null);
+  pane.currentAssistantMsg = null;
   const div = document.createElement("div");
   div.className = "msg msg-user";
   div.textContent = text;
@@ -202,6 +203,8 @@ export function appendCliOutput(data, pane) {
 export function renderMessagesIntoPane(messages, pane) {
   pane.messagesDiv.innerHTML = "";
   pane.currentAssistantMsg = null;
+  // Reset streaming counter — we're loading saved messages, not streaming
+  setState("streamingCharCount", 0);
   for (const msg of messages) {
     const data = JSON.parse(msg.content);
     switch (msg.role) {
@@ -223,6 +226,9 @@ export function renderMessagesIntoPane(messages, pane) {
     }
   }
   pane.currentAssistantMsg = null;
+  // Hide token counter and reset — loading saved messages shouldn't show streaming stats
+  setState("streamingCharCount", 0);
+  if ($.streamingTokens) $.streamingTokens.classList.add("hidden");
   highlightCodeBlocks(pane.messagesDiv);
   addCopyButtons(pane.messagesDiv);
   renderMermaidBlocks(pane.messagesDiv);

@@ -253,9 +253,12 @@ export function setupWebSocket(wss, sessionIds) {
       if (projectPrompt) opts.appendSystemPrompt = projectPrompt;
       if (resumeId) opts.resume = resumeId;
 
+      let resolvedSid = clientSid;
+
       function wsSend(payload) {
         if (ws.readyState !== 1) return;
         if (chatId) payload.chatId = chatId;
+        if (resolvedSid) payload.sessionId = resolvedSid;
         ws.send(JSON.stringify(payload));
       }
 
@@ -266,7 +269,6 @@ export function setupWebSocket(wss, sessionIds) {
         // Process the stream — user message and title set here
         let sessionCreated = false;
         let claudeSessionId = null;
-        let resolvedSid = clientSid;
 
         for await (const sdkMsg of q) {
           if (ws.readyState !== 1) break;

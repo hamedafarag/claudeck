@@ -64,22 +64,30 @@ router.get("/commands", async (req, res) => {
   const { readdir, stat } = await import("fs/promises");
   const commands = [];
 
-  // 1. Read .claude/commands/*.md
+  // 1. Read .claude/commands/*.md and .claude/commands/<subfolder>/*.md
   const commandsDir = join(projectPath, ".claude", "commands");
-  try {
-    const files = await readdir(commandsDir);
-    for (const file of files.filter(f => f.endsWith(".md"))) {
-      try {
-        const filePath = join(commandsDir, file);
-        if (!filePath.startsWith(commandsDir)) continue;
-        const content = await readFile(filePath, "utf-8");
-        const name = file.replace(/\.md$/, "");
-        const titleMatch = content.match(/^#\s+(.+)$/m);
-        const description = titleMatch ? titleMatch[1].trim() : name;
-        commands.push({ command: name, description, prompt: content, source: "command" });
-      } catch { /* skip unreadable files */ }
-    }
-  } catch { /* .claude/commands/ doesn't exist */ }
+  async function readCommandsRecursive(dir, prefix) {
+    try {
+      const entries = await readdir(dir);
+      for (const entry of entries) {
+        const entryPath = join(dir, entry);
+        if (!entryPath.startsWith(commandsDir)) continue;
+        try {
+          const s = await stat(entryPath);
+          if (s.isDirectory()) {
+            await readCommandsRecursive(entryPath, prefix ? `${prefix}:${entry}` : entry);
+          } else if (entry.endsWith(".md")) {
+            const content = await readFile(entryPath, "utf-8");
+            const name = prefix ? `${prefix}:${entry.replace(/\.md$/, "")}` : entry.replace(/\.md$/, "");
+            const titleMatch = content.match(/^#\s+(.+)$/m);
+            const description = titleMatch ? titleMatch[1].trim() : name;
+            commands.push({ command: name, description, prompt: content, source: "command" });
+          }
+        } catch { /* skip unreadable entries */ }
+      }
+    } catch { /* directory doesn't exist or unreadable */ }
+  }
+  await readCommandsRecursive(commandsDir, "");
 
   // 2. Read .claude/skills/*/SKILL.md
   const skillsDir = join(projectPath, ".claude", "skills");

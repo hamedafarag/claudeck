@@ -17,6 +17,7 @@ import { updateAttachmentBadge } from './attachments.js';
 import { applyTheme } from './theme.js';
 import { exportAsMarkdown, exportAsHtml } from './export.js';
 import * as api from './api.js';
+import { isBackgroundSession, removeBackgroundSession, showCompletionToast } from './background-sessions.js';
 
 export function sendMessage(pane) {
   pane = pane || getPane(null);
@@ -167,6 +168,21 @@ _setChatFns({ sendMessage, stopGeneration });
 
 // Handle WebSocket messages
 function handleServerMessage(msg) {
+  // Route background session messages — skip rendering, only handle terminal states
+  if (msg.sessionId && isBackgroundSession(msg.sessionId)) {
+    if (msg.type === "done") {
+      const bgMap = getState("backgroundSessions");
+      const info = bgMap.get(msg.sessionId);
+      const title = info?.title || "Background session";
+      const projectPath = info?.projectPath || "";
+      showCompletionToast(msg.sessionId, title, projectPath);
+      removeBackgroundSession(msg.sessionId);
+      loadSessions();
+    }
+    // Silently ignore all other message types — server saves to DB
+    return;
+  }
+
   const pane = getPane(msg.chatId || null);
   removeThinking(pane);
 
@@ -362,8 +378,7 @@ if (typeof mermaid !== "undefined") {
 }
 
 // ── Boot sequence ──
-loadProjects();
-loadSessions();
+loadProjects(); // loadSessions() is called inside loadProjects() after dropdown is populated
 loadAccountInfo();
 loadStats();
 loadPrompts();

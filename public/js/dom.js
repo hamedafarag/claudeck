@@ -65,4 +65,13 @@ export const $ = {
 
   // Streaming tokens
   streamingTokens: document.getElementById("streaming-tokens"),
+
+  // Background sessions
+  bgConfirmModal: document.getElementById("bg-confirm-modal"),
+  bgConfirmCancel: document.getElementById("bg-confirm-cancel"),
+  bgConfirmAbort: document.getElementById("bg-confirm-abort"),
+  bgConfirmBackground: document.getElementById("bg-confirm-background"),
+  bgConfirmClose: document.getElementById("bg-confirm-close"),
+  bgSessionIndicator: document.getElementById("bg-session-indicator"),
+  bgSessionBadge: document.getElementById("bg-session-badge"),
 };

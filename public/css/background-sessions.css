@@ -1,0 +1,188 @@
+/* ── Background Sessions ───────────────────────────────── */
+
+/* Header indicator pill */
+.bg-session-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: rgba(229, 165, 10, 0.12);
+  border: 1px solid rgba(229, 165, 10, 0.3);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--warning);
+  cursor: default;
+  user-select: none;
+}
+
+.bg-session-indicator.hidden {
+  display: none;
+}
+
+/* Blinking dot */
+.bg-dot-blink {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  animation: bgDotPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes bgDotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Confirmation dialog */
+.bg-confirm-modal {
+  max-width: 420px;
+}
+
+.bg-confirm-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.bg-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.bg-confirm-abort-btn {
+  color: var(--error) !important;
+  border-color: var(--error) !important;
+}
+
+.bg-confirm-abort-btn:hover {
+  background: rgba(237, 51, 59, 0.1) !important;
+}
+
+/* Toast container */
+.toast-container {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  max-width: 360px;
+}
+
+/* Individual toast */
+.bg-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--success);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: toastSlideIn 0.3s ease-out;
+  font-size: 12px;
+  color: var(--text);
+  min-width: 260px;
+}
+
+.bg-toast.toast-exit {
+  animation: toastSlideOut 0.25s ease-in forwards;
+}
+
+.bg-toast-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+.bg-toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.bg-toast-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.bg-toast-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bg-toast-switch {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.bg-toast-switch:hover {
+  background: var(--accent-dim);
+}
+
+.bg-toast-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.bg-toast-close:hover {
+  color: var(--text);
+}
+
+/* Session list blinking dot */
+.session-bg-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  margin-left: 6px;
+  vertical-align: middle;
+  animation: bgDotPulse 1.4s ease-in-out infinite;
+}
+
+/* Toast animations */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}

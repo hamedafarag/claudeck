@@ -62,31 +62,42 @@ function renderSessions(sessions) {
     });
     li.addEventListener("click", async (e) => {
       if (e.target.closest(".session-delete") || e.target.closest(".session-pin") || e.target.closest(".session-title-edit")) return;
-      setState("sessionId", s.id);
-      if (s.project_path) {
-        $.projectSelect.value = s.project_path;
-        localStorage.setItem("shawkat-ai-cwd", s.project_path);
-      }
-
-      const parallelMode = getState("parallelMode");
-      const needsParallel = s.mode === "parallel" || s.mode === "both";
-      if (needsParallel && !parallelMode) {
-        enterParallelMode();
-      } else if (!needsParallel && parallelMode) {
-        exitParallelMode();
-      }
-
-      if (getState("parallelMode")) {
-        for (const chatId of CHAT_IDS) {
-          const pane = panes.get(chatId);
-          if (pane) pane.messagesDiv.innerHTML = "";
+      const { guardSwitch } = await import('./background-sessions.js');
+      guardSwitch(async () => {
+        setState("sessionId", s.id);
+        if (s.project_path) {
+          $.projectSelect.value = s.project_path;
+          localStorage.setItem("shawkat-ai-cwd", s.project_path);
         }
-      } else {
-        $.messagesDiv.innerHTML = "";
-      }
-      await loadMessages(s.id);
-      loadSessions();
+
+        const parallelMode = getState("parallelMode");
+        const needsParallel = s.mode === "parallel" || s.mode === "both";
+        if (needsParallel && !parallelMode) {
+          enterParallelMode();
+        } else if (!needsParallel && parallelMode) {
+          exitParallelMode();
+        }
+
+        if (getState("parallelMode")) {
+          for (const chatId of CHAT_IDS) {
+            const pane = panes.get(chatId);
+            if (pane) pane.messagesDiv.innerHTML = "";
+          }
+        } else {
+          $.messagesDiv.innerHTML = "";
+        }
+        await loadMessages(s.id);
+        loadSessions();
+      });
     });
+    // Show blinking dot for background sessions
+    const bgMap = getState("backgroundSessions");
+    if (bgMap && bgMap.has(s.id)) {
+      const dot = document.createElement("span");
+      dot.className = "session-bg-indicator";
+      li.querySelector(".session-title").after(dot);
+    }
+
     $.sessionList.appendChild(li);
   }
 }

@@ -11,6 +11,7 @@ const state = {
   allProjectFiles: [],
   mermaidCounter: 0,
   savedChatArea: null,
+  backgroundSessions: new Map(),
 };
 
 const listeners = {};
