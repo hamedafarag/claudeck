@@ -1,11 +1,30 @@
 // Session management
 import { $ } from './dom.js';
-import { getState, setState } from './store.js';
+import { getState, setState, on as onState } from './store.js';
 import { CHAT_IDS } from './constants.js';
 import { escapeHtml } from './utils.js';
 import * as api from './api.js';
 import { panes, enterParallelMode, exitParallelMode } from './parallel.js';
 import { renderMessagesIntoPane } from './messages.js';
+
+const SESSION_STORAGE_KEY = "shawkat-ai-session-id";
+
+// Persist sessionId to localStorage whenever it changes
+onState("sessionId", (val) => {
+  if (val) {
+    localStorage.setItem(SESSION_STORAGE_KEY, val);
+  } else {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  }
+});
+
+// Restore sessionId from localStorage on module load
+(function restoreSessionId() {
+  const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (saved && !getState("sessionId")) {
+    setState("sessionId", saved);
+  }
+})();
 
 export async function loadSessions(searchTerm) {
   try {

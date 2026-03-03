@@ -29,6 +29,16 @@
           <option value="bypass">bypass</option>
           <option value="confirmDangerous" selected>confirm writes</option>
           <option value="confirmAll">confirm all</option>
+          <option value="plan">plan mode</option>
+        </select>
+      </span>
+      <span class="term-sep">&middot;</span>
+      <span class="model-selector">
+        <select id="model-select" title="Model">
+          <option value="">auto</option>
+          <option value="sonnet">sonnet</option>
+          <option value="opus">opus</option>
+          <option value="haiku">haiku</option>
         </select>
       </span>
       <span class="term-sep">&middot;</span>
@@ -245,6 +255,7 @@
               <tr>
                 <th data-sort="title">Session</th>
                 <th data-sort="turns">Turns</th>
+                <th data-sort="tokens">Tokens</th>
                 <th data-sort="cost">Cost</th>
               </tr>
             </thead>

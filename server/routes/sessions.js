@@ -6,6 +6,7 @@ import {
   toggleSessionPin,
   searchSessions,
 } from "../../db.js";
+import { getActiveSessionIds } from "../ws-handler.js";
 
 const router = Router();
 
@@ -33,6 +34,15 @@ router.get("/search", (req, res) => {
     const projectPath = req.query.project_path || undefined;
     const sessions = searchSessions(q, 20, projectPath);
     res.json(sessions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List session IDs with active (in-flight) queries
+router.get("/active", (req, res) => {
+  try {
+    res.json({ activeSessionIds: getActiveSessionIds() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

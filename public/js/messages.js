@@ -11,7 +11,17 @@ export function addUserMessage(text, pane) {
   pane.currentAssistantMsg = null;
   const div = document.createElement("div");
   div.className = "msg msg-user";
-  div.textContent = text;
+
+  const label = document.createElement("span");
+  label.className = "msg-user-label";
+  label.textContent = "YOU";
+
+  const body = document.createElement("span");
+  body.className = "msg-user-body";
+  body.textContent = text;
+
+  div.appendChild(label);
+  div.appendChild(body);
   pane.messagesDiv.appendChild(div);
   scrollToBottom(pane);
 }
@@ -158,6 +168,11 @@ export function addResultSummary(msg, pane) {
     parts.push(`${secs}s`);
   }
   if (msg.cost_usd != null) parts.push(`$${msg.cost_usd.toFixed(4)}`);
+  const totalTokens = (msg.input_tokens || 0) + (msg.output_tokens || 0);
+  if (totalTokens > 0) {
+    const fmt = totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens);
+    parts.push(`${fmt} tokens`);
+  }
   if (parts.length > 0) {
     addStatus(parts.join(" \u00b7 "), false, pane);
   }

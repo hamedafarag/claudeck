@@ -17,8 +17,9 @@ import { updateAttachmentBadge } from './attachments.js';
 import { applyTheme } from './theme.js';
 import { exportAsMarkdown, exportAsHtml } from './export.js';
 import * as api from './api.js';
-import { isBackgroundSession, removeBackgroundSession, showCompletionToast } from './background-sessions.js';
+import { isBackgroundSession, removeBackgroundSession, showCompletionToast, reconcileBackgroundSessions } from './background-sessions.js';
 import { enqueuePermissionRequest, getPermissionMode, clearSessionPermissions } from './permissions.js';
+import { getSelectedModel } from './model-selector.js';
 
 export function sendMessage(pane) {
   pane = pane || getPane(null);
@@ -110,6 +111,7 @@ export function sendMessage(pane) {
   const selectedOption = $.projectSelect.options[$.projectSelect.selectedIndex];
   const projectName = selectedOption?.textContent || "Session";
 
+  const model = getSelectedModel();
   const payload = {
     type: "chat",
     message: fullMessage,
@@ -118,6 +120,7 @@ export function sendMessage(pane) {
     projectName,
     permissionMode: getPermissionMode(),
   };
+  if (model) payload.model = model;
 
   if (parallelMode && pane.chatId) {
     payload.chatId = pane.chatId;
@@ -270,6 +273,36 @@ function handleServerMessage(msg) {
 
 // Listen for WebSocket messages via event bus
 on("ws:message", handleServerMessage);
+
+// Reconnect state sync — recover from connection drops
+on("ws:reconnected", async () => {
+  console.log("WebSocket reconnected — syncing state...");
+  try {
+    // 1. Fetch active session IDs from server
+    const activeSessionIds = await api.fetchActiveSessionIds();
+
+    // 2. Reconcile background sessions
+    reconcileBackgroundSessions(activeSessionIds);
+
+    // 3. If any foreground pane was streaming, reset it and reload from DB
+    for (const pane of panes.values()) {
+      if (pane.isStreaming) {
+        finishStreamingHandler(pane);
+      }
+    }
+
+    const currentSessionId = getState("sessionId");
+    if (currentSessionId) {
+      const { loadMessages } = await import('./sessions.js');
+      await loadMessages(currentSessionId);
+    }
+
+    // 4. Refresh session list
+    loadSessions();
+  } catch (err) {
+    console.error("Reconnect sync failed:", err);
+  }
+});
 
 // Register built-in commands
 registerCommand("clear", {

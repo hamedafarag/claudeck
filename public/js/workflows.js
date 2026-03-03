@@ -7,6 +7,7 @@ import { commandRegistry, registerCommand } from './commands.js';
 import { getPane, panes } from './parallel.js';
 import { showThinking, addStatus } from './messages.js';
 import { getPermissionMode } from './permissions.js';
+import { getSelectedModel } from './model-selector.js';
 
 export async function loadWorkflows() {
   try {
@@ -91,14 +92,17 @@ export function startWorkflow(workflow, pane) {
   const projectName = selectedOption?.textContent || "Session";
   const ws = getState("ws");
 
-  ws.send(JSON.stringify({
+  const model = getSelectedModel();
+  const wfPayload = {
     type: "workflow",
     workflow,
     cwd,
     sessionId: getState("sessionId"),
     projectName,
     permissionMode: getPermissionMode(),
-  }));
+  };
+  if (model) wfPayload.model = model;
+  ws.send(JSON.stringify(wfPayload));
 
   showThinking(`Running workflow: ${workflow.title}...`, pane);
 }

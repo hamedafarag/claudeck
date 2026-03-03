@@ -4,6 +4,12 @@ import { escapeHtml } from './utils.js';
 import * as api from './api.js';
 import { registerCommand } from './commands.js';
 
+function formatTokenCount(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+  return String(n);
+}
+
 export async function loadStats() {
   try {
     const cwd = $.projectSelect.value;
@@ -53,6 +59,9 @@ function renderCostDashboard(data) {
     .filter((t) => t.date === new Date().toISOString().slice(0, 10))
     .reduce((sum, t) => sum + t.cost, 0);
 
+  const tokens = data.totalTokens || { input_tokens: 0, output_tokens: 0 };
+  const totalTok = tokens.input_tokens + tokens.output_tokens;
+
   cardsEl.innerHTML = `
     <div class="cost-card">
       <div class="cost-card-label">Total</div>
@@ -66,6 +75,11 @@ function renderCostDashboard(data) {
       <div class="cost-card-label">Today</div>
       <div class="cost-card-value">$${todayCost.toFixed(4)}</div>
     </div>
+    <div class="cost-card">
+      <div class="cost-card-label">Tokens</div>
+      <div class="cost-card-value">${formatTokenCount(totalTok)}</div>
+      <div class="cost-card-sub">${formatTokenCount(tokens.input_tokens)} in / ${formatTokenCount(tokens.output_tokens)} out</div>
+    </div>
   `;
 
   const tbody = document.getElementById("cost-table-body");
@@ -73,23 +87,27 @@ function renderCostDashboard(data) {
   for (const s of data.sessions) {
     if (s.total_cost === 0) continue;
     const tr = document.createElement("tr");
+    const sTok = (s.input_tokens || 0) + (s.output_tokens || 0);
     tr.innerHTML = `
       <td title="${escapeHtml(s.id)}">${escapeHtml(s.title || s.project_name || "Session")}</td>
       <td>${s.turns}</td>
+      <td>${formatTokenCount(sTok)}</td>
       <td>$${s.total_cost.toFixed(4)}</td>
     `;
     tbody.appendChild(tr);
   }
 
+  const colIndex = { title: 0, turns: 1, tokens: 2, cost: 3 };
   document.querySelectorAll(".cost-table th[data-sort]").forEach((th) => {
     th.onclick = () => {
       const key = th.dataset.sort;
+      const idx = colIndex[key] ?? 0;
       const rows = [...tbody.querySelectorAll("tr")];
       rows.sort((a, b) => {
-        const aVal = a.children[key === "title" ? 0 : key === "turns" ? 1 : 2].textContent;
-        const bVal = b.children[key === "title" ? 0 : key === "turns" ? 1 : 2].textContent;
+        const aVal = a.children[idx].textContent;
+        const bVal = b.children[idx].textContent;
         if (key === "title") return aVal.localeCompare(bVal);
-        return parseFloat(bVal.replace("$", "")) - parseFloat(aVal.replace("$", ""));
+        return parseFloat(bVal.replace(/[$,k]/g, "")) - parseFloat(aVal.replace(/[$,k]/g, ""));
       });
       tbody.innerHTML = "";
       rows.forEach((r) => tbody.appendChild(r));

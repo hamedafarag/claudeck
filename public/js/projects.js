@@ -30,6 +30,14 @@ export async function loadProjects() {
     loadProjectCommands();
     // Load sessions after project dropdown is populated so they filter correctly
     loadSessions();
+
+    // If a session was restored from localStorage, load its messages
+    const { getState } = await import('./store.js');
+    const { loadMessages } = await import('./sessions.js');
+    const restoredSid = getState("sessionId");
+    if (restoredSid) {
+      loadMessages(restoredSid);
+    }
   } catch (err) {
     console.error("Failed to load projects:", err);
   }

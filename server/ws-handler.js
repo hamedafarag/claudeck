@@ -21,6 +21,31 @@ const READ_ONLY_TOOLS = new Set([
 
 const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
+// Global tracking of active queries across all connections
+// Key: sessionId, Value: Set<queryKey>
+const globalActiveQueries = new Map();
+
+function registerGlobalQuery(sessionId, queryKey) {
+  if (!sessionId) return;
+  if (!globalActiveQueries.has(sessionId)) {
+    globalActiveQueries.set(sessionId, new Set());
+  }
+  globalActiveQueries.get(sessionId).add(queryKey);
+}
+
+function unregisterGlobalQuery(sessionId, queryKey) {
+  if (!sessionId) return;
+  const set = globalActiveQueries.get(sessionId);
+  if (set) {
+    set.delete(queryKey);
+    if (set.size === 0) globalActiveQueries.delete(sessionId);
+  }
+}
+
+export function getActiveSessionIds() {
+  return [...globalActiveQueries.keys()];
+}
+
 /**
  * Creates a canUseTool callback that sends permission requests over WebSocket
  * and waits for the client to approve/deny.
@@ -143,11 +168,13 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
         const costUsd = sdkMsg.total_cost_usd || 0;
         const durationMs = sdkMsg.duration_ms || 0;
         const numTurns = sdkMsg.num_turns || 0;
+        const inputTokens = sdkMsg.usage?.input_tokens || 0;
+        const outputTokens = sdkMsg.usage?.output_tokens || 0;
         const sid = resolvedSid || [...sessionIds.entries()].find(
           ([, v]) => v === claudeSessionId
         )?.[0];
         if (sid) {
-          addCost(sid, costUsd, durationMs, numTurns);
+          addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens);
         }
 
         wsSend({
@@ -156,6 +183,8 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
           num_turns: sdkMsg.num_turns,
           cost_usd: sdkMsg.total_cost_usd,
           totalCost: getTotalCost(),
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
         });
 
         if (!isWorkflow && resolvedSid) {
@@ -204,8 +233,14 @@ export function setupWebSocket(wss, sessionIds) {
     const activeQueries = new Map();
     const pendingApprovals = new Map();
 
-    // Deny all pending approvals on disconnect
+    // Abort active queries and deny all pending approvals on disconnect
     ws.on("close", () => {
+      // Abort all active SDK streams first (they may be blocked on approval)
+      for (const [, q] of activeQueries) {
+        q.abort();
+      }
+      activeQueries.clear();
+
       for (const [id, { resolve, timer }] of pendingApprovals) {
         clearTimeout(timer);
         resolve({ behavior: "deny", message: "Client disconnected" });
@@ -256,7 +291,7 @@ export function setupWebSocket(wss, sessionIds) {
 
       // Workflow handler
       if (msg.type === "workflow") {
-        const { workflow, cwd, sessionId: clientSid, projectName, permissionMode: wfPermMode } = msg;
+        const { workflow, cwd, sessionId: clientSid, projectName, permissionMode: wfPermMode, model: wfModel } = msg;
         if (!workflow || !workflow.steps) return;
 
         function wfSend(payload) {
@@ -276,16 +311,18 @@ export function setupWebSocket(wss, sessionIds) {
           const abortController = new AbortController();
           const effectivePermMode = wfPermMode || "bypass";
           const useBypass = effectivePermMode === "bypass";
+          const usePlan = effectivePermMode === "plan";
           const stepOpts = {
             cwd: cwd || process.env.HOME,
-            permissionMode: useBypass ? "bypassPermissions" : "default",
+            permissionMode: usePlan ? "plan" : (useBypass ? "bypassPermissions" : "default"),
             abortController,
             maxTurns: 30,
           };
 
-          if (!useBypass) {
+          if (!useBypass && !usePlan) {
             stepOpts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, null);
           }
+          if (wfModel) stepOpts.model = wfModel;
 
           const projectPrompt = getProjectSystemPrompt(cwd);
           if (projectPrompt) stepOpts.appendSystemPrompt = projectPrompt;
@@ -322,7 +359,7 @@ export function setupWebSocket(wss, sessionIds) {
       // Chat handler
       if (msg.type !== "chat") return;
 
-      const { message, cwd, sessionId: clientSid, projectName, chatId, permissionMode: clientPermMode } = msg;
+      const { message, cwd, sessionId: clientSid, projectName, chatId, permissionMode: clientPermMode, model: chatModel } = msg;
       const queryKey = chatId || "__default__";
 
       const sessionKey = chatId ? `${clientSid}::${chatId}` : clientSid;
@@ -335,16 +372,18 @@ export function setupWebSocket(wss, sessionIds) {
       const abortController = new AbortController();
       const effectivePermMode = clientPermMode || "bypass";
       const useBypass = effectivePermMode === "bypass";
+      const usePlan = effectivePermMode === "plan";
       const opts = {
         cwd: cwd || process.env.HOME,
-        permissionMode: useBypass ? "bypassPermissions" : "default",
+        permissionMode: usePlan ? "plan" : (useBypass ? "bypassPermissions" : "default"),
         abortController,
         maxTurns: 30,
       };
 
-      if (!useBypass) {
+      if (!useBypass && !usePlan) {
         opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, chatId);
       }
+      if (chatModel) opts.model = chatModel;
 
       const projectPrompt = getProjectSystemPrompt(cwd);
       if (projectPrompt) opts.appendSystemPrompt = projectPrompt;
@@ -358,6 +397,9 @@ export function setupWebSocket(wss, sessionIds) {
         if (resolvedSid) payload.sessionId = resolvedSid;
         ws.send(JSON.stringify(payload));
       }
+
+      // Register for global tracking if we already know the session
+      if (clientSid) registerGlobalQuery(clientSid, queryKey);
 
       try {
         const q = query({ prompt: message, options: opts });
@@ -391,6 +433,9 @@ export function setupWebSocket(wss, sessionIds) {
             wsSend({ type: "session", sessionId: ourSid });
             addMessage(resolvedSid, "user", JSON.stringify({ text: message }), chatId || null);
 
+            // Register global query tracking now that we know the session
+            if (!clientSid) registerGlobalQuery(resolvedSid, queryKey);
+
             const existingSession = getSession(ourSid);
             if (existingSession && !existingSession.title) {
               const title = message.slice(0, 100).split("\n")[0];
@@ -415,9 +460,11 @@ export function setupWebSocket(wss, sessionIds) {
           if (sdkMsg.type === "result") {
             if (sdkMsg.subtype === "success") {
               const sid = resolvedSid || [...sessionIds.entries()].find(([, v]) => v === claudeSessionId)?.[0];
-              if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0);
-              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost() });
-              if (resolvedSid) addMessage(resolvedSid, "result", JSON.stringify({ duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd }), chatId || null);
+              const inputTokens = sdkMsg.usage?.input_tokens || 0;
+              const outputTokens = sdkMsg.usage?.output_tokens || 0;
+              if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens);
+              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens });
+              if (resolvedSid) addMessage(resolvedSid, "result", JSON.stringify({ duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, input_tokens: inputTokens, output_tokens: outputTokens }), chatId || null);
             } else if (sdkMsg.subtype?.startsWith("error")) {
               wsSend({ type: "error", error: sdkMsg.errors?.join(", ") || "Unknown error" });
             }
@@ -448,6 +495,7 @@ export function setupWebSocket(wss, sessionIds) {
         }
       } finally {
         activeQueries.delete(queryKey);
+        unregisterGlobalQuery(resolvedSid, queryKey);
       }
     });
   });

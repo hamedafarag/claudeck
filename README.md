@@ -47,6 +47,8 @@ browser ──────── WebSocket ──────── server.js �
 ```
 
 - **WebSocket** streams assistant text, tool calls, and results in real time
+- **Reconnect with backoff** — exponential backoff (2s → 4s → 8s → ... → 30s cap, 0-25% jitter), distinct `ws:reconnected` event triggers state sync
+- **State sync on reconnect** — reconciles background sessions, resets streaming panes, reloads messages from DB, refreshes session list
 - **Modular frontend** — 26 ES modules (`<script type="module">`) with no bundler
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
@@ -55,8 +57,11 @@ browser ──────── WebSocket ──────── server.js �
 - **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
 - **Prepared statements** for all DB queries (no SQL injection risk)
 - **Session resumption** via stored Claude session IDs (survives page reloads)
+- **Session ID persistence** — active session saved to `localStorage`, restored on page load with auto-message loading
 - **AbortController** for mid-stream cancellation
-- **Background sessions** — streams continue server-side when switching away; client routes messages by `sessionId`
+- **Server-side abort on disconnect** — all active SDK streams are aborted when a client disconnects (no lingering processes)
+- **Global active query tracking** — server tracks which sessions have running queries; exposed via `GET /api/sessions/active`
+- **Background sessions** — streams continue server-side when switching away; client routes messages by `sessionId`; persisted to `localStorage` and reconciled on reconnect
 
 ---
 
@@ -108,13 +113,14 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 ## API Endpoints
 
 ### Sessions
-| Method | Path                        | Description                          |
-| ------ | --------------------------- | ------------------------------------ |
-| GET    | /api/sessions               | List sessions (filtered by project)  |
-| GET    | /api/sessions/search        | Search sessions by title             |
-| DELETE | /api/sessions/:id           | Delete session + all related data    |
-| PUT    | /api/sessions/:id/title     | Rename session                       |
-| PUT    | /api/sessions/:id/pin       | Toggle pin/unpin                     |
+| Method | Path                        | Description                            |
+| ------ | --------------------------- | -------------------------------------- |
+| GET    | /api/sessions               | List sessions (filtered by project)    |
+| GET    | /api/sessions/search        | Search sessions by title               |
+| GET    | /api/sessions/active        | List session IDs with in-flight queries|
+| DELETE | /api/sessions/:id           | Delete session + all related data      |
+| PUT    | /api/sessions/:id/title     | Rename session                         |
+| PUT    | /api/sessions/:id/pin       | Toggle pin/unpin                       |
 
 ### Messages
 | Method | Path                              | Description                     |
@@ -185,11 +191,13 @@ All streamed messages include `sessionId` so the client can route background ses
 ## Features
 
 ### 1. Real-Time Chat
-- Bidirectional WebSocket streaming
+- Bidirectional WebSocket streaming with exponential backoff reconnection
 - Single-mode and parallel-mode (2x2 grid) conversations
 - Session persistence with message history
 - Auto-generated session titles from first message
 - Session resumption across page reloads
+- Active session persisted to `localStorage` — page refresh returns to the same session with messages auto-loaded
+- State sync on reconnect — background sessions reconciled, streaming panes reset, messages reloaded from DB
 
 ### 2. Per-Project System Prompts
 - Custom instructions per project (stored in folders.json)
@@ -244,10 +252,16 @@ Each workflow chains prompts sequentially with context passing and step progress
 | `Shift+Enter`| New line in input         |
 
 ### 9. Response Formatting
-- Syntax highlighting via highlight.js (language auto-detection)
-- Copy button on every code block ("Copied!" feedback)
+- Syntax highlighting via highlight.js (language auto-detection for all code blocks)
+- Code blocks with language header bar (e.g. "JAVASCRIPT", "PYTHON", "BASH") — 50+ language labels
+- Copy button in the header bar ("Copied!" feedback)
 - Mermaid diagram rendering (```mermaid blocks → SVG)
-- Markdown: bold, italic, headers, inline code, code blocks
+- Rich markdown: bold, italic, strikethrough, headers (h1–h4 with border styling), inline code (purple with subtle border)
+- Unordered and ordered lists with green accent markers
+- Blockquotes with green left border and accent background
+- Tables with header row, column alignment, and hover highlighting
+- Horizontal rules, links (open in new tab)
+- User messages styled with "YOU" label badge, accent bar, and distinct background
 
 ### 10. Export
 - `/export md` — download as Markdown
@@ -335,7 +349,9 @@ Background session behavior:
 - Toast does **not** auto-close — click the arrow (→) to switch back, or × to dismiss
 - Switching via toast restores the correct project context (dropdown, system prompt, commands)
 - All messages are saved to DB during background streaming — nothing is lost
-- WebSocket disconnect triggers toasts for all background sessions as "(connection lost)"
+- Background sessions persisted to `localStorage` — survive page refreshes and disconnects
+- On WebSocket reconnect, background sessions are reconciled against the server's active query list (`GET /api/sessions/active`). Sessions no longer running get a completion toast; still-active sessions remain in the map
+- Server aborts all active SDK streams on client disconnect — no orphaned processes
 - Send/Stop buttons and thinking indicators reset correctly when backgrounding
 
 The guard dialog intercepts session clicks, project switches, and the New Session button.
@@ -473,6 +489,9 @@ Supports `{{variable}}` placeholders that show a fill-in form.
 - Green caret and input text
 - Left-border accents on messages, code blocks, and tool indicators
 - 4px border radius for sharp terminal feel
+- User messages: "YOU" label badge header with accent-dim background, 3px green left border, secondary background
+- Assistant messages: clean flowing text with styled headings (h1/h2 with bottom borders), purple inline code, green list markers
+- Code blocks: language header bar with uppercase label + copy button, rounded corners, deep background
 
 ### Theming
 All colors are CSS custom properties on `:root` (defined in `css/variables.css`). The light theme overrides them via `html[data-theme="light"]`. No page reload required.
@@ -545,7 +564,7 @@ shawkat-ai/
         ├── export.js          Export as Markdown / HTML
         ├── theme.js           Dark/light theme toggle + persistence
         ├── api.js             All fetch() calls as named async functions
-        ├── ws.js              WebSocket connection + reconnection
+        ├── ws.js              WebSocket connection + exponential backoff reconnection
         ├── commands.js        Slash command registry + autocomplete
         ├── messages.js        Message rendering (user, assistant, tool, status)
         ├── parallel.js        Parallel mode (2x2 pane grid)
@@ -559,6 +578,7 @@ shawkat-ai/
         ├── permissions.js     Permission modes, approval queue, modal logic
         ├── linear-panel.js    Linear tasks panel + create issue modal
         ├── shortcuts.js       Global keyboard shortcuts
+        ├── model-selector.js  Model selection dropdown (auto/sonnet/opus/haiku)
         └── chat.js            Send/stop logic, WS message handler, boot
 ```
 
@@ -609,7 +629,9 @@ The following data flows through the app at runtime but is **not** saved to the 
 | `shawkat-ai-theme` | Dark/light theme preference |
 | `shawkat-perm-mode` | Permission mode (bypass / confirmDangerous / confirmAll) |
 | `shawkat-linear-panel` | Linear panel open/closed state |
-| Last selected project | Remembered via the project `<select>` |
+| `shawkat-ai-session-id` | Active session ID (restored on page load with auto-message loading) |
+| `shawkat-ai-bg-sessions` | Background sessions map (serialized, survives disconnects and page refreshes) |
+| `shawkat-ai-cwd` | Last selected project path |
 
 There is no server-side user preferences table — all client preferences are lost if localStorage is cleared or a different browser is used.
 

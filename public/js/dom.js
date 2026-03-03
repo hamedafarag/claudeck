@@ -66,6 +66,9 @@ export const $ = {
   // Streaming tokens
   streamingTokens: document.getElementById("streaming-tokens"),
 
+  // Model selector
+  modelSelect: document.getElementById("model-select"),
+
   // Permissions
   permModeSelect: document.getElementById("perm-mode-select"),
   permModal: document.getElementById("perm-modal"),

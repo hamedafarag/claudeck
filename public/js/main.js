@@ -21,6 +21,7 @@ import './prompts.js';
 import './workflows.js';
 import './cost-dashboard.js';
 import './permissions.js';
+import './model-selector.js';
 import './shortcuts.js';
 import './chat.js';
 import './linear-panel.js';

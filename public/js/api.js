@@ -20,6 +20,12 @@ export async function searchSessions(query, projectPath) {
   return res.json();
 }
 
+export async function fetchActiveSessionIds() {
+  const res = await fetch("/api/sessions/active");
+  const data = await res.json();
+  return data.activeSessionIds || [];
+}
+
 export async function fetchMessages(sessionId) {
   const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages`);
   return res.json();

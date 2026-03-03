@@ -1,6 +1,6 @@
 /* ── Cost Dashboard ─────────────────────────────────── */
 .cost-dashboard-modal {
-  width: 680px;
+  width: 760px;
   max-width: 95vw;
   max-height: 80vh;
   display: flex;
@@ -9,7 +9,7 @@
 
 .cost-summary-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 18px;
 }
@@ -36,6 +36,13 @@
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--success);
+}
+
+.cost-card-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-family: var(--font-mono);
 }
 
 .cost-table-container {

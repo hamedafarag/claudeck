@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { execFile } from "child_process";
-import { getTotalCost, getProjectCost, getSessionCosts, getCostTimeline } from "../../db.js";
+import { getTotalCost, getProjectCost, getSessionCosts, getCostTimeline, getTotalTokens, getProjectTokens } from "../../db.js";
 
 const router = Router();
 
@@ -37,7 +37,9 @@ router.get("/dashboard", (req, res) => {
     const timeline = getCostTimeline(projectPath);
     const totalCost = getTotalCost();
     const projectCost = projectPath ? getProjectCost(projectPath) : null;
-    res.json({ sessions, timeline, totalCost, projectCost });
+    const totalTokens = getTotalTokens();
+    const projectTokens = projectPath ? getProjectTokens(projectPath) : null;
+    res.json({ sessions, timeline, totalCost, projectCost, totalTokens, projectTokens });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

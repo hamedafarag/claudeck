@@ -1,7 +1,8 @@
 /* ── Permission / Tool Approval ────────────────────────── */
 
-/* Header mode selector */
-.perm-mode-selector select {
+/* Header mode selector + model selector */
+.perm-mode-selector select,
+.model-selector select {
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -16,12 +17,14 @@
   appearance: none;
 }
 
-.perm-mode-selector select:hover {
+.perm-mode-selector select:hover,
+.model-selector select:hover {
   border-color: var(--text-dim);
   color: var(--text);
 }
 
-.perm-mode-selector select:focus {
+.perm-mode-selector select:focus,
+.model-selector select:focus {
   border-color: var(--accent);
   color: var(--text);
 }

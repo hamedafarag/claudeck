@@ -50,6 +50,8 @@ db.exec(`
 try { db.exec(`ALTER TABLE messages ADD COLUMN chat_id TEXT DEFAULT NULL`); } catch { /* exists */ }
 try { db.exec(`ALTER TABLE sessions ADD COLUMN title TEXT DEFAULT NULL`); } catch { /* exists */ }
 try { db.exec(`ALTER TABLE sessions ADD COLUMN pinned INTEGER DEFAULT 0`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE costs ADD COLUMN input_tokens INTEGER DEFAULT 0`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE costs ADD COLUMN output_tokens INTEGER DEFAULT 0`); } catch { /* exists */ }
 
 // Indexes for query performance
 db.exec(`
@@ -94,7 +96,7 @@ const stmts = {
     `UPDATE sessions SET last_used_at = unixepoch() WHERE id = ?`
   ),
   addCost: db.prepare(
-    `INSERT INTO costs (session_id, cost_usd, duration_ms, num_turns) VALUES (?, ?, ?, ?)`
+    `INSERT INTO costs (session_id, cost_usd, duration_ms, num_turns, input_tokens, output_tokens) VALUES (?, ?, ?, ?, ?, ?)`
   ),
   addMessage: db.prepare(
     `INSERT INTO messages (session_id, role, content, chat_id) VALUES (?, ?, ?, ?)`
@@ -140,7 +142,9 @@ const stmts = {
   getSessionCosts: db.prepare(
     `SELECT s.id, s.title, s.project_name, s.last_used_at,
             COALESCE(SUM(c.cost_usd), 0) AS total_cost,
-            COALESCE(SUM(c.num_turns), 0) AS turns
+            COALESCE(SUM(c.num_turns), 0) AS turns,
+            COALESCE(SUM(c.input_tokens), 0) AS input_tokens,
+            COALESCE(SUM(c.output_tokens), 0) AS output_tokens
      FROM sessions s
      LEFT JOIN costs c ON c.session_id = s.id
      WHERE s.project_path = ?
@@ -150,7 +154,9 @@ const stmts = {
   getSessionCostsAll: db.prepare(
     `SELECT s.id, s.title, s.project_name, s.last_used_at,
             COALESCE(SUM(c.cost_usd), 0) AS total_cost,
-            COALESCE(SUM(c.num_turns), 0) AS turns
+            COALESCE(SUM(c.num_turns), 0) AS turns,
+            COALESCE(SUM(c.input_tokens), 0) AS input_tokens,
+            COALESCE(SUM(c.output_tokens), 0) AS output_tokens
      FROM sessions s
      LEFT JOIN costs c ON c.session_id = s.id
      GROUP BY s.id
@@ -172,6 +178,17 @@ const stmts = {
      WHERE s.project_path = ? AND c.created_at >= unixepoch() - 30 * 86400
      GROUP BY date(c.created_at, 'unixepoch')
      ORDER BY date ASC`
+  ),
+  getTotalTokens: db.prepare(
+    `SELECT COALESCE(SUM(input_tokens), 0) AS input_tokens,
+            COALESCE(SUM(output_tokens), 0) AS output_tokens
+     FROM costs`
+  ),
+  getProjectTokens: db.prepare(
+    `SELECT COALESCE(SUM(c.input_tokens), 0) AS input_tokens,
+            COALESCE(SUM(c.output_tokens), 0) AS output_tokens
+     FROM costs c JOIN sessions s ON c.session_id = s.id
+     WHERE s.project_path = ?`
   ),
 };
 
@@ -198,8 +215,8 @@ export function touchSession(id) {
   stmts.touchSession.run(id);
 }
 
-export function addCost(sessionId, costUsd, durationMs, numTurns) {
-  stmts.addCost.run(sessionId, costUsd, durationMs, numTurns);
+export function addCost(sessionId, costUsd, durationMs, numTurns, inputTokens = 0, outputTokens = 0) {
+  stmts.addCost.run(sessionId, costUsd, durationMs, numTurns, inputTokens, outputTokens);
 }
 
 export function getTotalCost() {
@@ -274,6 +291,14 @@ export function getCostTimeline(projectPath) {
     return stmts.getCostTimelineByProject.all(projectPath);
   }
   return stmts.getCostTimeline.all();
+}
+
+export function getTotalTokens() {
+  return stmts.getTotalTokens.get();
+}
+
+export function getProjectTokens(projectPath) {
+  return stmts.getProjectTokens.get(projectPath);
 }
 
 export function getDb() {

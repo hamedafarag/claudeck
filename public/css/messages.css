@@ -13,7 +13,7 @@
   padding: 24px 24px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .messages:empty::after {
@@ -36,25 +36,46 @@
 }
 
 .msg-user {
-  background: var(--accent-dim);
-  border: 1px solid rgba(51,209,122,0.15);
-  border-left: 2px solid var(--accent);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 0;
   font-size: 13px;
   line-height: 1.6;
-  white-space: pre-wrap;
   color: var(--text);
+  overflow: hidden;
+}
+
+.msg-user-label {
+  display: block;
+  padding: 4px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 1.2px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-bottom: 1px solid var(--border-subtle);
+  user-select: none;
+}
+
+.msg-user-body {
+  display: block;
+  padding: 10px 14px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 html[data-theme="light"] .msg-user {
-  border-color: rgba(26,138,74,0.2);
+  border-color: var(--border);
   border-left-color: var(--accent);
 }
 
 .msg-assistant {
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text);
 }
 
 .msg-assistant .text-content {
@@ -62,31 +83,301 @@ html[data-theme="light"] .msg-user {
   word-wrap: break-word;
 }
 
-.msg-assistant .text-content p  { margin-bottom: 8px; }
+/* ── Typography — Headings ───────────────────────────── */
+.msg-assistant .text-content .md-h1,
+.msg-assistant .text-content .md-h2,
+.msg-assistant .text-content .md-h3,
+.msg-assistant .text-content .md-h4 {
+  font-family: var(--font-mono);
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin-top: 12px;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
 
-.msg-assistant .text-content code {
+.msg-assistant .text-content .md-h1 {
+  font-size: 18px;
+  font-weight: 700;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.msg-assistant .text-content .md-h2 {
+  font-size: 16px;
+  font-weight: 700;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.msg-assistant .text-content .md-h3 {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.msg-assistant .text-content .md-h4 {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ── Typography — Paragraphs & Text ──────────────────── */
+.msg-assistant .text-content p {
+  margin-bottom: 8px;
+}
+
+.msg-assistant .text-content strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.msg-assistant .text-content em {
+  font-style: italic;
+  color: var(--text);
+}
+
+.msg-assistant .text-content del {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+/* ── Typography — Inline Code ────────────────────────── */
+.msg-assistant .text-content code.inline-code {
   font-family: var(--font-mono);
   font-size: 12px;
   background: var(--bg-tertiary);
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--purple);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Legacy inline code (without .inline-code class) */
+.msg-assistant .text-content code:not([class*="language-"]):not(.inline-code):not(.hljs) {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-tertiary);
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--purple);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ── Typography — Links ──────────────────────────────── */
+.msg-assistant .text-content .md-link {
   color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.msg-assistant .text-content .md-link:hover {
+  border-bottom-color: var(--accent);
+}
+
+/* ── Typography — Horizontal Rule ────────────────────── */
+.msg-assistant .text-content .md-hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+/* ── Typography — Blockquotes ────────────────────────── */
+.msg-assistant .text-content .md-blockquote {
+  margin: 10px 0;
+  padding: 8px 16px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-dim);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── Typography — Lists ──────────────────────────────── */
+.msg-assistant .text-content .md-list {
+  margin: 8px 0;
+  padding-left: 24px;
+  line-height: 1.7;
+}
+
+.msg-assistant .text-content .md-list li {
+  margin-bottom: 3px;
+  padding-left: 4px;
+}
+
+.msg-assistant .text-content .md-ul {
+  list-style-type: disc;
+}
+
+.msg-assistant .text-content .md-ul li::marker {
+  color: var(--accent);
+}
+
+.msg-assistant .text-content .md-ol {
+  list-style-type: decimal;
+}
+
+.msg-assistant .text-content .md-ol li::marker {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ── Typography — Tables ─────────────────────────────── */
+.msg-assistant .text-content .md-table-wrap {
+  margin: 10px 0;
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.msg-assistant .text-content .md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+}
+
+.msg-assistant .text-content .md-table th {
+  background: var(--bg-tertiary);
+  color: var(--text);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.msg-assistant .text-content .md-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text);
+}
+
+.msg-assistant .text-content .md-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.msg-assistant .text-content .md-table tbody tr:hover {
+  background: var(--accent-dim);
+}
+
+/* ── Code Blocks ─────────────────────────────────────── */
+.code-block-wrapper {
+  position: relative;
+  margin: 10px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  min-height: 28px;
+}
+
+.code-lang-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
 }
 
 .msg-assistant .text-content pre {
   background: var(--bg-deep);
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--accent);
-  border-radius: var(--radius);
-  padding: 12px 16px;
+  border: none;
+  border-radius: 0;
+  padding: 14px 16px;
   overflow-x: auto;
-  margin: 8px 0;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+/* Pre blocks that aren't inside a wrapper (direct pre) */
+.msg-assistant .text-content > pre {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin: 10px 0;
 }
 
 .msg-assistant .text-content pre code {
   background: none;
   padding: 0;
+  border: none;
   color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* ── Code Copy Button ──────────────────────────────────── */
+/* When inside a header, position is flow-based */
+.code-block-header .code-copy-btn {
+  position: static;
+  opacity: 0;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: auto;
+}
+
+/* When no header exists, position absolutely */
+.code-block-wrapper > .code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  z-index: 2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-block-wrapper:hover .code-copy-btn {
+  opacity: 1;
+}
+
+.code-copy-btn:hover {
+  color: var(--text);
+  background: var(--bg-secondary);
+  border-color: var(--accent);
+}
+
+.code-copy-btn.copied {
+  color: var(--success);
+  border-color: var(--success);
+  opacity: 1;
 }
 
 /* ── Tool Indicators ──────────────────────────────────── */
@@ -235,46 +526,6 @@ html[data-theme="light"] .msg-user {
 #send-btn:disabled    { opacity: 0.25; cursor: not-allowed; }
 #stop-btn             { background: var(--error); color: #fff; }
 #stop-btn:hover       { opacity: 0.85; }
-
-/* ── Code Block Copy Button ─────────────────────────── */
-.code-block-wrapper {
-  position: relative;
-}
-
-.code-copy-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 2px 8px;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--text-dim);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
-  z-index: 2;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.code-block-wrapper:hover .code-copy-btn {
-  opacity: 1;
-}
-
-.code-copy-btn:hover {
-  color: var(--text);
-  background: var(--bg-secondary);
-  border-color: var(--accent);
-}
-
-.code-copy-btn.copied {
-  color: var(--success);
-  border-color: var(--success);
-  opacity: 1;
-}
 
 /* ── Mermaid Diagrams ───────────────────────────────── */
 .mermaid-container {

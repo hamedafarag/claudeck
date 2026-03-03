@@ -1,10 +1,38 @@
-// Background sessions — guardSwitch, toast notifications, header indicator
+// Background sessions — guardSwitch, toast notifications, header indicator, localStorage persistence
 import { $ } from './dom.js';
 import { getState, setState } from './store.js';
 import { on } from './events.js';
 import { panes } from './parallel.js';
 import { CHAT_IDS } from './constants.js';
 import { removeThinking } from './messages.js';
+
+const BG_STORAGE_KEY = "shawkat-ai-bg-sessions";
+
+// ── localStorage helpers ──
+
+function persistBgSessions() {
+  const map = getBackgroundSessions();
+  const obj = {};
+  for (const [k, v] of map.entries()) {
+    obj[k] = v;
+  }
+  try {
+    localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(obj));
+  } catch { /* quota exceeded — ignore */ }
+}
+
+function restoreBgSessions() {
+  try {
+    const raw = localStorage.getItem(BG_STORAGE_KEY);
+    if (!raw) return;
+    const obj = JSON.parse(raw);
+    const map = getBackgroundSessions();
+    for (const [k, v] of Object.entries(obj)) {
+      map.set(k, v);
+    }
+    updateHeaderIndicator();
+  } catch { /* corrupted data — ignore */ }
+}
 
 // ── Helpers ──
 
@@ -36,16 +64,36 @@ export function addBackgroundSession(sessionId, title, projectName, projectPath)
   const map = getBackgroundSessions();
   map.set(sessionId, { title, projectName, projectPath, startedAt: Date.now() });
   updateHeaderIndicator();
+  persistBgSessions();
 }
 
 export function removeBackgroundSession(sessionId) {
   const map = getBackgroundSessions();
   map.delete(sessionId);
   updateHeaderIndicator();
+  persistBgSessions();
 }
 
 export function isBackgroundSession(sessionId) {
   return getBackgroundSessions().has(sessionId);
+}
+
+/**
+ * Reconcile background sessions against the server's active query list.
+ * Sessions NOT in activeSessionIds → show completion toast, remove from map.
+ * Sessions still active → keep in map.
+ */
+export function reconcileBackgroundSessions(activeSessionIds) {
+  const activeSet = new Set(activeSessionIds);
+  const map = getBackgroundSessions();
+  for (const [sessionId, info] of [...map.entries()]) {
+    if (!activeSet.has(sessionId)) {
+      showCompletionToast(sessionId, info.title || "Background session", info.projectPath || "");
+      map.delete(sessionId);
+    }
+  }
+  updateHeaderIndicator();
+  persistBgSessions();
 }
 
 export function showCompletionToast(sessionId, title, projectPath) {
@@ -246,16 +294,15 @@ function initConfirmDialog() {
 }
 
 // ── WS disconnect handler ──
+// Non-destructive: bg sessions are persisted in localStorage and will be
+// reconciled on reconnect instead of being cleared.
 
 on("ws:disconnected", () => {
-  const map = getBackgroundSessions();
-  for (const [sessionId, info] of map.entries()) {
-    showCompletionToast(sessionId, `${info.title} (connection lost)`);
-  }
-  map.clear();
-  updateHeaderIndicator();
+  // No-op: bg sessions survive disconnects via localStorage persistence.
+  // reconcileBackgroundSessions() is called on ws:reconnected.
 });
 
 // ── Init ──
 
+restoreBgSessions();
 initConfirmDialog();
