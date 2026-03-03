@@ -10,11 +10,12 @@ A terminal-style web UI for Claude Code. Chat with Claude, run workflows, manage
 
 ```bash
 npm install
+cp .env.example .env   # configure LINEAR_API_KEY etc.
 npm start
 # Open http://localhost:9009
 ```
 
-Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth login`).
+Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth login`). Installable as a PWA from Chrome's address bar.
 
 ---
 
@@ -23,10 +24,11 @@ Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth lo
 | Layer     | Technology                                                        |
 | --------- | ----------------------------------------------------------------- |
 | Runtime   | Node.js 18+ (ESM)                                                |
-| Backend   | Express 4, WebSocket (ws 8)                                      |
+| Backend   | Express 4, WebSocket (ws 8), dotenv                              |
 | AI SDK    | @anthropic-ai/claude-code ^1                                     |
 | Database  | SQLite 3 via better-sqlite3 ^11, WAL mode, prepared statements   |
 | Frontend  | Vanilla JavaScript ES modules (no bundler), CSS custom properties |
+| PWA       | Web App Manifest, Service Worker (pass-through), standalone display |
 | Rendering | highlight.js 11.9 (syntax), Mermaid 10 (diagrams) — both via CDN |
 
 ## Architecture
@@ -34,21 +36,21 @@ Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth lo
 ```
 browser ──────── WebSocket ──────── server.js ──────── Claude Code SDK
    |                                    |
-   ├── js/main.js (entry point)       ├── server/routes/ (8 route modules)
+   ├── js/main.js (entry point)       ├── server/routes/ (9 route modules)
    │   ├── store.js (reactive state)  ├── server/ws-handler.js
    │   ├── ws.js (WebSocket client)   ├── db.js (SQLite)
    │   ├── api.js (fetch calls)       ├── folders.json (projects)
    │   ├── chat.js, messages.js ...   ├── prompts.json (16 templates)
-   │   └── 17 more modules            └── workflows.json (3 workflows)
-   ├── css/ (14 focused stylesheets)
+   │   └── 19 more modules            └── workflows.json (3 workflows)
+   ├── css/ (16 focused stylesheets)
    └── index.html
 ```
 
 - **WebSocket** streams assistant text, tool calls, and results in real time
-- **Modular frontend** — 23 ES modules (`<script type="module">`) with no bundler
+- **Modular frontend** — 26 ES modules (`<script type="module">`) with no bundler
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
-- **Modular backend** — 8 Express Router modules + shared WS handler
+- **Modular backend** — 9 Express Router modules + shared WS handler
 - **SQLite + WAL** persists sessions, messages, costs, and Claude session mappings
 - **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
 - **Prepared statements** for all DB queries (no SQL injection risk)
@@ -141,6 +143,14 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | GET    | /api/workflows     | List workflows                           |
 | GET    | /api/files         | Recursive file listing (depth 3, max 500)|
 | GET    | /api/files/content | Read file content (50KB limit)           |
+
+### Linear Integration
+| Method | Path                              | Description                                      |
+| ------ | --------------------------------- | ------------------------------------------------ |
+| GET    | /api/linear/issues                | List assigned open issues for the authenticated user |
+| GET    | /api/linear/teams                 | List Linear teams                                |
+| GET    | /api/linear/teams/:teamId/states  | List workflow states for a team                  |
+| POST   | /api/linear/issues                | Create a new issue (title, teamId, description, stateId) |
 
 ### Stats & System
 | Method | Path                 | Description                              |
@@ -305,7 +315,14 @@ Behavior:
 - Mode persisted to `localStorage`
 - WebSocket disconnect auto-denies all pending approvals
 
-### 19. Background Sessions
+### 19. PWA / Install as App
+- Installable from Chrome's address bar (⊕ icon) on localhost
+- Runs in a standalone window (no browser chrome)
+- Web App Manifest with app name, theme color, and icons (192x192 + 512x512)
+- Minimal service worker with fetch pass-through (no offline caching — localhost app)
+- Apple touch icon and `apple-mobile-web-app-capable` meta for iOS/Safari
+
+### 20. Background Sessions
 When switching sessions or projects while Claude is mid-stream, a confirmation dialog offers three options:
 - **Cancel** — stay on the current session, revert the project dropdown
 - **Abort Session** — stop generation immediately, then switch
@@ -322,6 +339,18 @@ Background session behavior:
 - Send/Stop buttons and thinking indicators reset correctly when backgrounding
 
 The guard dialog intercepts session clicks, project switches, and the New Session button.
+
+### 21. Linear Integration
+Side panel for viewing and creating Linear issues directly from the app:
+- **Tasks panel** — toggle via header button; shows assigned open issues with priority, state, labels, due date
+- **Create issue** — modal with title, description, team selector, and workflow state (loaded dynamically per team)
+- **Auto-assign** — new issues auto-assigned via `LINEAR_ASSIGNEE_EMAIL` env var
+- 60-second client-side cache with manual refresh
+- Panel state (open/closed) persisted to `localStorage`
+- Requires `LINEAR_API_KEY` env var (gracefully degrades with hint if missing)
+
+### 22. Persistent Confirmation Modals
+The background-session and permission approval modals are persistent — they can only be dismissed via their action buttons. Overlay clicks, Escape key, and close buttons are disabled to prevent accidental dismissal of critical decisions.
 
 ---
 
@@ -385,6 +414,14 @@ Autocomplete triggers on `/` with keyboard navigation (arrow keys, Tab, Enter). 
 ---
 
 ## Configuration
+
+### .env — Environment Variables
+```bash
+PORT=9009                        # Server port (default 9009)
+LINEAR_API_KEY=                  # Linear API key for issue integration
+LINEAR_ASSIGNEE_EMAIL=           # Auto-assign new issues to this email
+```
+Copy `.env.example` to `.env` and fill in values. The app works without any env vars configured.
 
 ### folders.json — Projects
 ```json
@@ -453,6 +490,7 @@ All colors are CSS custom properties on `:root` (defined in `css/variables.css`)
 shawkat-ai/
 ├── server.js              Express entry point (~70 lines)
 ├── db.js                  SQLite layer with indexes + prepared statements
+├── .env.example           Environment variable template
 ├── server/
 │   ├── ws-handler.js      WebSocket handler with shared processSdkStream()
 │   └── routes/
@@ -463,14 +501,20 @@ shawkat-ai/
 │       ├── stats.js       Cost stats + dashboard + account info
 │       ├── files.js       File listing + content reading
 │       ├── workflows.js   Workflow listing
-│       └── exec.js        Shell command execution
-├── package.json           4 dependencies
+│       ├── exec.js        Shell command execution
+│       └── linear.js      Linear API proxy (issues, teams, states)
+├── package.json           5 dependencies
 ├── folders.json           Project configurations
 ├── prompts.json           16 prompt templates
 ├── workflows.json         3 multi-step workflows
 ├── data.db                SQLite database (auto-created)
 └── public/
-    ├── index.html         HTML structure + modals
+    ├── index.html         HTML structure + modals + SW registration
+    ├── manifest.json      PWA Web App Manifest
+    ├── sw.js              Service worker (fetch pass-through)
+    ├── icons/
+    │   ├── icon-192.png   App icon 192x192
+    │   └── icon-512.png   App icon 512x512
     ├── style.css          CSS entry point (@import hub)
     ├── css/
     │   ├── variables.css      CSS custom properties + light theme
@@ -486,6 +530,7 @@ shawkat-ai/
     │   ├── cost-dashboard.css Cost dashboard cards, table, chart
     │   ├── background-sessions.css Confirm dialog, toast notifications, bg indicator
     │   ├── permissions.css    Permission modal + mode selector styles
+    │   ├── linear-panel.css   Linear tasks panel + create issue modal
     │   ├── theme.css          Scanline overlay, animations, scrollbar
     │   └── print.css          Print-friendly styles
     └── js/
@@ -512,6 +557,7 @@ shawkat-ai/
         ├── cost-dashboard.js  Cost dashboard (cards, table, bar chart)
         ├── background-sessions.js Guard switch, bg tracking, toasts, indicator
         ├── permissions.js     Permission modes, approval queue, modal logic
+        ├── linear-panel.js    Linear tasks panel + create issue modal
         ├── shortcuts.js       Global keyboard shortcuts
         └── chat.js            Send/stop logic, WS message handler, boot
 ```
@@ -562,6 +608,7 @@ The following data flows through the app at runtime but is **not** saved to the 
 | --- | ---- |
 | `shawkat-ai-theme` | Dark/light theme preference |
 | `shawkat-perm-mode` | Permission mode (bypass / confirmDangerous / confirmAll) |
+| `shawkat-linear-panel` | Linear panel open/closed state |
 | Last selected project | Remembered via the project `<select>` |
 
 There is no server-side user preferences table — all client preferences are lost if localStorage is cleared or a different browser is used.
