@@ -6,6 +6,7 @@ import * as api from './api.js';
 import { commandRegistry, registerCommand } from './commands.js';
 import { getPane, panes } from './parallel.js';
 import { showThinking, addStatus } from './messages.js';
+import { getPermissionMode } from './permissions.js';
 
 export async function loadWorkflows() {
   try {
@@ -96,6 +97,7 @@ export function startWorkflow(workflow, pane) {
     cwd,
     sessionId: getState("sessionId"),
     projectName,
+    permissionMode: getPermissionMode(),
   }));
 
   showThinking(`Running workflow: ${workflow.title}...`, pane);

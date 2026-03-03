@@ -1,0 +1,169 @@
+/* ── Permission / Tool Approval ────────────────────────── */
+
+/* Header mode selector */
+.perm-mode-selector select {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s, color 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.perm-mode-selector select:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.perm-mode-selector select:focus {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* Permission modal */
+.perm-modal {
+  width: 520px;
+  max-width: 92vw;
+}
+
+.perm-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perm-modal-header h3 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perm-tool-icon {
+  color: var(--warning);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.perm-bg-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--warning);
+  background: rgba(229, 165, 10, 0.12);
+  border: 1px solid rgba(229, 165, 10, 0.3);
+  border-radius: var(--radius);
+  padding: 2px 8px;
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.perm-modal-summary {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border-left: 3px solid var(--accent);
+  padding: 8px 12px;
+  margin: 12px 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.perm-modal-details {
+  margin: 8px 0 12px;
+}
+
+.perm-modal-details summary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.perm-modal-details summary:hover {
+  color: var(--text-secondary);
+}
+
+.perm-modal-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-top: 8px;
+  max-height: 200px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.perm-always-allow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.perm-always-allow input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.perm-deny-btn {
+  background: transparent;
+  border: 1px solid var(--error);
+  border-radius: var(--radius);
+  padding: 7px 14px;
+  color: var(--error);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.perm-deny-btn:hover {
+  background: rgba(237, 51, 59, 0.1);
+  color: #ff6b6f;
+}
+
+.perm-allow-btn {
+  background: var(--accent-solid);
+  border: none;
+  border-radius: var(--radius);
+  padding: 7px 14px;
+  color: #000;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.perm-allow-btn:hover {
+  background: var(--accent);
+  box-shadow: var(--glow-strong);
+}

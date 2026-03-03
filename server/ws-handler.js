@@ -12,6 +12,62 @@ import {
 } from "../db.js";
 import { getProjectSystemPrompt } from "./routes/projects.js";
 
+// Tools that are read-only and safe to auto-approve in "confirmDangerous" mode
+const READ_ONLY_TOOLS = new Set([
+  "Read", "Glob", "Grep", "WebSearch", "WebFetch", "Agent",
+  "TodoRead", "TaskRead", "NotebookRead", "LS", "View", "ListFiles",
+  "TaskList", "TaskGet",
+]);
+
+const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Creates a canUseTool callback that sends permission requests over WebSocket
+ * and waits for the client to approve/deny.
+ */
+function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId) {
+  return async (toolName, toolInput, options) => {
+    // Bypass mode — auto-approve everything
+    if (permissionMode === "bypass") {
+      return { behavior: "allow", updatedInput: toolInput };
+    }
+
+    // Confirm-dangerous mode — auto-approve read-only tools
+    if (permissionMode === "confirmDangerous" && READ_ONLY_TOOLS.has(toolName)) {
+      return { behavior: "allow", updatedInput: toolInput };
+    }
+
+    // Send permission request to client and wait for response
+    const id = crypto.randomUUID();
+    const payload = { type: "permission_request", id, toolName, input: toolInput };
+    if (chatId) payload.chatId = chatId;
+
+    if (ws.readyState !== 1) {
+      return { behavior: "deny", message: "WebSocket disconnected" };
+    }
+
+    ws.send(JSON.stringify(payload));
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        pendingApprovals.delete(id);
+        resolve({ behavior: "deny", message: "Approval timed out (5 minutes)" });
+      }, APPROVAL_TIMEOUT_MS);
+
+      // Clean up if aborted via signal
+      if (options?.signal) {
+        options.signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          pendingApprovals.delete(id);
+          resolve({ behavior: "deny", message: "Aborted by user" });
+        }, { once: true });
+      }
+
+      pendingApprovals.set(id, { resolve, timer, toolInput });
+    });
+  };
+}
+
 // Shared SDK stream processor — deduplicates chat and workflow message parsing
 async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, cwd, projectName, isWorkflow, stepLabel }) {
   let claudeSessionId = null;
@@ -146,6 +202,16 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
 export function setupWebSocket(wss, sessionIds) {
   wss.on("connection", (ws) => {
     const activeQueries = new Map();
+    const pendingApprovals = new Map();
+
+    // Deny all pending approvals on disconnect
+    ws.on("close", () => {
+      for (const [id, { resolve, timer }] of pendingApprovals) {
+        clearTimeout(timer);
+        resolve({ behavior: "deny", message: "Client disconnected" });
+      }
+      pendingApprovals.clear();
+    });
 
     ws.on("message", async (raw) => {
       let msg;
@@ -164,12 +230,33 @@ export function setupWebSocket(wss, sessionIds) {
           for (const q of activeQueries.values()) q.abort();
           activeQueries.clear();
         }
+        // Also deny any pending approvals on abort
+        for (const [id, { resolve, timer }] of pendingApprovals) {
+          clearTimeout(timer);
+          resolve({ behavior: "deny", message: "Aborted by user" });
+        }
+        pendingApprovals.clear();
+        return;
+      }
+
+      // Permission response handler
+      if (msg.type === "permission_response") {
+        const pending = pendingApprovals.get(msg.id);
+        if (pending) {
+          clearTimeout(pending.timer);
+          pendingApprovals.delete(msg.id);
+          if (msg.behavior === "allow") {
+            pending.resolve({ behavior: "allow", updatedInput: pending.toolInput });
+          } else {
+            pending.resolve({ behavior: "deny", message: "Denied by user" });
+          }
+        }
         return;
       }
 
       // Workflow handler
       if (msg.type === "workflow") {
-        const { workflow, cwd, sessionId: clientSid, projectName } = msg;
+        const { workflow, cwd, sessionId: clientSid, projectName, permissionMode: wfPermMode } = msg;
         if (!workflow || !workflow.steps) return;
 
         function wfSend(payload) {
@@ -187,13 +274,18 @@ export function setupWebSocket(wss, sessionIds) {
           wfSend({ type: "workflow_step", stepIndex: i, status: "running" });
 
           const abortController = new AbortController();
+          const effectivePermMode = wfPermMode || "bypass";
+          const useBypass = effectivePermMode === "bypass";
           const stepOpts = {
             cwd: cwd || process.env.HOME,
-            permissionMode: "bypassPermissions",
-            allowDangerouslySkipPermissions: true,
+            permissionMode: useBypass ? "bypassPermissions" : "default",
             abortController,
             maxTurns: 30,
           };
+
+          if (!useBypass) {
+            stepOpts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, null);
+          }
 
           const projectPrompt = getProjectSystemPrompt(cwd);
           if (projectPrompt) stepOpts.appendSystemPrompt = projectPrompt;
@@ -230,7 +322,7 @@ export function setupWebSocket(wss, sessionIds) {
       // Chat handler
       if (msg.type !== "chat") return;
 
-      const { message, cwd, sessionId: clientSid, projectName, chatId } = msg;
+      const { message, cwd, sessionId: clientSid, projectName, chatId, permissionMode: clientPermMode } = msg;
       const queryKey = chatId || "__default__";
 
       const sessionKey = chatId ? `${clientSid}::${chatId}` : clientSid;
@@ -241,13 +333,18 @@ export function setupWebSocket(wss, sessionIds) {
       }
 
       const abortController = new AbortController();
+      const effectivePermMode = clientPermMode || "bypass";
+      const useBypass = effectivePermMode === "bypass";
       const opts = {
         cwd: cwd || process.env.HOME,
-        permissionMode: "bypassPermissions",
-        allowDangerouslySkipPermissions: true,
+        permissionMode: useBypass ? "bypassPermissions" : "default",
         abortController,
         maxTurns: 30,
       };
+
+      if (!useBypass) {
+        opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, chatId);
+      }
 
       const projectPrompt = getProjectSystemPrompt(cwd);
       if (projectPrompt) opts.appendSystemPrompt = projectPrompt;

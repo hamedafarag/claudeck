@@ -153,9 +153,10 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 ### WebSocket (`/ws`)
 
 **Outgoing** (client to server):
-- `{ type: "chat", message, cwd, sessionId, projectName, chatId }` — send a message
-- `{ type: "workflow", workflow, cwd, sessionId, projectName }` — run a workflow
+- `{ type: "chat", message, cwd, sessionId, projectName, chatId, permissionMode }` — send a message
+- `{ type: "workflow", workflow, cwd, sessionId, projectName, permissionMode }` — run a workflow
 - `{ type: "abort", chatId? }` — stop generation
+- `{ type: "permission_response", id, behavior }` — approve (`"allow"`) or deny (`"deny"`) a tool call
 
 **Incoming** (server to client):
 - `session` — session created/resumed
@@ -165,6 +166,7 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 - `result` — query complete (cost, duration, turns)
 - `error` / `aborted` / `done` — terminal states
 - `workflow_started` / `workflow_step` / `workflow_completed` — workflow progress
+- `permission_request` — tool approval needed (id, toolName, input)
 
 All streamed messages include `sessionId` so the client can route background session messages correctly.
 
@@ -282,7 +284,28 @@ Each workflow chains prompts sequentially with context passing and step progress
 - Switches Mermaid theme (dark / default)
 - `/theme` slash command
 
-### 18. Background Sessions
+### 18. Permission / Tool Approval
+Three permission modes selectable from the header dropdown:
+- **Bypass** — all tool calls auto-approved (original behavior)
+- **Confirm Writes** (default) — read-only tools (Read, Glob, Grep, WebSearch, etc.) auto-approve; write/execute tools (Bash, Edit, Write, etc.) show an approval modal
+- **Confirm All** — every tool call requires manual approval
+
+Approval modal shows:
+- Tool name and summary (file path, command, or pattern)
+- Collapsible full JSON input
+- "Always allow {tool} this session" checkbox — auto-approves that tool for the rest of the session
+- Deny (red) and Allow (green) buttons
+- Background session badge when the request comes from a backgrounded session
+
+Behavior:
+- Multiple permission requests queue up — one modal at a time (important for parallel mode)
+- Escape key sends deny response
+- Always-allow set is per browser session only (cleared on refresh or `/new`) for security
+- 5-minute timeout for unanswered requests
+- Mode persisted to `localStorage`
+- WebSocket disconnect auto-denies all pending approvals
+
+### 19. Background Sessions
 When switching sessions or projects while Claude is mid-stream, a confirmation dialog offers three options:
 - **Cancel** — stay on the current session, revert the project dropdown
 - **Abort Session** — stop generation immediately, then switch
@@ -418,7 +441,7 @@ Supports `{{variable}}` placeholders that show a fill-in form.
 All colors are CSS custom properties on `:root` (defined in `css/variables.css`). The light theme overrides them via `html[data-theme="light"]`. No page reload required.
 
 ### Layout
-- **Header** (36px): connection status, background session indicator, account info, active project name (centered), cost display, token counter
+- **Header** (36px): connection status, background session indicator, permission mode selector, account info, active project name (centered), cost display, token counter
 - **Sidebar** (272px): project selector, session search, session list, parallel toggle
 - **Main area**: messages (820px max-width), input bar, toolbox/workflow panels
 
@@ -462,6 +485,7 @@ shawkat-ai/
     │   ├── file-picker.css    File picker modal + attach badge
     │   ├── cost-dashboard.css Cost dashboard cards, table, chart
     │   ├── background-sessions.css Confirm dialog, toast notifications, bg indicator
+    │   ├── permissions.css    Permission modal + mode selector styles
     │   ├── theme.css          Scanline overlay, animations, scrollbar
     │   └── print.css          Print-friendly styles
     └── js/
@@ -487,6 +511,7 @@ shawkat-ai/
         ├── workflows.js       Workflow panel + execution
         ├── cost-dashboard.js  Cost dashboard (cards, table, bar chart)
         ├── background-sessions.js Guard switch, bg tracking, toasts, indicator
+        ├── permissions.js     Permission modes, approval queue, modal logic
         ├── shortcuts.js       Global keyboard shortcuts
         └── chat.js            Send/stop logic, WS message handler, boot
 ```
@@ -495,6 +520,7 @@ shawkat-ai/
 
 ## Security
 
+- **Tool approval** — three permission modes (bypass, confirm writes, confirm all) with approve/deny modal for dangerous tool calls
 - **Path traversal protection** on file read endpoint
 - **File size limits** (50KB) on content reading
 - **Directory depth limits** (3 levels) on file listing
@@ -535,6 +561,7 @@ The following data flows through the app at runtime but is **not** saved to the 
 | Key | Data |
 | --- | ---- |
 | `shawkat-ai-theme` | Dark/light theme preference |
+| `shawkat-perm-mode` | Permission mode (bypass / confirmDangerous / confirmAll) |
 | Last selected project | Remembered via the project `<select>` |
 
 There is no server-side user preferences table — all client preferences are lost if localStorage is cleared or a different browser is used.

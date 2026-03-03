@@ -66,6 +66,18 @@ export const $ = {
   // Streaming tokens
   streamingTokens: document.getElementById("streaming-tokens"),
 
+  // Permissions
+  permModeSelect: document.getElementById("perm-mode-select"),
+  permModal: document.getElementById("perm-modal"),
+  permModalToolName: document.getElementById("perm-modal-tool-name"),
+  permModalSummary: document.getElementById("perm-modal-summary"),
+  permModalInput: document.getElementById("perm-modal-input"),
+  permAlwaysAllowCb: document.getElementById("perm-always-allow-cb"),
+  permAlwaysAllowTool: document.getElementById("perm-always-allow-tool"),
+  permAllowBtn: document.getElementById("perm-allow-btn"),
+  permDenyBtn: document.getElementById("perm-deny-btn"),
+  permModalClose: document.getElementById("perm-modal-close"),
+
   // Background sessions
   bgConfirmModal: document.getElementById("bg-confirm-modal"),
   bgConfirmCancel: document.getElementById("bg-confirm-cancel"),

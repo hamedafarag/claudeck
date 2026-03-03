@@ -20,5 +20,6 @@ import './attachments.js';
 import './prompts.js';
 import './workflows.js';
 import './cost-dashboard.js';
+import './permissions.js';
 import './shortcuts.js';
 import './chat.js';

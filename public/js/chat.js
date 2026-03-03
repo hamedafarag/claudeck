@@ -18,6 +18,7 @@ import { applyTheme } from './theme.js';
 import { exportAsMarkdown, exportAsHtml } from './export.js';
 import * as api from './api.js';
 import { isBackgroundSession, removeBackgroundSession, showCompletionToast } from './background-sessions.js';
+import { enqueuePermissionRequest, getPermissionMode, clearSessionPermissions } from './permissions.js';
 
 export function sendMessage(pane) {
   pane = pane || getPane(null);
@@ -115,6 +116,7 @@ export function sendMessage(pane) {
     cwd,
     sessionId: getState("sessionId"),
     projectName,
+    permissionMode: getPermissionMode(),
   };
 
   if (parallelMode && pane.chatId) {
@@ -169,7 +171,15 @@ _setChatFns({ sendMessage, stopGeneration });
 // Handle WebSocket messages
 function handleServerMessage(msg) {
   // Route background session messages — skip rendering, only handle terminal states
+  // Permission requests must pass through so the user can approve/deny tools
   if (msg.sessionId && isBackgroundSession(msg.sessionId)) {
+    if (msg.type === "permission_request") {
+      const bgMap = getState("backgroundSessions");
+      const bgInfo = bgMap.get(msg.sessionId);
+      msg._bgSessionTitle = bgInfo?.title || "Background session";
+      enqueuePermissionRequest(msg);
+      return;
+    }
     if (msg.type === "done") {
       const bgMap = getState("backgroundSessions");
       const info = bgMap.get(msg.sessionId);
@@ -251,6 +261,10 @@ function handleServerMessage(msg) {
       removeThinking(pane);
       addStatus("Workflow completed", false, pane);
       break;
+
+    case "permission_request":
+      enqueuePermissionRequest(msg);
+      break;
   }
 }
 
@@ -271,6 +285,7 @@ registerCommand("new", {
   category: "app",
   description: "Start a new session",
   execute() {
+    clearSessionPermissions();
     $.newSessionBtn.click();
   },
 });

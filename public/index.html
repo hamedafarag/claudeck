@@ -19,6 +19,14 @@
         <span id="bg-session-badge">0</span> bg
       </span>
       <span class="term-sep">&middot;</span>
+      <span class="perm-mode-selector">
+        <select id="perm-mode-select" title="Tool approval mode">
+          <option value="bypass">bypass</option>
+          <option value="confirmDangerous" selected>confirm writes</option>
+          <option value="confirmAll">confirm all</option>
+        </select>
+      </span>
+      <span class="term-sep">&middot;</span>
       <span class="term-user" id="account-email">---</span>
       <span class="term-plan" id="account-plan"></span>
     </div>
@@ -233,6 +241,30 @@
         <button id="bg-confirm-cancel" class="modal-btn-cancel">Cancel</button>
         <button id="bg-confirm-abort" class="modal-btn-cancel bg-confirm-abort-btn">Abort Session</button>
         <button id="bg-confirm-background" class="modal-btn-save">Continue in Background</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Permission Approval Modal -->
+  <div id="perm-modal" class="modal-overlay hidden">
+    <div class="modal perm-modal">
+      <div class="modal-header perm-modal-header">
+        <h3><span class="perm-tool-icon">&#9888;</span> <span id="perm-modal-tool-name">Tool Approval</span></h3>
+        <button id="perm-modal-close" class="modal-close">&times;</button>
+      </div>
+      <span id="perm-bg-badge" class="perm-bg-badge hidden"></span>
+      <div id="perm-modal-summary" class="perm-modal-summary"></div>
+      <details class="perm-modal-details">
+        <summary>Full input</summary>
+        <pre id="perm-modal-input" class="perm-modal-input"></pre>
+      </details>
+      <label class="perm-always-allow">
+        <input type="checkbox" id="perm-always-allow-cb">
+        Always allow <strong id="perm-always-allow-tool"></strong> this session
+      </label>
+      <div class="modal-actions">
+        <button id="perm-deny-btn" class="perm-deny-btn">Deny</button>
+        <button id="perm-allow-btn" class="perm-allow-btn">Allow</button>
       </div>
     </div>
   </div>
