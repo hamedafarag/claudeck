@@ -102,6 +102,42 @@ export async function fetchFileContent(base, filePath) {
   return res.json();
 }
 
+export async function fetchFileTree(base, dir = "") {
+  let url = `/api/files/tree?base=${encodeURIComponent(base)}`;
+  if (dir) url += `&dir=${encodeURIComponent(dir)}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+export async function searchFiles(base, query) {
+  const url = `/api/files/search?base=${encodeURIComponent(base)}&q=${encodeURIComponent(query)}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+export async function fetchMcpServers() {
+  const res = await fetch("/api/mcp/servers");
+  return res.json();
+}
+
+export async function saveMcpServer(name, config) {
+  const res = await fetch(`/api/mcp/servers/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) throw new Error("Failed to save MCP server");
+  return res.json();
+}
+
+export async function deleteMcpServer(name) {
+  const res = await fetch(`/api/mcp/servers/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete MCP server");
+  return res.json();
+}
+
 export async function fetchAccountInfo() {
   const res = await fetch("/api/account");
   return res.json();

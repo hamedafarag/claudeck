@@ -1,28 +1,13 @@
-// Linear Panel — fetch, render, toggle
+// Linear Panel — fetch, render (toggle delegated to right-panel.js)
 import { $ } from "./dom.js";
+import { on } from "./events.js";
 import { fetchLinearIssues, fetchLinearTeams, fetchLinearTeamStates, createLinearIssue } from "./api.js";
 
-const STORAGE_KEY = "shawkat-linear-panel";
 const CACHE_TTL = 60_000; // 60s
 
 let cachedData = null;
 let cacheTime = 0;
 let loading = false;
-
-function isPanelOpen() {
-  return !$.linearPanel.classList.contains("hidden");
-}
-
-export function toggleLinearPanel(forceState) {
-  const open = forceState !== undefined ? forceState : !isPanelOpen();
-  $.linearPanel.classList.toggle("hidden", !open);
-  $.linearToggleBtn.classList.toggle("active", open);
-  localStorage.setItem(STORAGE_KEY, open ? "open" : "closed");
-
-  if (open && (!cachedData || Date.now() - cacheTime > CACHE_TTL)) {
-    loadIssues();
-  }
-}
 
 async function loadIssues() {
   if (loading) return;
@@ -66,11 +51,11 @@ function renderEmpty(msg) {
 
 function priorityColor(priority) {
   switch (priority) {
-    case 1: return "var(--error)";   // urgent
-    case 2: return "var(--warning)"; // high
-    case 3: return "var(--accent)";  // medium
-    case 4: return "var(--text-dim)"; // low
-    default: return "var(--border)"; // none
+    case 1: return "var(--error)";
+    case 2: return "var(--warning)";
+    case 3: return "var(--accent)";
+    case 4: return "var(--text-dim)";
+    default: return "var(--border)";
   }
 }
 
@@ -187,20 +172,19 @@ async function handleCreateSubmit(e) {
       loadIssues();
       closeCreateModal();
     } else {
-      $.linearCreateSubmit.textContent = "Failed — retry";
+      $.linearCreateSubmit.textContent = "Failed \u2014 retry";
       $.linearCreateSubmit.disabled = false;
     }
   } catch {
-    $.linearCreateSubmit.textContent = "Failed — retry";
+    $.linearCreateSubmit.textContent = "Failed \u2014 retry";
     $.linearCreateSubmit.disabled = false;
   }
 }
 
 // Init
 export function initLinearPanel() {
-  $.linearToggleBtn.addEventListener("click", () => toggleLinearPanel());
+  // Refresh button
   $.linearRefreshBtn.addEventListener("click", () => loadIssues());
-  $.linearCloseBtn.addEventListener("click", () => toggleLinearPanel(false));
 
   // Create issue
   $.linearCreateBtn.addEventListener("click", () => openCreateModal());
@@ -212,11 +196,18 @@ export function initLinearPanel() {
   $.linearCreateTeam.addEventListener("change", handleTeamChange);
   $.linearCreateForm.addEventListener("submit", handleCreateSubmit);
 
-  // Restore state
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved === "open") {
-    toggleLinearPanel(true);
-  }
+  // Listen for right panel tab changes — auto-fetch when Tasks tab opens
+  on("rightPanel:opened", (tabName) => {
+    if (tabName === "tasks" && (!cachedData || Date.now() - cacheTime > CACHE_TTL)) {
+      loadIssues();
+    }
+  });
+
+  on("rightPanel:tabChanged", (tabName) => {
+    if (tabName === "tasks" && (!cachedData || Date.now() - cacheTime > CACHE_TTL)) {
+      loadIssues();
+    }
+  });
 }
 
 initLinearPanel();

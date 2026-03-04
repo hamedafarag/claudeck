@@ -46,11 +46,17 @@
       <span class="term-plan" id="account-plan"></span>
     </div>
     <span class="term-project-name" id="header-project-name"></span>
-    <button id="linear-toggle-btn" class="linear-toggle-btn" title="Toggle Linear tasks panel">
+    <button id="mcp-toggle-btn" class="right-panel-toggle-btn" title="MCP Server Management">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
-      Tasks
+      MCP
+    </button>
+    <button id="right-panel-toggle-btn" class="right-panel-toggle-btn" title="Toggle right panel (Cmd+B)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/>
+      </svg>
+      Panel
     </button>
     <div class="term-costs">
       <span id="streaming-tokens" class="streaming-tokens hidden">~0 tokens</span>
@@ -142,23 +148,71 @@
       <div id="workflow-panel" class="toolbox-panel hidden"></div>
     </main>
 
-    <!-- Linear Tasks Panel -->
-    <aside id="linear-panel" class="linear-panel hidden">
-      <div class="linear-panel-header">
-        <h3>Linear Tasks</h3>
-        <div class="linear-panel-actions">
-          <button id="linear-create-btn" title="Create issue">+</button>
-          <button id="linear-refresh-btn" title="Refresh issues">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-            </svg>
-          </button>
-          <button id="linear-close-btn" title="Close panel">&times;</button>
+    <!-- Right Panel (tabbed: Tasks / Files / Git) -->
+    <aside id="right-panel" class="right-panel hidden">
+      <div id="right-panel-resize" class="right-panel-resize"></div>
+      <div class="right-panel-tab-bar">
+        <button class="right-panel-tab active" data-tab="tasks">Tasks</button>
+        <button class="right-panel-tab" data-tab="files">Files</button>
+        <button class="right-panel-tab" data-tab="git">Git</button>
+        <button id="right-panel-close" class="right-panel-close" title="Close panel">&times;</button>
+      </div>
+      <div class="right-panel-content">
+        <!-- Tasks (Linear) pane -->
+        <div class="right-panel-pane active" data-tab="tasks">
+          <div class="linear-panel-header">
+            <h3>Linear Tasks</h3>
+            <div class="linear-panel-actions">
+              <button id="linear-create-btn" title="Create issue">+</button>
+              <button id="linear-refresh-btn" title="Refresh issues">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="linear-issues-list" class="linear-issues"></div>
+          <div id="linear-footer" class="linear-panel-footer"></div>
+        </div>
+
+        <!-- Files pane -->
+        <div class="right-panel-pane" data-tab="files">
+          <div class="file-explorer-toolbar">
+            <input id="file-explorer-search" type="text" placeholder="Filter files..." autocomplete="off" class="file-explorer-search">
+          </div>
+          <div id="file-tree" class="file-tree"></div>
+          <div id="file-preview" class="file-preview hidden">
+            <div class="file-preview-header">
+              <span id="file-preview-name" class="file-preview-name"></span>
+              <button id="file-preview-close" class="file-preview-close" title="Close preview">&times;</button>
+            </div>
+            <pre id="file-preview-content" class="file-preview-content"><code></code></pre>
+          </div>
+        </div>
+
+        <!-- Git pane -->
+        <div class="right-panel-pane" data-tab="git">
+          <div class="git-toolbar">
+            <select id="git-branch-select" class="git-branch-select" title="Switch branch"></select>
+            <button id="git-refresh-btn" class="git-refresh-btn" title="Refresh">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+            </button>
+          </div>
+          <div id="git-status-list" class="git-status-list"></div>
+          <div class="git-commit-section">
+            <textarea id="git-commit-msg" class="git-commit-msg" placeholder="Commit message..." rows="2"></textarea>
+            <button id="git-commit-btn" class="git-commit-btn">Commit</button>
+          </div>
+          <div class="git-log-section">
+            <h4 class="git-log-title">Recent Commits</h4>
+            <div id="git-log-list" class="git-log-list"></div>
+          </div>
         </div>
       </div>
-      <div id="linear-issues-list" class="linear-issues"></div>
-      <div id="linear-footer" class="linear-panel-footer"></div>
     </aside>
   </div>
 
@@ -231,6 +285,9 @@
         <tr><td><span class="kbd">&#8984;K</span></td><td>Focus session search</td></tr>
         <tr><td><span class="kbd">&#8984;N</span></td><td>New session</td></tr>
         <tr><td><span class="kbd">&#8984;/</span></td><td>Show keyboard shortcuts</td></tr>
+        <tr><td><span class="kbd">&#8984;B</span></td><td>Toggle right panel</td></tr>
+        <tr><td><span class="kbd">&#8984;&#8679;E</span></td><td>Open file explorer</td></tr>
+        <tr><td><span class="kbd">&#8984;&#8679;G</span></td><td>Open git panel</td></tr>
         <tr><td><span class="kbd">&#8984;1</span>–<span class="kbd">&#8984;4</span></td><td>Focus parallel pane 1–4</td></tr>
         <tr><td><span class="kbd">Esc</span></td><td>Close any open modal</td></tr>
         <tr><td><span class="kbd">Enter</span></td><td>Send message</td></tr>
@@ -333,6 +390,49 @@
           <button type="submit" id="linear-create-submit" class="modal-btn-save">Create</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MCP Server Management Modal -->
+  <div id="mcp-modal" class="modal-overlay hidden">
+    <div class="modal mcp-modal">
+      <div class="modal-header">
+        <h3>MCP Servers</h3>
+        <button id="mcp-modal-close" class="modal-close">&times;</button>
+      </div>
+      <div id="mcp-server-list" class="mcp-server-list"></div>
+      <div id="mcp-form-container" class="mcp-form-container hidden">
+        <h4 id="mcp-form-title" class="mcp-form-title">Add Server</h4>
+        <form id="mcp-form">
+          <label for="mcp-name">Name</label>
+          <input id="mcp-name" type="text" placeholder="my-server" required>
+          <label for="mcp-type">Type</label>
+          <select id="mcp-type">
+            <option value="stdio">stdio</option>
+            <option value="sse">sse</option>
+            <option value="http">http</option>
+          </select>
+          <div id="mcp-stdio-fields">
+            <label for="mcp-command">Command</label>
+            <input id="mcp-command" type="text" placeholder="npx -y @modelcontextprotocol/server-name">
+            <label for="mcp-args">Args (one per line)</label>
+            <textarea id="mcp-args" rows="2" placeholder="--flag&#10;value"></textarea>
+            <label for="mcp-env">Environment (KEY=VALUE, one per line)</label>
+            <textarea id="mcp-env" rows="2" placeholder="API_KEY=xxx"></textarea>
+          </div>
+          <div id="mcp-url-fields" class="hidden">
+            <label for="mcp-url">URL</label>
+            <input id="mcp-url" type="text" placeholder="https://...">
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="mcp-form-cancel" class="modal-btn-cancel">Cancel</button>
+            <button type="submit" id="mcp-form-save" class="modal-btn-save">Save</button>
+          </div>
+        </form>
+      </div>
+      <div class="mcp-modal-footer">
+        <button id="mcp-add-btn" class="modal-btn-save">+ Add Server</button>
+      </div>
     </div>
   </div>
 

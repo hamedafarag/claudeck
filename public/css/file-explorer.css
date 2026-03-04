@@ -1,0 +1,246 @@
+/* ── File Explorer ────────────────────────────────────── */
+.file-explorer-toolbar {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.file-explorer-search {
+  width: 100%;
+  padding: 4px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  outline: none;
+}
+
+.file-explorer-search:focus {
+  border-color: var(--accent);
+}
+
+/* Tree */
+.file-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.file-tree::-webkit-scrollbar {
+  width: 4px;
+}
+
+.file-tree::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.file-tree-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: background 0.1s;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.file-tree-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.file-tree-item.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.file-tree-chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  color: var(--text-dim);
+}
+
+.file-tree-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.file-tree-chevron.hidden {
+  visibility: hidden;
+}
+
+.file-tree-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+
+.file-tree-icon.folder {
+  color: var(--accent);
+}
+
+.file-tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-tree-children {
+  display: none;
+}
+
+.file-tree-children.expanded {
+  display: block;
+}
+
+/* Drag state */
+.file-tree-item[draggable="true"] {
+  cursor: grab;
+}
+
+.file-tree-item.dragging {
+  opacity: 0.4;
+}
+
+/* Drop target highlight on chat textarea */
+textarea.file-drop-hover {
+  border-color: var(--accent) !important;
+  box-shadow: var(--glow-strong), inset 0 0 0 1px var(--accent) !important;
+}
+
+.file-tree-loading {
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* Search results (flat list) */
+.file-search-result {
+  padding: 5px 8px;
+  gap: 6px;
+}
+
+.file-search-name {
+  font-weight: 600;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.file-search-path {
+  font-size: 10px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+/* Context menu */
+.file-ctx-menu {
+  position: fixed;
+  z-index: 1000;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 160px;
+}
+
+.file-ctx-menu button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 6px 12px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.file-ctx-menu button:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* Preview */
+.file-preview {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  max-height: 50%;
+  overflow: hidden;
+}
+
+.file-preview.hidden {
+  display: none;
+}
+
+.file-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.file-preview-name {
+  font-size: 11px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.file-preview-close:hover {
+  color: var(--text);
+}
+
+.file-preview-content {
+  flex: 1;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  background: var(--bg);
+}
+
+.file-preview-content::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.file-preview-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.file-preview-content code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}

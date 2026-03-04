@@ -88,13 +88,51 @@ export const $ = {
   bgSessionIndicator: document.getElementById("bg-session-indicator"),
   bgSessionBadge: document.getElementById("bg-session-badge"),
 
-  // Linear panel
-  linearPanel: document.getElementById("linear-panel"),
-  linearToggleBtn: document.getElementById("linear-toggle-btn"),
+  // Right panel
+  rightPanel: document.getElementById("right-panel"),
+  rightPanelToggleBtn: document.getElementById("right-panel-toggle-btn"),
+  rightPanelClose: document.getElementById("right-panel-close"),
+
+  // Linear panel (inside right panel tasks tab)
   linearRefreshBtn: document.getElementById("linear-refresh-btn"),
-  linearCloseBtn: document.getElementById("linear-close-btn"),
   linearIssuesList: document.getElementById("linear-issues-list"),
   linearFooter: document.getElementById("linear-footer"),
+
+  // File explorer (inside right panel files tab)
+  fileExplorerSearch: document.getElementById("file-explorer-search"),
+  fileTree: document.getElementById("file-tree"),
+  filePreview: document.getElementById("file-preview"),
+  filePreviewName: document.getElementById("file-preview-name"),
+  filePreviewContent: document.getElementById("file-preview-content"),
+  filePreviewClose: document.getElementById("file-preview-close"),
+
+  // Git panel (inside right panel git tab)
+  gitBranchSelect: document.getElementById("git-branch-select"),
+  gitRefreshBtn: document.getElementById("git-refresh-btn"),
+  gitStatusList: document.getElementById("git-status-list"),
+  gitCommitMsg: document.getElementById("git-commit-msg"),
+  gitCommitBtn: document.getElementById("git-commit-btn"),
+  gitLogList: document.getElementById("git-log-list"),
+
+  // MCP manager
+  mcpToggleBtn: document.getElementById("mcp-toggle-btn"),
+  mcpModal: document.getElementById("mcp-modal"),
+  mcpModalClose: document.getElementById("mcp-modal-close"),
+  mcpServerList: document.getElementById("mcp-server-list"),
+  mcpFormContainer: document.getElementById("mcp-form-container"),
+  mcpFormTitle: document.getElementById("mcp-form-title"),
+  mcpForm: document.getElementById("mcp-form"),
+  mcpName: document.getElementById("mcp-name"),
+  mcpType: document.getElementById("mcp-type"),
+  mcpStdioFields: document.getElementById("mcp-stdio-fields"),
+  mcpUrlFields: document.getElementById("mcp-url-fields"),
+  mcpCommand: document.getElementById("mcp-command"),
+  mcpArgs: document.getElementById("mcp-args"),
+  mcpEnv: document.getElementById("mcp-env"),
+  mcpUrl: document.getElementById("mcp-url"),
+  mcpFormCancel: document.getElementById("mcp-form-cancel"),
+  mcpFormSave: document.getElementById("mcp-form-save"),
+  mcpAddBtn: document.getElementById("mcp-add-btn"),
 
   // Linear create issue
   linearCreateBtn: document.getElementById("linear-create-btn"),

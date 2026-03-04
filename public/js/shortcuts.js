@@ -4,6 +4,7 @@ import { getState } from './store.js';
 import { CHAT_IDS } from './constants.js';
 import { panes } from './parallel.js';
 import { registerCommand } from './commands.js';
+import { toggleRightPanel, openRightPanel } from './right-panel.js';
 
 function closeAllModals() {
   document.querySelectorAll(".modal-overlay:not([data-persistent])").forEach((m) => m.classList.add("hidden"));
@@ -45,6 +46,27 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // Cmd+B — Toggle right panel
+  if (isMeta && e.key === "b") {
+    e.preventDefault();
+    toggleRightPanel();
+    return;
+  }
+
+  // Cmd+Shift+E — Open Files tab
+  if (isMeta && e.shiftKey && e.key === "E") {
+    e.preventDefault();
+    openRightPanel("files");
+    return;
+  }
+
+  // Cmd+Shift+G — Open Git tab
+  if (isMeta && e.shiftKey && e.key === "G") {
+    e.preventDefault();
+    openRightPanel("git");
+    return;
+  }
+
   if (isMeta && getState("parallelMode") && e.key >= "1" && e.key <= "4") {
     e.preventDefault();
     const idx = parseInt(e.key) - 1;
@@ -62,5 +84,22 @@ registerCommand("shortcuts", {
   description: "Show keyboard shortcuts",
   execute() {
     $.shortcutsModal.classList.remove("hidden");
+  },
+});
+
+// Register /files and /git slash commands
+registerCommand("files", {
+  category: "app",
+  description: "Open file explorer",
+  execute() {
+    openRightPanel("files");
+  },
+});
+
+registerCommand("git", {
+  category: "app",
+  description: "Open git panel",
+  execute() {
+    openRightPanel("git");
   },
 });

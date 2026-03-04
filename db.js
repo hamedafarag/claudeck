@@ -133,11 +133,11 @@ const stmts = {
   ),
   searchSessions: db.prepare(
     `SELECT s.*, ${MODE_CASE}
-     FROM sessions s WHERE s.project_path = ? AND s.title LIKE ? ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
+     FROM sessions s WHERE s.project_path = ? AND (s.title LIKE ? OR s.project_name LIKE ?) ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
   ),
   searchSessionsAll: db.prepare(
     `SELECT s.*, ${MODE_CASE}
-     FROM sessions s WHERE s.title LIKE ? ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
+     FROM sessions s WHERE (s.title LIKE ? OR s.project_name LIKE ?) ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
   ),
   getSessionCosts: db.prepare(
     `SELECT s.id, s.title, s.project_name, s.last_used_at,
@@ -267,9 +267,9 @@ export function toggleSessionPin(id) {
 export function searchSessions(query, limit = 20, projectPath) {
   const pattern = `%${query}%`;
   if (projectPath) {
-    return stmts.searchSessions.all(projectPath, pattern, limit);
+    return stmts.searchSessions.all(projectPath, pattern, pattern, limit);
   }
-  return stmts.searchSessionsAll.all(pattern, limit);
+  return stmts.searchSessionsAll.all(pattern, pattern, limit);
 }
 
 export const deleteSession = db.transaction((id) => {
