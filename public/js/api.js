@@ -176,6 +176,14 @@ export async function deleteMcpServer(name) {
   return res.json();
 }
 
+export async function fetchAnalytics(projectPath) {
+  const url = projectPath
+    ? `/api/stats/analytics?project_path=${encodeURIComponent(projectPath)}`
+    : "/api/stats/analytics";
+  const res = await fetch(url);
+  return res.json();
+}
+
 export async function fetchAccountInfo() {
   const res = await fetch("/api/account");
   return res.json();

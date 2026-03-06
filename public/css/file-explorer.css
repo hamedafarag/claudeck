@@ -207,8 +207,25 @@ textarea.file-drop-hover {
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  max-height: 50%;
   overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.file-preview-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+  z-index: 5;
+}
+
+.file-preview-resize:hover,
+.file-preview-resize.dragging {
+  background: var(--accent);
+  opacity: 0.5;
 }
 
 .file-preview.hidden {
@@ -270,4 +287,19 @@ textarea.file-drop-hover {
 .file-preview-content code {
   font-family: var(--font-mono);
   font-size: 11px;
+}
+
+.file-preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  margin: auto;
+  display: block;
+  flex: 1;
+  min-height: 0;
+  background: repeating-conic-gradient(#1a1a2e 0% 25%, #12121f 0% 50%) 0 0 / 16px 16px;
+}
+
+.file-preview-image.hidden {
+  display: none;
 }

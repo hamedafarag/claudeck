@@ -301,6 +301,394 @@ export function getProjectTokens(projectPath) {
   return stmts.getProjectTokens.get(projectPath);
 }
 
+// ── Analytics queries ──────────────────────────────────────────
+
+const analyticsStmts = {
+  overviewAll: db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM sessions) AS sessions,
+      COUNT(*) AS queries,
+      COALESCE(SUM(cost_usd), 0) AS totalCost,
+      COALESCE(SUM(num_turns), 0) AS totalTurns,
+      COALESCE(SUM(output_tokens), 0) AS totalOutputTokens
+    FROM costs
+  `),
+  overviewByProject: db.prepare(`
+    SELECT
+      COUNT(DISTINCT s.id) AS sessions,
+      COUNT(c.id) AS queries,
+      COALESCE(SUM(c.cost_usd), 0) AS totalCost,
+      COALESCE(SUM(c.num_turns), 0) AS totalTurns,
+      COALESCE(SUM(c.output_tokens), 0) AS totalOutputTokens
+    FROM sessions s
+    LEFT JOIN costs c ON c.session_id = s.id
+    WHERE s.project_path = ?
+  `),
+  errorRateAll: db.prepare(`
+    SELECT
+      COUNT(CASE WHEN json_extract(content, '$.isError') = 1 THEN 1 END) AS errors,
+      COUNT(*) AS total
+    FROM messages WHERE role = 'tool_result'
+  `),
+  errorRateByProject: db.prepare(`
+    SELECT
+      COUNT(CASE WHEN json_extract(m.content, '$.isError') = 1 THEN 1 END) AS errors,
+      COUNT(*) AS total
+    FROM messages m
+    JOIN sessions s ON m.session_id = s.id
+    WHERE m.role = 'tool_result' AND s.project_path = ?
+  `),
+  dailyBreakdownAll: db.prepare(`
+    SELECT
+      date(c.created_at, 'unixepoch') AS date,
+      COUNT(*) AS queries,
+      SUM(c.cost_usd) AS cost,
+      SUM(c.num_turns) AS turns,
+      SUM(c.output_tokens) AS output_tok
+    FROM costs c
+    WHERE c.created_at >= unixepoch() - 30 * 86400
+    GROUP BY date(c.created_at, 'unixepoch')
+    ORDER BY date ASC
+  `),
+  dailyBreakdownByProject: db.prepare(`
+    SELECT
+      date(c.created_at, 'unixepoch') AS date,
+      COUNT(*) AS queries,
+      SUM(c.cost_usd) AS cost,
+      SUM(c.num_turns) AS turns,
+      SUM(c.output_tokens) AS output_tok
+    FROM costs c
+    JOIN sessions s ON c.session_id = s.id
+    WHERE s.project_path = ? AND c.created_at >= unixepoch() - 30 * 86400
+    GROUP BY date(c.created_at, 'unixepoch')
+    ORDER BY date ASC
+  `),
+  hourlyActivityAll: db.prepare(`
+    SELECT
+      CAST(strftime('%H', c.created_at, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+      COUNT(*) AS queries,
+      SUM(c.cost_usd) AS cost
+    FROM costs c
+    GROUP BY strftime('%H', c.created_at, 'unixepoch', 'localtime')
+    ORDER BY hour ASC
+  `),
+  hourlyActivityByProject: db.prepare(`
+    SELECT
+      CAST(strftime('%H', c.created_at, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+      COUNT(*) AS queries,
+      SUM(c.cost_usd) AS cost
+    FROM costs c
+    JOIN sessions s ON c.session_id = s.id
+    WHERE s.project_path = ?
+    GROUP BY strftime('%H', c.created_at, 'unixepoch', 'localtime')
+    ORDER BY hour ASC
+  `),
+  projectBreakdown: db.prepare(`
+    SELECT
+      s.project_name AS name,
+      s.project_path AS path,
+      COUNT(DISTINCT s.id) AS sessions,
+      COUNT(c.id) AS queries,
+      COALESCE(SUM(c.cost_usd), 0) AS totalCost,
+      CASE WHEN COUNT(DISTINCT s.id) > 0
+        THEN COALESCE(SUM(c.cost_usd), 0) / COUNT(DISTINCT s.id)
+        ELSE 0 END AS avgCost,
+      CASE WHEN COUNT(DISTINCT s.id) > 0
+        THEN COALESCE(SUM(c.num_turns), 0) / COUNT(DISTINCT s.id)
+        ELSE 0 END AS avgTurns
+    FROM sessions s
+    LEFT JOIN costs c ON c.session_id = s.id
+    GROUP BY s.project_path
+    ORDER BY totalCost DESC
+  `),
+  topSessionsAll: db.prepare(`
+    SELECT
+      s.title,
+      s.project_name AS project,
+      COALESCE(SUM(c.cost_usd), 0) AS cost,
+      COALESCE(SUM(c.num_turns), 0) AS turns,
+      COUNT(c.id) AS queries,
+      COALESCE(SUM(c.duration_ms), 0) / 60000.0 AS duration_min
+    FROM sessions s
+    LEFT JOIN costs c ON c.session_id = s.id
+    GROUP BY s.id
+    HAVING cost > 0
+    ORDER BY cost DESC
+    LIMIT 10
+  `),
+  topSessionsByProject: db.prepare(`
+    SELECT
+      s.title,
+      s.project_name AS project,
+      COALESCE(SUM(c.cost_usd), 0) AS cost,
+      COALESCE(SUM(c.num_turns), 0) AS turns,
+      COUNT(c.id) AS queries,
+      COALESCE(SUM(c.duration_ms), 0) / 60000.0 AS duration_min
+    FROM sessions s
+    LEFT JOIN costs c ON c.session_id = s.id
+    WHERE s.project_path = ?
+    GROUP BY s.id
+    HAVING cost > 0
+    ORDER BY cost DESC
+    LIMIT 10
+  `),
+  toolUsageAll: db.prepare(`
+    SELECT
+      json_extract(content, '$.name') AS name,
+      COUNT(*) AS count
+    FROM messages
+    WHERE role = 'tool' AND json_extract(content, '$.name') IS NOT NULL
+    GROUP BY json_extract(content, '$.name')
+    ORDER BY count DESC
+  `),
+  toolUsageByProject: db.prepare(`
+    SELECT
+      json_extract(m.content, '$.name') AS name,
+      COUNT(*) AS count
+    FROM messages m
+    JOIN sessions s ON m.session_id = s.id
+    WHERE m.role = 'tool' AND s.project_path = ? AND json_extract(m.content, '$.name') IS NOT NULL
+    GROUP BY json_extract(m.content, '$.name')
+    ORDER BY count DESC
+  `),
+  toolErrorsAll: db.prepare(`
+    SELECT
+      json_extract(t.content, '$.name') AS name,
+      COUNT(CASE WHEN json_extract(tr.content, '$.isError') = 1 THEN 1 END) AS errors,
+      COUNT(*) AS total,
+      CAST(COUNT(CASE WHEN json_extract(tr.content, '$.isError') = 1 THEN 1 END) AS REAL) / NULLIF(COUNT(*), 0) * 100 AS errorRate
+    FROM messages t
+    JOIN messages tr ON tr.session_id = t.session_id
+      AND tr.role = 'tool_result'
+      AND json_extract(tr.content, '$.toolUseId') = json_extract(t.content, '$.id')
+    WHERE t.role = 'tool'
+    GROUP BY json_extract(t.content, '$.name')
+    HAVING errors > 0
+    ORDER BY errors DESC
+  `),
+  toolErrorsByProject: db.prepare(`
+    SELECT
+      json_extract(t.content, '$.name') AS name,
+      COUNT(CASE WHEN json_extract(tr.content, '$.isError') = 1 THEN 1 END) AS errors,
+      COUNT(*) AS total,
+      CAST(COUNT(CASE WHEN json_extract(tr.content, '$.isError') = 1 THEN 1 END) AS REAL) / NULLIF(COUNT(*), 0) * 100 AS errorRate
+    FROM messages t
+    JOIN messages tr ON tr.session_id = t.session_id
+      AND tr.role = 'tool_result'
+      AND json_extract(tr.content, '$.toolUseId') = json_extract(t.content, '$.id')
+    JOIN sessions s ON t.session_id = s.id
+    WHERE t.role = 'tool' AND s.project_path = ?
+    GROUP BY json_extract(t.content, '$.name')
+    HAVING errors > 0
+    ORDER BY errors DESC
+  `),
+  sessionDepthAll: db.prepare(`
+    SELECT
+      CASE
+        WHEN cnt = 1 THEN '1 query'
+        WHEN cnt BETWEEN 2 AND 3 THEN '2-3'
+        WHEN cnt BETWEEN 4 AND 6 THEN '4-6'
+        WHEN cnt BETWEEN 7 AND 10 THEN '7-10'
+        ELSE '10+'
+      END AS bucket,
+      COUNT(*) AS count,
+      AVG(total_cost) AS avgCost
+    FROM (
+      SELECT s.id, COUNT(c.id) AS cnt, COALESCE(SUM(c.cost_usd), 0) AS total_cost
+      FROM sessions s
+      LEFT JOIN costs c ON c.session_id = s.id
+      GROUP BY s.id
+      HAVING cnt > 0
+    )
+    GROUP BY bucket
+    ORDER BY MIN(cnt)
+  `),
+  sessionDepthByProject: db.prepare(`
+    SELECT
+      CASE
+        WHEN cnt = 1 THEN '1 query'
+        WHEN cnt BETWEEN 2 AND 3 THEN '2-3'
+        WHEN cnt BETWEEN 4 AND 6 THEN '4-6'
+        WHEN cnt BETWEEN 7 AND 10 THEN '7-10'
+        ELSE '10+'
+      END AS bucket,
+      COUNT(*) AS count,
+      AVG(total_cost) AS avgCost
+    FROM (
+      SELECT s.id, COUNT(c.id) AS cnt, COALESCE(SUM(c.cost_usd), 0) AS total_cost
+      FROM sessions s
+      LEFT JOIN costs c ON c.session_id = s.id
+      WHERE s.project_path = ?
+      GROUP BY s.id
+      HAVING cnt > 0
+    )
+    GROUP BY bucket
+    ORDER BY MIN(cnt)
+  `),
+  msgLengthAll: db.prepare(`
+    SELECT
+      CASE
+        WHEN len < 100 THEN '<100'
+        WHEN len BETWEEN 100 AND 499 THEN '100-499'
+        WHEN len BETWEEN 500 AND 999 THEN '500-999'
+        WHEN len BETWEEN 1000 AND 4999 THEN '1k-5k'
+        ELSE '5k+'
+      END AS bucket,
+      COUNT(*) AS count,
+      CAST(AVG(len) AS INTEGER) AS avgChars
+    FROM (
+      SELECT LENGTH(json_extract(content, '$.text')) AS len
+      FROM messages
+      WHERE role = 'user' AND json_extract(content, '$.text') IS NOT NULL
+    )
+    WHERE len > 0
+    GROUP BY bucket
+    ORDER BY MIN(len)
+  `),
+  msgLengthByProject: db.prepare(`
+    SELECT
+      CASE
+        WHEN len < 100 THEN '<100'
+        WHEN len BETWEEN 100 AND 499 THEN '100-499'
+        WHEN len BETWEEN 500 AND 999 THEN '500-999'
+        WHEN len BETWEEN 1000 AND 4999 THEN '1k-5k'
+        ELSE '5k+'
+      END AS bucket,
+      COUNT(*) AS count,
+      CAST(AVG(len) AS INTEGER) AS avgChars
+    FROM (
+      SELECT LENGTH(json_extract(m.content, '$.text')) AS len
+      FROM messages m
+      JOIN sessions s ON m.session_id = s.id
+      WHERE m.role = 'user' AND s.project_path = ? AND json_extract(m.content, '$.text') IS NOT NULL
+    )
+    WHERE len > 0
+    GROUP BY bucket
+    ORDER BY MIN(len)
+  `),
+  topBashCommandsAll: db.prepare(`
+    SELECT
+      SUBSTR(json_extract(content, '$.input.command'), 1, 80) AS command,
+      COUNT(*) AS count
+    FROM messages
+    WHERE role = 'tool' AND json_extract(content, '$.name') = 'Bash'
+      AND json_extract(content, '$.input.command') IS NOT NULL
+    GROUP BY SUBSTR(json_extract(content, '$.input.command'), 1, 80)
+    ORDER BY count DESC
+    LIMIT 10
+  `),
+  topBashCommandsByProject: db.prepare(`
+    SELECT
+      SUBSTR(json_extract(m.content, '$.input.command'), 1, 80) AS command,
+      COUNT(*) AS count
+    FROM messages m
+    JOIN sessions s ON m.session_id = s.id
+    WHERE m.role = 'tool' AND s.project_path = ? AND json_extract(m.content, '$.name') = 'Bash'
+      AND json_extract(m.content, '$.input.command') IS NOT NULL
+    GROUP BY SUBSTR(json_extract(m.content, '$.input.command'), 1, 80)
+    ORDER BY count DESC
+    LIMIT 10
+  `),
+  topFilesAll: db.prepare(`
+    SELECT
+      json_extract(content, '$.input.file_path') AS path,
+      COUNT(*) AS count,
+      json_extract(content, '$.name') AS tool
+    FROM messages
+    WHERE role = 'tool'
+      AND json_extract(content, '$.name') IN ('Read', 'Write', 'Edit')
+      AND json_extract(content, '$.input.file_path') IS NOT NULL
+    GROUP BY json_extract(content, '$.input.file_path'), json_extract(content, '$.name')
+    ORDER BY count DESC
+    LIMIT 15
+  `),
+  topFilesByProject: db.prepare(`
+    SELECT
+      json_extract(m.content, '$.input.file_path') AS path,
+      COUNT(*) AS count,
+      json_extract(m.content, '$.name') AS tool
+    FROM messages m
+    JOIN sessions s ON m.session_id = s.id
+    WHERE m.role = 'tool' AND s.project_path = ?
+      AND json_extract(m.content, '$.name') IN ('Read', 'Write', 'Edit')
+      AND json_extract(m.content, '$.input.file_path') IS NOT NULL
+    GROUP BY json_extract(m.content, '$.input.file_path'), json_extract(m.content, '$.name')
+    ORDER BY count DESC
+    LIMIT 15
+  `),
+};
+
+export function getAnalyticsOverview(projectPath) {
+  const overview = projectPath
+    ? analyticsStmts.overviewByProject.get(projectPath)
+    : analyticsStmts.overviewAll.get();
+  const errors = projectPath
+    ? analyticsStmts.errorRateByProject.get(projectPath)
+    : analyticsStmts.errorRateAll.get();
+  return {
+    ...overview,
+    errorRate: errors.total > 0 ? (errors.errors / errors.total * 100) : 0,
+  };
+}
+
+export function getDailyBreakdown(projectPath) {
+  return projectPath
+    ? analyticsStmts.dailyBreakdownByProject.all(projectPath)
+    : analyticsStmts.dailyBreakdownAll.all();
+}
+
+export function getHourlyActivity(projectPath) {
+  return projectPath
+    ? analyticsStmts.hourlyActivityByProject.all(projectPath)
+    : analyticsStmts.hourlyActivityAll.all();
+}
+
+export function getProjectBreakdown() {
+  return analyticsStmts.projectBreakdown.all();
+}
+
+export function getTopSessionsByCost(projectPath) {
+  return projectPath
+    ? analyticsStmts.topSessionsByProject.all(projectPath)
+    : analyticsStmts.topSessionsAll.all();
+}
+
+export function getToolUsage(projectPath) {
+  return projectPath
+    ? analyticsStmts.toolUsageByProject.all(projectPath)
+    : analyticsStmts.toolUsageAll.all();
+}
+
+export function getToolErrors(projectPath) {
+  return projectPath
+    ? analyticsStmts.toolErrorsByProject.all(projectPath)
+    : analyticsStmts.toolErrorsAll.all();
+}
+
+export function getSessionDepth(projectPath) {
+  return projectPath
+    ? analyticsStmts.sessionDepthByProject.all(projectPath)
+    : analyticsStmts.sessionDepthAll.all();
+}
+
+export function getMsgLengthDistribution(projectPath) {
+  return projectPath
+    ? analyticsStmts.msgLengthByProject.all(projectPath)
+    : analyticsStmts.msgLengthAll.all();
+}
+
+export function getTopBashCommands(projectPath) {
+  return projectPath
+    ? analyticsStmts.topBashCommandsByProject.all(projectPath)
+    : analyticsStmts.topBashCommandsAll.all();
+}
+
+export function getTopFiles(projectPath) {
+  return projectPath
+    ? analyticsStmts.topFilesByProject.all(projectPath)
+    : analyticsStmts.topFilesAll.all();
+}
+
 export function getDb() {
   return db;
 }

@@ -1,0 +1,100 @@
+/* ── Analytics Dashboard ─────────────────────────── */
+.analytics-modal {
+  width: 900px;
+  max-width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.analytics-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.analytics-project-filter {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.analytics-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.analytics-cards {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 800px) {
+  .analytics-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.analytics-section {
+  margin-bottom: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.analytics-section h4 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.analytics-section .cost-chart {
+  max-height: 260px;
+}
+
+.analytics-section .cost-chart-label {
+  width: 80px;
+}
+
+.analytics-section .cost-chart-value {
+  width: auto;
+  min-width: 50px;
+  white-space: nowrap;
+}
+
+.analytics-error-value {
+  color: var(--error) !important;
+}
+
+.analytics-error-badge {
+  color: var(--error);
+  font-size: 10px;
+  margin-left: 6px;
+}
+
+.analytics-empty {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 12px 0;
+  font-style: italic;
+}
+
+.analytics-loading {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.analytics-section .cost-table-container {
+  max-height: 260px;
+}

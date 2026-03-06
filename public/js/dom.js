@@ -55,6 +55,12 @@ export const $ = {
   costDashboardModal: document.getElementById("cost-dashboard-modal"),
   costModalClose: document.getElementById("cost-modal-close"),
 
+  // Analytics
+  analyticsModal: document.getElementById("analytics-modal"),
+  analyticsClose: document.getElementById("analytics-close"),
+  analyticsContent: document.getElementById("analytics-content"),
+  analyticsBtn: document.getElementById("analytics-btn"),
+
   // Theme
   themeToggleBtn: document.getElementById("theme-toggle-btn"),
   themeIconSun: document.getElementById("theme-icon-sun"),
@@ -108,6 +114,7 @@ export const $ = {
   filePreview: document.getElementById("file-preview"),
   filePreviewName: document.getElementById("file-preview-name"),
   filePreviewContent: document.getElementById("file-preview-content"),
+  filePreviewImage: document.getElementById("file-preview-image"),
   filePreviewClose: document.getElementById("file-preview-close"),
 
   // Git panel (inside right panel git tab)
@@ -139,6 +146,7 @@ export const $ = {
   mcpAddBtn: document.getElementById("mcp-add-btn"),
 
   // Add project modal
+  openVscodeBtn: document.getElementById("open-vscode-btn"),
   addProjectBtn: document.getElementById("add-project-btn"),
   addProjectModal: document.getElementById("add-project-modal"),
   addProjectClose: document.getElementById("add-project-close"),

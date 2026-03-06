@@ -253,6 +253,19 @@ async function confirmAddProject() {
   }
 }
 
+// Open in VS Code
+$.openVscodeBtn.addEventListener("click", async () => {
+  const path = $.projectSelect.value;
+  if (!path) return;
+  try {
+    await fetch("/api/exec", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command: "code .", cwd: path }),
+    });
+  } catch { /* ignore */ }
+});
+
 // Add project button & modal event listeners
 $.addProjectBtn.addEventListener("click", openAddProjectModal);
 $.addProjectClose.addEventListener("click", closeAddProjectModal);

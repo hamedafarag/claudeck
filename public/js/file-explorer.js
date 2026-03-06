@@ -18,6 +18,13 @@ function isFilesTabActive() {
 }
 
 // SVG icons
+const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]);
+
+function isImageFile(name) {
+  const dot = name.lastIndexOf(".");
+  return dot !== -1 && IMAGE_EXTENSIONS.has(name.slice(dot).toLowerCase());
+}
+
 const CHEVRON_SVG = `<svg class="file-tree-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>`;
 const FOLDER_SVG = `<svg class="file-tree-icon folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
 const FILE_SVG = `<svg class="file-tree-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
@@ -131,25 +138,45 @@ async function openFilePreview(entry) {
 
   activeFilePath = entry.path;
   $.filePreviewName.textContent = entry.path;
-  $.filePreviewContent.querySelector("code").textContent = "Loading...";
   $.filePreview.classList.remove("hidden");
 
-  try {
-    const data = await fetchFileContent(base, entry.path);
-    if (activeFilePath !== entry.path) return; // stale
-    const code = $.filePreviewContent.querySelector("code");
-    code.textContent = data.content;
-    code.className = ""; // reset hljs classes
-    delete code.dataset.highlighted;
-    highlightCodeBlocks($.filePreviewContent);
-  } catch (err) {
-    if (activeFilePath !== entry.path) return;
-    $.filePreviewContent.querySelector("code").textContent = `Error: ${err.message}`;
+  if (isImageFile(entry.name || entry.path)) {
+    // Image preview
+    $.filePreviewContent.classList.add("hidden");
+    $.filePreviewImage.classList.remove("hidden");
+    $.filePreviewImage.alt = entry.name || entry.path;
+    $.filePreviewImage.src = `/api/files/raw?base=${encodeURIComponent(base)}&path=${encodeURIComponent(entry.path)}`;
+    $.filePreviewImage.onerror = () => {
+      if (activeFilePath !== entry.path) return;
+      $.filePreviewImage.classList.add("hidden");
+      $.filePreviewContent.classList.remove("hidden");
+      $.filePreviewContent.querySelector("code").textContent = "Error: failed to load image";
+    };
+  } else {
+    // Text preview
+    $.filePreviewImage.classList.add("hidden");
+    $.filePreviewImage.src = "";
+    $.filePreviewContent.classList.remove("hidden");
+    $.filePreviewContent.querySelector("code").textContent = "Loading...";
+
+    try {
+      const data = await fetchFileContent(base, entry.path);
+      if (activeFilePath !== entry.path) return; // stale
+      const code = $.filePreviewContent.querySelector("code");
+      code.textContent = data.content;
+      code.className = ""; // reset hljs classes
+      delete code.dataset.highlighted;
+      highlightCodeBlocks($.filePreviewContent);
+    } catch (err) {
+      if (activeFilePath !== entry.path) return;
+      $.filePreviewContent.querySelector("code").textContent = `Error: ${err.message}`;
+    }
   }
 }
 
 function closePreview() {
   $.filePreview.classList.add("hidden");
+  $.filePreview.style.height = "";
   activeFilePath = null;
   $.fileTree.querySelectorAll(".file-tree-item.active").forEach((el) => el.classList.remove("active"));
 }
@@ -265,6 +292,7 @@ async function refreshFileTree() {
 
 function initFileExplorer() {
   $.filePreviewClose.addEventListener("click", closePreview);
+  initPreviewResize();
   $.fileRefreshBtn.addEventListener("click", () => refreshFileTree());
 
   $.fileExplorerSearch.addEventListener("input", (e) => {
@@ -341,6 +369,36 @@ function showContextMenu(e, relPath) {
     if (action === "full") navigator.clipboard.writeText(fullPath);
     if (action === "relative") navigator.clipboard.writeText(relPath);
     hideContextMenu();
+  });
+}
+
+function initPreviewResize() {
+  const handle = document.createElement("div");
+  handle.className = "file-preview-resize";
+  $.filePreview.prepend(handle);
+
+  let startY, startH;
+
+  function onMouseMove(e) {
+    const delta = startY - e.clientY;
+    const pane = $.filePreview.closest(".right-panel-pane");
+    const maxH = pane ? pane.clientHeight - 40 : 600;
+    $.filePreview.style.height = Math.min(maxH, Math.max(80, startH + delta)) + "px";
+  }
+
+  function onMouseUp() {
+    handle.classList.remove("dragging");
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  }
+
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    startY = e.clientY;
+    startH = $.filePreview.offsetHeight;
+    handle.classList.add("dragging");
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
   });
 }
 

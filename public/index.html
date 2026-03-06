@@ -24,60 +24,118 @@
         <span id="bg-session-badge">0</span> bg
       </span>
       <span class="term-sep">&middot;</span>
-      <span class="header-control">
-        <label class="header-control-label">approval</label>
-        <select id="perm-mode-select" title="Tool approval mode">
+      <span class="term-user" id="account-email">---</span>
+      <span class="term-plan" id="account-plan"></span>
+    </div>
+    <span class="term-project-name" id="header-project-name"></span>
+
+    <div class="header-right">
+      <!-- Session Settings Dropdown -->
+      <div class="header-dropdown">
+        <button class="header-dropdown-trigger">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Session
+          <svg class="header-dropdown-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="header-dropdown-menu header-dropdown-menu--right">
+          <div class="header-dropdown-item has-submenu">
+            <span class="header-dropdown-item-label">Approval</span>
+            <span class="header-dropdown-item-value" id="perm-mode-display">confirm writes</span>
+            <svg class="header-dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+            <div class="header-submenu header-submenu--left">
+              <button class="header-submenu-item" data-target="perm-mode-select" data-value="bypass">Bypass</button>
+              <button class="header-submenu-item active" data-target="perm-mode-select" data-value="confirmDangerous">Confirm Writes</button>
+              <button class="header-submenu-item" data-target="perm-mode-select" data-value="confirmAll">Confirm All</button>
+              <button class="header-submenu-item" data-target="perm-mode-select" data-value="plan">Plan Mode</button>
+            </div>
+          </div>
+          <div class="header-dropdown-item has-submenu">
+            <span class="header-dropdown-item-label">Model</span>
+            <span class="header-dropdown-item-value" id="model-display">auto</span>
+            <svg class="header-dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+            <div class="header-submenu header-submenu--left">
+              <button class="header-submenu-item active" data-target="model-select" data-value="">Auto</button>
+              <button class="header-submenu-item" data-target="model-select" data-value="sonnet">Sonnet</button>
+              <button class="header-submenu-item" data-target="model-select" data-value="opus">Opus</button>
+              <button class="header-submenu-item" data-target="model-select" data-value="haiku">Haiku</button>
+            </div>
+          </div>
+          <div class="header-dropdown-item has-submenu">
+            <span class="header-dropdown-item-label">Max Turns</span>
+            <span class="header-dropdown-item-value" id="max-turns-display">30</span>
+            <svg class="header-dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+            <div class="header-submenu header-submenu--left">
+              <button class="header-submenu-item" data-target="max-turns-select" data-value="10">10</button>
+              <button class="header-submenu-item active" data-target="max-turns-select" data-value="30">30</button>
+              <button class="header-submenu-item" data-target="max-turns-select" data-value="50">50</button>
+              <button class="header-submenu-item" data-target="max-turns-select" data-value="100">100</button>
+              <button class="header-submenu-item" data-target="max-turns-select" data-value="0">Unlimited</button>
+            </div>
+          </div>
+        </div>
+        <!-- Hidden selects (keep for existing JS logic) -->
+        <select id="perm-mode-select" class="header-hidden-select" title="Tool approval mode">
           <option value="bypass">bypass</option>
           <option value="confirmDangerous" selected>confirm writes</option>
           <option value="confirmAll">confirm all</option>
           <option value="plan">plan mode</option>
         </select>
-      </span>
-      <span class="term-sep">&middot;</span>
-      <span class="header-control">
-        <label class="header-control-label">model</label>
-        <select id="model-select" title="Model">
+        <select id="model-select" class="header-hidden-select" title="Model">
           <option value="">auto</option>
           <option value="sonnet">sonnet</option>
           <option value="opus">opus</option>
           <option value="haiku">haiku</option>
         </select>
-      </span>
-      <span class="term-sep">&middot;</span>
-      <span class="header-control">
-        <label class="header-control-label">turns</label>
-        <select id="max-turns-select" title="Max turns per query">
+        <select id="max-turns-select" class="header-hidden-select" title="Max turns per query">
           <option value="10">10</option>
           <option value="30" selected>30</option>
           <option value="50">50</option>
           <option value="100">100</option>
           <option value="0">unlimited</option>
         </select>
-      </span>
-      <span class="term-sep">&middot;</span>
-      <span class="term-user" id="account-email">---</span>
-      <span class="term-plan" id="account-plan"></span>
-    </div>
-    <span class="term-project-name" id="header-project-name"></span>
-    <button id="mcp-toggle-btn" class="right-panel-toggle-btn" title="MCP Server Management">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-      MCP
-    </button>
-    <button id="right-panel-toggle-btn" class="right-panel-toggle-btn" title="Toggle right panel (Cmd+B)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/>
-      </svg>
-      Panel
-    </button>
-    <div class="term-costs">
-      <span id="streaming-tokens" class="streaming-tokens hidden">~0 tokens</span>
-      <span class="term-cost-label">proj</span>
-      <span class="term-cost-value" id="project-cost">$0.00</span>
-      <span class="term-cost-pipe">&#x2503;</span>
-      <span class="term-cost-label">all</span>
-      <span class="term-cost-value" id="total-cost">$0.00</span>
+      </div>
+
+      <!-- Tools Dropdown -->
+      <div class="header-dropdown">
+        <button class="header-dropdown-trigger">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/>
+          </svg>
+          Tools
+          <svg class="header-dropdown-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="header-dropdown-menu header-dropdown-menu--right">
+          <button class="header-dropdown-item" id="mcp-toggle-btn" title="MCP Server Management">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span>MCP Servers</span>
+          </button>
+          <button class="header-dropdown-item" id="analytics-btn" title="Analytics Dashboard (Cmd+Shift+A)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span>Analytics</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="right-panel-toggle-btn" class="header-icon-btn" title="Toggle right panel (Cmd+B)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/>
+        </svg>
+      </button>
+
+      <div class="term-costs">
+        <span id="streaming-tokens" class="streaming-tokens hidden">~0 tokens</span>
+        <span class="term-cost-label">proj</span>
+        <span class="term-cost-value" id="project-cost">$0.00</span>
+        <span class="term-cost-pipe">&#x2503;</span>
+        <span class="term-cost-label">all</span>
+        <span class="term-cost-value" id="total-cost">$0.00</span>
+      </div>
     </div>
   </header>
 
@@ -100,6 +158,11 @@
         <div class="folder-picker-header">
           <label for="project-select">Project <span id="system-prompt-badge" class="system-prompt-badge hidden" title="System prompt configured">SP</span></label>
           <div class="folder-picker-actions">
+            <button id="open-vscode-btn" class="add-project-btn" title="Open in VS Code">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+            </button>
             <button id="add-project-btn" class="add-project-btn" title="Add project">+</button>
             <button id="system-prompt-edit-btn" class="system-prompt-edit-btn" title="Edit system prompt">&#9881;</button>
           </div>
@@ -210,6 +273,7 @@
               <button id="file-preview-close" class="file-preview-close" title="Close preview">&times;</button>
             </div>
             <pre id="file-preview-content" class="file-preview-content"><code></code></pre>
+            <img id="file-preview-image" class="file-preview-image hidden" alt="">
           </div>
         </div>
 
@@ -310,6 +374,7 @@
         <tr><td><span class="kbd">&#8984;B</span></td><td>Toggle right panel</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;E</span></td><td>Open file explorer</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;G</span></td><td>Open git panel</td></tr>
+        <tr><td><span class="kbd">&#8984;&#8679;A</span></td><td>Open analytics dashboard</td></tr>
         <tr><td><span class="kbd">&#8984;1</span>–<span class="kbd">&#8984;4</span></td><td>Focus parallel pane 1–4</td></tr>
         <tr><td><span class="kbd">Esc</span></td><td>Close any open modal</td></tr>
         <tr><td><span class="kbd">Enter</span></td><td>Send message</td></tr>
@@ -345,6 +410,24 @@
           <h4>Daily Costs (Last 30 Days)</h4>
           <div class="cost-chart" id="cost-chart"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Dashboard Modal -->
+  <div id="analytics-modal" class="modal-overlay hidden">
+    <div class="modal analytics-modal">
+      <div class="modal-header">
+        <h3>Analytics Dashboard</h3>
+        <div class="analytics-header-actions">
+          <select id="analytics-project-filter" class="analytics-project-filter">
+            <option value="">All Projects</option>
+          </select>
+          <button id="analytics-close" class="modal-close">&times;</button>
+        </div>
+      </div>
+      <div id="analytics-content" class="analytics-content">
+        <div class="analytics-loading">Loading analytics...</div>
       </div>
     </div>
   </div>

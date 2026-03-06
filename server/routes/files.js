@@ -20,7 +20,7 @@ router.get("/", async (req, res) => {
       const entries = await readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
         if (results.length >= MAX_FILES) break;
-        if (SKIP.has(entry.name) || entry.name.startsWith(".")) continue;
+        if (SKIP.has(entry.name)) continue;
         const full = join(dir, entry.name);
         const rel = full.slice(basePath.length + 1);
         if (entry.isDirectory()) {
@@ -82,7 +82,7 @@ router.get("/tree", async (req, res) => {
     const results = [];
 
     for (const entry of entries) {
-      if (SKIP.has(entry.name) || entry.name.startsWith(".")) continue;
+      if (SKIP.has(entry.name)) continue;
       const relPath = dir ? `${dir}/${entry.name}` : entry.name;
       results.push({
         name: entry.name,
@@ -106,6 +106,40 @@ router.get("/tree", async (req, res) => {
   }
 });
 
+// Serve raw binary files (images) with streaming
+const IMAGE_MIME = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+};
+
+router.get("/raw", async (req, res) => {
+  const base = req.query.base;
+  const filePath = req.query.path;
+  if (!base || !filePath) return res.status(400).json({ error: "base and path required" });
+
+  const resolved = join(base, filePath);
+  if (!resolved.startsWith(base)) return res.status(403).json({ error: "path traversal detected" });
+
+  const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
+  const mime = IMAGE_MIME[ext];
+  if (!mime) return res.status(415).json({ error: "unsupported file type" });
+
+  try {
+    const { stat } = await import("fs/promises");
+    const stats = await stat(resolved);
+    if (stats.size > 5 * 1024 * 1024) {
+      return res.status(413).json({ error: "File too large (5MB limit)" });
+    }
+    res.type(mime).sendFile(resolved);
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
 // Search files/folders by name (recursive, LIKE %query%)
 router.get("/search", async (req, res) => {
   const base = req.query.base;
@@ -124,7 +158,7 @@ router.get("/search", async (req, res) => {
       const entries = await readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
         if (results.length >= MAX_RESULTS) break;
-        if (SKIP.has(entry.name) || entry.name.startsWith(".")) continue;
+        if (SKIP.has(entry.name)) continue;
 
         const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
         const isDir = entry.isDirectory();
