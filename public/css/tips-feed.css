@@ -1,0 +1,366 @@
+/* ── Tips Feed Panel ──────────────────────────────────── */
+.tips-feed-panel {
+  width: 350px;
+  min-width: 260px;
+  max-width: 600px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.tips-feed-panel.hidden {
+  display: none;
+}
+
+/* ── Resize Handle ───────────────────────────────────── */
+.tips-feed-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.tips-feed-resize:hover,
+.tips-feed-resize.dragging {
+  background: var(--accent);
+}
+
+/* ── Header ──────────────────────────────────────────── */
+.tips-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.tips-feed-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tips-feed-title-icon {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.tips-feed-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  transition: color 0.15s, background 0.15s;
+}
+
+.tips-feed-close:hover {
+  color: var(--text);
+  background: var(--bg-tertiary);
+}
+
+/* ── Category Tabs ───────────────────────────────────── */
+.tips-feed-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.tips-feed-tab {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.tips-feed-tab:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.tips-feed-tab.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.tips-feed-tab-icon {
+  margin-right: 4px;
+  opacity: 0.7;
+}
+
+/* ── Scrollable Content ──────────────────────────────── */
+.tips-feed-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Tip of the Day Banner ───────────────────────────── */
+.tips-feed-totd {
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  animation: fadeIn 0.2s ease;
+}
+
+.tips-feed-totd-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--accent);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tips-feed-totd-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.tips-feed-totd-body {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* ── Tip Cards ───────────────────────────────────────── */
+.tips-feed-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--purple);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+
+.tips-feed-card:hover {
+  border-color: var(--text-dim);
+  border-left-color: var(--purple);
+}
+
+.tips-feed-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tips-feed-card-icon {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+
+.tips-feed-card-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tips-feed-card-body {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.tips-feed-card-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.tips-feed-card-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+
+/* ── RSS Cards ───────────────────────────────────────── */
+.tips-feed-rss-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--purple);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+
+.tips-feed-rss-card:hover {
+  border-color: var(--text-dim);
+  border-left-color: var(--purple);
+}
+
+.tips-feed-rss-source {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--purple);
+  margin-bottom: 4px;
+}
+
+.tips-feed-rss-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.tips-feed-rss-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.tips-feed-rss-link {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.tips-feed-rss-link:hover {
+  border-bottom-color: var(--accent);
+}
+
+/* ── External Link (shared by curated + RSS) ─────────── */
+.tips-feed-ext-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+  margin-top: 6px;
+}
+
+.tips-feed-ext-link:hover {
+  border-bottom-color: var(--accent);
+}
+
+.tips-feed-ext-link svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* ── Section Divider ─────────────────────────────────── */
+.tips-feed-section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+/* ── Loading State ───────────────────────────────────── */
+.tips-feed-loading {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* ── Toggle Button in Header ─────────────────────────── */
+#tips-feed-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  transition: color 0.15s, background 0.15s;
+}
+
+#tips-feed-toggle-btn:hover {
+  color: var(--accent);
+  background: var(--bg-secondary);
+}
+
+#tips-feed-toggle-btn.active {
+  color: var(--accent);
+}
+
+#tips-feed-toggle-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

@@ -102,6 +102,13 @@ export const $ = {
   bgSessionIndicator: document.getElementById("bg-session-indicator"),
   bgSessionBadge: document.getElementById("bg-session-badge"),
 
+  // Tips feed panel
+  tipsFeedPanel: document.getElementById("tips-feed-panel"),
+  tipsFeedToggleBtn: document.getElementById("tips-feed-toggle-btn"),
+  tipsFeedClose: document.getElementById("tips-feed-close"),
+  tipsFeedContent: document.getElementById("tips-feed-content"),
+  tipsFeedResize: document.getElementById("tips-feed-resize"),
+
   // Right panel
   rightPanel: document.getElementById("right-panel"),
   rightPanelToggleBtn: document.getElementById("right-panel-toggle-btn"),

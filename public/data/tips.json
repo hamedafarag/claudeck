@@ -1,0 +1,218 @@
+{
+  "tips": [
+    {
+      "id": "prompt-01",
+      "category": "prompting",
+      "title": "Be specific with context",
+      "body": "Instead of 'fix this bug', say 'fix the null pointer in auth.js line 42 — the user object is undefined when session expires'. More context = better results.",
+      "tags": ["basics", "context"],
+      "source": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview"
+    },
+    {
+      "id": "prompt-02",
+      "category": "prompting",
+      "title": "Use role prompting",
+      "body": "Start with 'You are a senior TypeScript engineer reviewing this PR for security issues.' Role framing activates domain-specific knowledge patterns.",
+      "tags": ["advanced", "roles"],
+      "source": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts"
+    },
+    {
+      "id": "prompt-03",
+      "category": "prompting",
+      "title": "Chain of thought",
+      "body": "Add 'Think step by step' or 'First analyze, then implement' to get more thorough reasoning before code generation.",
+      "tags": ["reasoning", "quality"],
+      "source": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-of-thought"
+    },
+    {
+      "id": "prompt-04",
+      "category": "prompting",
+      "title": "Constrain the output",
+      "body": "Specify format: 'Return only the function, no explanation' or 'Give me a bullet list of 5 options'. Constraints reduce noise.",
+      "tags": ["format", "efficiency"],
+      "source": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview"
+    },
+    {
+      "id": "mcp-01",
+      "category": "mcp",
+      "title": "What is MCP?",
+      "body": "Model Context Protocol lets Claude use external tools — file systems, databases, APIs. Think of it as plugins for AI. Each server exposes tools Claude can call.",
+      "tags": ["basics", "intro"],
+      "source": "https://modelcontextprotocol.io/introduction"
+    },
+    {
+      "id": "mcp-02",
+      "category": "mcp",
+      "title": "Popular MCP servers",
+      "body": "filesystem (read/write files), github (PRs/issues), postgres (query DB), brave-search (web search), memory (persistent notes). Install via npx.",
+      "tags": ["tools", "setup"],
+      "source": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "mcp-03",
+      "category": "mcp",
+      "title": "Building custom MCP servers",
+      "body": "Use @modelcontextprotocol/sdk to build your own. Define tools with schemas, connect via stdio or SSE. Great for internal APIs and custom workflows.",
+      "tags": ["advanced", "development"],
+      "source": "https://modelcontextprotocol.io/quickstart/server"
+    },
+    {
+      "id": "mcp-04",
+      "category": "mcp",
+      "title": "MCP security tips",
+      "body": "Always review tool permissions before approving. Use 'confirm writes' mode for MCP tools that modify data. Scope server access to specific directories.",
+      "tags": ["security", "best-practices"],
+      "source": "https://modelcontextprotocol.io/specification/2025-03-26/basic/security"
+    },
+    {
+      "id": "workflow-01",
+      "category": "workflows",
+      "title": "Plan before coding",
+      "body": "Use plan mode to have Claude analyze the codebase and propose an approach before writing code. Catches architectural issues early and saves iteration cycles.",
+      "tags": ["planning", "efficiency"],
+      "source": "https://docs.anthropic.com/en/docs/claude-code/overview"
+    },
+    {
+      "id": "workflow-02",
+      "category": "workflows",
+      "title": "Iterative refinement",
+      "body": "Don't try to get everything in one prompt. Start broad, then refine: 'Now add error handling' → 'Add input validation' → 'Add tests'. Each step builds on the last.",
+      "tags": ["iteration", "quality"],
+      "source": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview"
+    },
+    {
+      "id": "workflow-03",
+      "category": "workflows",
+      "title": "Use parallel mode for comparisons",
+      "body": "Open parallel mode to try different approaches side by side. Compare implementations, test strategies, or architectural patterns simultaneously.",
+      "tags": ["parallel", "comparison"]
+    },
+    {
+      "id": "workflow-04",
+      "category": "workflows",
+      "title": "Session management",
+      "body": "Keep sessions focused on one task. Start a new session for unrelated work. Pin important sessions for quick access. Use search to find past conversations.",
+      "tags": ["organization", "sessions"]
+    },
+    {
+      "id": "commands-01",
+      "category": "commands",
+      "title": "Essential slash commands",
+      "body": "/clear resets context, /compact summarizes the conversation, /cost shows token usage. Use /help to see all available commands.",
+      "tags": ["basics", "reference"],
+      "source": "https://docs.anthropic.com/en/docs/claude-code/cli-usage"
+    },
+    {
+      "id": "commands-02",
+      "category": "commands",
+      "title": "Quick actions",
+      "body": "/review — get a code review. /fix — auto-fix issues. /test — generate tests. /explain — get an explanation. Most commands work with file context.",
+      "tags": ["actions", "productivity"],
+      "source": "https://docs.anthropic.com/en/docs/claude-code/cli-usage"
+    },
+    {
+      "id": "commands-03",
+      "category": "commands",
+      "title": "Custom workflows",
+      "body": "Create reusable prompt templates in the toolbox. Combine with slash commands for one-click complex operations like 'refactor + test + review'.",
+      "tags": ["automation", "templates"]
+    },
+    {
+      "id": "commands-04",
+      "category": "commands",
+      "title": "File attachments",
+      "body": "Attach files for context without pasting code. Claude sees the full file and can reference line numbers. Great for code reviews and debugging.",
+      "tags": ["files", "context"],
+      "source": "https://docs.anthropic.com/en/docs/claude-code/cli-usage"
+    },
+    {
+      "id": "claude-md-01",
+      "category": "claude-md",
+      "title": "What is CLAUDE.md?",
+      "body": "A markdown file at your project root that gives Claude persistent context — coding standards, architecture decisions, common patterns. Loaded automatically every session.",
+      "tags": ["basics", "setup"],
+      "source": "https://docs.anthropic.com/en/docs/claude-code/memory"
+    },
+    {
+      "id": "claude-md-02",
+      "category": "claude-md",
+      "title": "What to include",
+      "body": "Tech stack, file structure, naming conventions, testing approach, deployment process. Include things you'd tell a new team member on day one.",
+      "tags": ["content", "best-practices"],
+      "source": "https://docs.anthropic.com/en/docs/claude-code/memory"
+    },
+    {
+      "id": "claude-md-03",
+      "category": "claude-md",
+      "title": "Keep it concise",
+      "body": "CLAUDE.md is included in every prompt — long files waste tokens. Aim for 200-500 lines. Use bullet points, not paragraphs. Link to docs instead of duplicating them.",
+      "tags": ["optimization", "tokens"],
+      "source": "https://docs.anthropic.com/en/docs/claude-code/memory"
+    },
+    {
+      "id": "claude-md-04",
+      "category": "claude-md",
+      "title": "Example structure",
+      "body": "# Project\\n## Stack: Next.js 14, TypeScript, Prisma\\n## Conventions: kebab-case files, Zod validation\\n## Testing: Vitest + Testing Library\\n## Key dirs: src/app, src/lib, prisma/",
+      "tags": ["template", "example"],
+      "source": "https://docs.anthropic.com/en/docs/claude-code/memory"
+    }
+  ],
+  "categories": {
+    "prompting": { "label": "Prompting", "icon": ">", "color": "var(--accent)" },
+    "mcp": { "label": "MCP", "icon": "#", "color": "var(--purple)" },
+    "workflows": { "label": "Workflows", "icon": "~", "color": "var(--success)" },
+    "commands": { "label": "Commands", "icon": "/", "color": "var(--warning, #e8a317)" },
+    "claude-md": { "label": "CLAUDE.md", "icon": "@", "color": "var(--error)" }
+  },
+  "feeds": [
+    {
+      "id": "devto-mcp",
+      "name": "DEV.to MCP",
+      "url": "https://dev.to/feed/tag/mcp",
+      "category": "mcp"
+    },
+    {
+      "id": "devto-aiagents",
+      "name": "DEV.to AI Agents",
+      "url": "https://dev.to/feed/tag/aiagents",
+      "category": "workflows"
+    },
+    {
+      "id": "devto-promptengineering",
+      "name": "DEV.to Prompting",
+      "url": "https://dev.to/feed/tag/promptengineering",
+      "category": "prompting"
+    },
+    {
+      "id": "devto-claude",
+      "name": "DEV.to Claude",
+      "url": "https://dev.to/feed/tag/claude",
+      "category": "prompting"
+    },
+    {
+      "id": "devto-llm",
+      "name": "DEV.to LLM",
+      "url": "https://dev.to/feed/tag/llm",
+      "category": "workflows"
+    },
+    {
+      "id": "build-to-launch",
+      "name": "Build to Launch",
+      "url": "https://buildtolaunch.substack.com/feed",
+      "category": "workflows"
+    },
+    {
+      "id": "devto-ai",
+      "name": "DEV.to AI",
+      "url": "https://dev.to/feed/tag/ai",
+      "category": "workflows"
+    },
+    {
+      "id": "simonwillison",
+      "name": "Simon Willison",
+      "url": "https://simonwillison.net/atom/everything/",
+      "category": "workflows"
+    }
+  ]
+}

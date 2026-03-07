@@ -8,6 +8,7 @@ import {
   getTopSessionsByCost, getToolUsage, getToolErrors, getSessionDepth,
   getMsgLengthDistribution, getTopBashCommands, getTopFiles,
   getErrorCategories, getErrorTimeline, getErrorsByTool, getRecentErrors,
+  getModelUsage, getCacheEfficiency,
 } from "../../db.js";
 
 const router = Router();
@@ -81,6 +82,8 @@ router.get("/analytics", (req, res) => {
       errorTimeline: getErrorTimeline(projectPath),
       errorsByTool: getErrorsByTool(projectPath),
       recentErrors: getRecentErrors(projectPath),
+      modelUsage: getModelUsage(projectPath),
+      cacheEfficiency: getCacheEfficiency(projectPath),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

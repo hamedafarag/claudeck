@@ -97,9 +97,11 @@ function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId) {
 }
 
 // Shared SDK stream processor — deduplicates chat and workflow message parsing
-async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, cwd, projectName, isWorkflow, stepLabel }) {
+async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, cwd, projectName, isWorkflow, stepLabel, workflowId, stepIndex }) {
   let claudeSessionId = null;
   let resolvedSid = clientSid;
+  let sessionModel = null;
+  const wfMeta = isWorkflow ? { workflowId: workflowId || null, stepIndex: stepIndex ?? null, stepLabel: stepLabel || null } : null;
 
   for await (const sdkMsg of q) {
     if (ws.readyState !== 1) break;
@@ -107,6 +109,7 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
     // Capture session ID from init message
     if (sdkMsg.type === "system" && sdkMsg.subtype === "init") {
       claudeSessionId = sdkMsg.session_id;
+      if (sdkMsg.model) sessionModel = sdkMsg.model;
       const ourSid = clientSid || crypto.randomUUID();
       resolvedSid = ourSid;
 
@@ -134,7 +137,7 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
         // user message saved by caller for chat; for workflow, save with step label
       }
       if (isWorkflow) {
-        addMessage(resolvedSid, "user", JSON.stringify({ text: msgText }));
+        addMessage(resolvedSid, "user", JSON.stringify({ text: msgText }), null, wfMeta);
       }
 
       if (!isWorkflow) {
@@ -153,12 +156,12 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
         if (block.type === "text" && block.text) {
           wsSend({ type: "text", text: block.text });
           if (resolvedSid) {
-            addMessage(resolvedSid, "assistant", JSON.stringify({ text: block.text }), chatId || null);
+            addMessage(resolvedSid, "assistant", JSON.stringify({ text: block.text }), chatId || null, wfMeta);
           }
         } else if (block.type === "tool_use") {
           wsSend({ type: "tool", id: block.id, name: block.name, input: block.input });
           if (resolvedSid) {
-            addMessage(resolvedSid, "tool", JSON.stringify({ id: block.id, name: block.name, input: block.input }), chatId || null);
+            addMessage(resolvedSid, "tool", JSON.stringify({ id: block.id, name: block.name, input: block.input }), chatId || null, wfMeta);
           }
         }
       }
@@ -173,11 +176,14 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
         const numTurns = sdkMsg.num_turns || 0;
         const inputTokens = sdkMsg.usage?.input_tokens || 0;
         const outputTokens = sdkMsg.usage?.output_tokens || 0;
+        const cacheReadTokens = sdkMsg.usage?.cache_read_input_tokens || 0;
+        const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
+        const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
         const sid = resolvedSid || [...sessionIds.entries()].find(
           ([, v]) => v === claudeSessionId
         )?.[0];
         if (sid) {
-          addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens);
+          addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: "success", isError: 0, cacheReadTokens, cacheCreationTokens });
         }
 
         wsSend({
@@ -188,17 +194,36 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
           totalCost: getTotalCost(),
           input_tokens: inputTokens,
           output_tokens: outputTokens,
+          model,
+          stop_reason: "success",
         });
 
-        if (!isWorkflow && resolvedSid) {
+        if (resolvedSid) {
           addMessage(resolvedSid, "result", JSON.stringify({
             duration_ms: sdkMsg.duration_ms,
             num_turns: sdkMsg.num_turns,
             cost_usd: sdkMsg.total_cost_usd,
-          }), chatId || null);
+            model,
+            stop_reason: "success",
+          }), chatId || null, wfMeta);
         }
       } else if (sdkMsg.subtype?.startsWith("error")) {
         const errMsg = sdkMsg.errors?.join(", ") || "Unknown error";
+        const costUsd = sdkMsg.total_cost_usd || 0;
+        const durationMs = sdkMsg.duration_ms || 0;
+        const numTurns = sdkMsg.num_turns || 0;
+        const inputTokens = sdkMsg.usage?.input_tokens || 0;
+        const outputTokens = sdkMsg.usage?.output_tokens || 0;
+        const cacheReadTokens = sdkMsg.usage?.cache_read_input_tokens || 0;
+        const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
+        const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
+        const sid = resolvedSid || [...sessionIds.entries()].find(
+          ([, v]) => v === claudeSessionId
+        )?.[0];
+        if (sid) {
+          addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: sdkMsg.subtype, isError: 1, cacheReadTokens, cacheCreationTokens });
+          addMessage(sid, "error", JSON.stringify({ error: errMsg, subtype: sdkMsg.subtype, duration_ms: durationMs, cost_usd: costUsd, model }), chatId || null, wfMeta);
+        }
         wsSend({ type: "error", error: errMsg });
       }
       continue;
@@ -213,14 +238,19 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
           const text = Array.isArray(block.content)
             ? block.content.map(c => c.type === "text" ? c.text : "").join("")
             : typeof block.content === "string" ? block.content : "";
-          const toolResultPayload = {
+          const wirePayload = {
             toolUseId: block.tool_use_id,
             content: text.slice(0, 2000),
             isError: block.is_error || false,
           };
-          wsSend({ type: "tool_result", ...toolResultPayload });
-          if (!isWorkflow && resolvedSid) {
-            addMessage(resolvedSid, "tool_result", JSON.stringify(toolResultPayload), chatId || null);
+          wsSend({ type: "tool_result", ...wirePayload });
+          if (resolvedSid) {
+            const dbPayload = {
+              toolUseId: block.tool_use_id,
+              content: text.slice(0, 10000),
+              isError: block.is_error || false,
+            };
+            addMessage(resolvedSid, "tool_result", JSON.stringify(dbPayload), chatId || null, wfMeta);
           }
         }
       }
@@ -340,6 +370,7 @@ export function setupWebSocket(wss, sessionIds) {
               clientSid: resolvedSid, chatId: null,
               cwd, projectName: projectName || "Workflow",
               isWorkflow: true, stepLabel: step.label,
+              workflowId: workflow.id, stepIndex: i,
             });
 
             if (result.resolvedSid) resolvedSid = result.resolvedSid;
@@ -435,12 +466,14 @@ export function setupWebSocket(wss, sessionIds) {
         activeQueries.set(queryKey, { abort: () => abortController.abort() });
 
         let claudeSessionId = null;
+        let sessionModel = null;
 
         for await (const sdkMsg of q) {
           if (ws.readyState !== 1) break;
 
           if (sdkMsg.type === "system" && sdkMsg.subtype === "init") {
             claudeSessionId = sdkMsg.session_id;
+            if (sdkMsg.model) sessionModel = sdkMsg.model;
             const ourSid = clientSid || crypto.randomUUID();
             resolvedSid = ourSid;
 
@@ -493,20 +526,39 @@ export function setupWebSocket(wss, sessionIds) {
               const sid = resolvedSid || [...sessionIds.entries()].find(([, v]) => v === claudeSessionId)?.[0];
               const inputTokens = sdkMsg.usage?.input_tokens || 0;
               const outputTokens = sdkMsg.usage?.output_tokens || 0;
-              if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens);
-              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens });
-              if (resolvedSid) addMessage(resolvedSid, "result", JSON.stringify({ duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, input_tokens: inputTokens, output_tokens: outputTokens }), chatId || null);
+              const cacheReadTokens = sdkMsg.usage?.cache_read_input_tokens || 0;
+              const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
+              const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
+              if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens, { model, stopReason: "success", isError: 0, cacheReadTokens, cacheCreationTokens });
+              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, model, stop_reason: "success" });
+              if (resolvedSid) addMessage(resolvedSid, "result", JSON.stringify({ duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, input_tokens: inputTokens, output_tokens: outputTokens, model, stop_reason: "success" }), chatId || null);
             } else if (sdkMsg.subtype === "error_max_turns") {
               // Max turns reached — treat as a normal completion with a notice
               const sid = resolvedSid || [...sessionIds.entries()].find(([, v]) => v === claudeSessionId)?.[0];
               const inputTokens = sdkMsg.usage?.input_tokens || 0;
               const outputTokens = sdkMsg.usage?.output_tokens || 0;
-              if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens);
-              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens });
+              const cacheReadTokens = sdkMsg.usage?.cache_read_input_tokens || 0;
+              const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
+              const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
+              if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens, { model, stopReason: "error_max_turns", isError: 0, cacheReadTokens, cacheCreationTokens });
+              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, model, stop_reason: "error_max_turns" });
               wsSend({ type: "error", error: `Reached max turns limit (${sdkMsg.num_turns}). Send another message to continue.` });
             } else if (sdkMsg.subtype?.startsWith("error")) {
               const errMsg = sdkMsg.errors?.join(", ") || sdkMsg.error || sdkMsg.message || "Unknown error";
               console.error("SDK result error:", JSON.stringify(sdkMsg));
+              const costUsd = sdkMsg.total_cost_usd || 0;
+              const durationMs = sdkMsg.duration_ms || 0;
+              const numTurns = sdkMsg.num_turns || 0;
+              const inputTokens = sdkMsg.usage?.input_tokens || 0;
+              const outputTokens = sdkMsg.usage?.output_tokens || 0;
+              const cacheReadTokens = sdkMsg.usage?.cache_read_input_tokens || 0;
+              const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
+              const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
+              const sid = resolvedSid || [...sessionIds.entries()].find(([, v]) => v === claudeSessionId)?.[0];
+              if (sid) {
+                addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: sdkMsg.subtype, isError: 1, cacheReadTokens, cacheCreationTokens });
+                addMessage(sid, "error", JSON.stringify({ error: errMsg, subtype: sdkMsg.subtype, duration_ms: durationMs, cost_usd: costUsd, model }), chatId || null);
+              }
               wsSend({ type: "error", error: errMsg });
             }
             continue;
@@ -517,9 +569,12 @@ export function setupWebSocket(wss, sessionIds) {
             for (const block of blocks) {
               if (block.type === "tool_result") {
                 const text = Array.isArray(block.content) ? block.content.map(c => c.type === "text" ? c.text : "").join("") : typeof block.content === "string" ? block.content : "";
-                const payload = { toolUseId: block.tool_use_id, content: text.slice(0, 2000), isError: block.is_error || false };
-                wsSend({ type: "tool_result", ...payload });
-                if (resolvedSid) addMessage(resolvedSid, "tool_result", JSON.stringify(payload), chatId || null);
+                const wirePayload = { toolUseId: block.tool_use_id, content: text.slice(0, 2000), isError: block.is_error || false };
+                wsSend({ type: "tool_result", ...wirePayload });
+                if (resolvedSid) {
+                  const dbPayload = { toolUseId: block.tool_use_id, content: text.slice(0, 10000), isError: block.is_error || false };
+                  addMessage(resolvedSid, "tool_result", JSON.stringify(dbPayload), chatId || null);
+                }
               }
             }
             continue;
@@ -532,6 +587,7 @@ export function setupWebSocket(wss, sessionIds) {
         wsSend({ type: "done" });
       } catch (err) {
         if (err.name === "AbortError") {
+          if (resolvedSid) addMessage(resolvedSid, "aborted", JSON.stringify({ timestamp: Date.now() }), chatId || null);
           wsSend({ type: "aborted" });
         } else {
           const stderrOutput = stderrChunks.join("");
@@ -546,6 +602,7 @@ export function setupWebSocket(wss, sessionIds) {
               wsSend({ type: "done" });
             } catch (retryErr) {
               if (retryErr.name === "AbortError") {
+                if (resolvedSid) addMessage(resolvedSid, "aborted", JSON.stringify({ timestamp: Date.now() }), chatId || null);
                 wsSend({ type: "aborted" });
               } else {
                 console.error("Query retry error:", retryErr.message);

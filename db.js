@@ -59,6 +59,16 @@ try { db.exec(`ALTER TABLE sessions ADD COLUMN title TEXT DEFAULT NULL`); } catc
 try { db.exec(`ALTER TABLE sessions ADD COLUMN pinned INTEGER DEFAULT 0`); } catch { /* exists */ }
 try { db.exec(`ALTER TABLE costs ADD COLUMN input_tokens INTEGER DEFAULT 0`); } catch { /* exists */ }
 try { db.exec(`ALTER TABLE costs ADD COLUMN output_tokens INTEGER DEFAULT 0`); } catch { /* exists */ }
+// New columns for costs table
+try { db.exec(`ALTER TABLE costs ADD COLUMN model TEXT DEFAULT NULL`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE costs ADD COLUMN stop_reason TEXT DEFAULT NULL`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE costs ADD COLUMN is_error INTEGER DEFAULT 0`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE costs ADD COLUMN cache_read_tokens INTEGER DEFAULT 0`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE costs ADD COLUMN cache_creation_tokens INTEGER DEFAULT 0`); } catch { /* exists */ }
+// New columns for messages table (workflow metadata)
+try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_id TEXT DEFAULT NULL`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_step_index INTEGER DEFAULT NULL`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_step_label TEXT DEFAULT NULL`); } catch { /* exists */ }
 
 // Indexes for query performance
 db.exec(`
@@ -103,10 +113,10 @@ const stmts = {
     `UPDATE sessions SET last_used_at = unixepoch() WHERE id = ?`
   ),
   addCost: db.prepare(
-    `INSERT INTO costs (session_id, cost_usd, duration_ms, num_turns, input_tokens, output_tokens) VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT INTO costs (session_id, cost_usd, duration_ms, num_turns, input_tokens, output_tokens, model, stop_reason, is_error, cache_read_tokens, cache_creation_tokens) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ),
   addMessage: db.prepare(
-    `INSERT INTO messages (session_id, role, content, chat_id) VALUES (?, ?, ?, ?)`
+    `INSERT INTO messages (session_id, role, content, chat_id, workflow_id, workflow_step_index, workflow_step_label) VALUES (?, ?, ?, ?, ?, ?, ?)`
   ),
   getMessages: db.prepare(
     `SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC`
@@ -222,8 +232,8 @@ export function touchSession(id) {
   stmts.touchSession.run(id);
 }
 
-export function addCost(sessionId, costUsd, durationMs, numTurns, inputTokens = 0, outputTokens = 0) {
-  stmts.addCost.run(sessionId, costUsd, durationMs, numTurns, inputTokens, outputTokens);
+export function addCost(sessionId, costUsd, durationMs, numTurns, inputTokens = 0, outputTokens = 0, { model = null, stopReason = null, isError = 0, cacheReadTokens = 0, cacheCreationTokens = 0 } = {}) {
+  stmts.addCost.run(sessionId, costUsd, durationMs, numTurns, inputTokens, outputTokens, model, stopReason, isError, cacheReadTokens, cacheCreationTokens);
 }
 
 export function getTotalCost() {
@@ -234,8 +244,8 @@ export function getProjectCost(projectPath) {
   return stmts.getProjectCost.get(projectPath).total;
 }
 
-export function addMessage(sessionId, role, content, chatId = null) {
-  stmts.addMessage.run(sessionId, role, content, chatId);
+export function addMessage(sessionId, role, content, chatId = null, workflowMeta = null) {
+  stmts.addMessage.run(sessionId, role, content, chatId, workflowMeta?.workflowId ?? null, workflowMeta?.stepIndex ?? null, workflowMeta?.stepLabel ?? null);
 }
 
 export function getMessages(sessionId) {
@@ -748,6 +758,53 @@ const analyticsStmts = {
     ORDER BY tr.created_at DESC
     LIMIT 20
   `),
+
+  // ── Model usage & cache efficiency ─────────────────────────
+  modelUsageAll: db.prepare(`
+    SELECT
+      COALESCE(model, 'unknown') AS model,
+      COUNT(*) AS count,
+      COALESCE(SUM(cost_usd), 0) AS cost,
+      COALESCE(SUM(input_tokens + output_tokens), 0) AS tokens
+    FROM costs
+    GROUP BY COALESCE(model, 'unknown')
+    ORDER BY cost DESC
+  `),
+  modelUsageByProject: db.prepare(`
+    SELECT
+      COALESCE(c.model, 'unknown') AS model,
+      COUNT(*) AS count,
+      COALESCE(SUM(c.cost_usd), 0) AS cost,
+      COALESCE(SUM(c.input_tokens + c.output_tokens), 0) AS tokens
+    FROM costs c
+    JOIN sessions s ON c.session_id = s.id
+    WHERE s.project_path = ?
+    GROUP BY COALESCE(c.model, 'unknown')
+    ORDER BY cost DESC
+  `),
+  cacheEfficiencyAll: db.prepare(`
+    SELECT
+      date(c.created_at, 'unixepoch') AS date,
+      COALESCE(SUM(c.cache_read_tokens), 0) AS cache_read,
+      COALESCE(SUM(c.cache_creation_tokens), 0) AS cache_creation,
+      COALESCE(SUM(c.input_tokens), 0) AS total_input
+    FROM costs c
+    WHERE c.created_at >= unixepoch() - 30 * 86400
+    GROUP BY date(c.created_at, 'unixepoch')
+    ORDER BY date ASC
+  `),
+  cacheEfficiencyByProject: db.prepare(`
+    SELECT
+      date(c.created_at, 'unixepoch') AS date,
+      COALESCE(SUM(c.cache_read_tokens), 0) AS cache_read,
+      COALESCE(SUM(c.cache_creation_tokens), 0) AS cache_creation,
+      COALESCE(SUM(c.input_tokens), 0) AS total_input
+    FROM costs c
+    JOIN sessions s ON c.session_id = s.id
+    WHERE s.project_path = ? AND c.created_at >= unixepoch() - 30 * 86400
+    GROUP BY date(c.created_at, 'unixepoch')
+    ORDER BY date ASC
+  `),
 };
 
 export function getAnalyticsOverview(projectPath) {
@@ -843,6 +900,18 @@ export function getRecentErrors(projectPath) {
   return projectPath
     ? analyticsStmts.recentErrorsByProject.all(projectPath)
     : analyticsStmts.recentErrorsAll.all();
+}
+
+export function getModelUsage(projectPath) {
+  return projectPath
+    ? analyticsStmts.modelUsageByProject.all(projectPath)
+    : analyticsStmts.modelUsageAll.all();
+}
+
+export function getCacheEfficiency(projectPath) {
+  return projectPath
+    ? analyticsStmts.cacheEfficiencyByProject.all(projectPath)
+    : analyticsStmts.cacheEfficiencyAll.all();
 }
 
 // ── Push subscription queries ────────────────────────────────

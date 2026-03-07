@@ -236,6 +236,7 @@ export function removeThinking(pane) {
 export function addResultSummary(msg, pane) {
   pane = pane || getPane(null);
   const parts = [];
+  if (msg.model) parts.push(msg.model);
   if (msg.num_turns != null) parts.push(`${msg.num_turns} turn${msg.num_turns !== 1 ? "s" : ""}`);
   if (msg.duration_ms != null) {
     const secs = (msg.duration_ms / 1000).toFixed(1);
@@ -246,6 +247,9 @@ export function addResultSummary(msg, pane) {
   if (totalTokens > 0) {
     const fmt = totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens);
     parts.push(`${fmt} tokens`);
+  }
+  if (msg.stop_reason && msg.stop_reason !== "success") {
+    parts.push(`[${msg.stop_reason}]`);
   }
   if (parts.length > 0) {
     addStatus(parts.join(" \u00b7 "), false, pane);
@@ -311,6 +315,18 @@ export function renderMessagesIntoPane(messages, pane) {
         break;
       case "result":
         addResultSummary(data, pane);
+        break;
+      case "error": {
+        const errorParts = [];
+        if (data.subtype) errorParts.push(`[${data.subtype}]`);
+        if (data.error) errorParts.push(data.error);
+        if (data.cost_usd != null) errorParts.push(`$${data.cost_usd.toFixed(4)}`);
+        if (data.model) errorParts.push(data.model);
+        addStatus(errorParts.join(" \u00b7 ") || "Error", true, pane);
+        break;
+      }
+      case "aborted":
+        addStatus("Aborted", true, pane);
         break;
     }
   }

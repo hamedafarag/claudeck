@@ -6,6 +6,7 @@ import { panes } from './parallel.js';
 import { registerCommand } from './commands.js';
 import { toggleRightPanel, openRightPanel } from './right-panel.js';
 import { openAnalytics } from './analytics.js';
+import { toggleTipsFeed } from './tips-feed.js';
 
 function closeAllModals() {
   document.querySelectorAll(".modal-overlay:not([data-persistent])").forEach((m) => m.classList.add("hidden"));
@@ -79,6 +80,13 @@ document.addEventListener("keydown", (e) => {
   if (isMeta && e.shiftKey && e.key === "A") {
     e.preventDefault();
     openAnalytics();
+    return;
+  }
+
+  // Cmd+Shift+T — Toggle Tips Feed
+  if (isMeta && e.shiftKey && e.key === "T") {
+    e.preventDefault();
+    toggleTipsFeed();
     return;
   }
 

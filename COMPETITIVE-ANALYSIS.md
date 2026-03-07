@@ -230,6 +230,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | Plan/Code/Ask modes | **Yes** | No | No | **Yes** | Yes | No |
 | Multi-agent/CLI support | No | No | **Yes** | No | No | Yes |
 | Image/vision support | **Yes** | No | No | **Yes** | No | No |
+| Tips feed (curated + RSS) | **Yes** | No | No | No | No | No |
 | Custom AI agents | No | **Yes** | No | No | No | No |
 | Voice dictation | No | No | No | No | No | **Yes** |
 | **Code & Files** |
@@ -293,6 +294,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | 13 | PWA offline fallback | Done | Arabic-styled offline page, SW caching strategy, network-first with fallback |
 | 14 | Custom Arabic-style logo | Done | SVG bot logo with Islamic geometric patterns, generated PNG icons (192+512) |
 | 15 | Error pattern analytics | Done | 9 error categories, timeline, per-tool breakdown, recent errors list |
+| 16 | Tips feed panel | Done | Curated AI tips (20 tips, 5 categories) + 8 RSS feeds, tip-of-the-day, category tabs, resize, source links |
 
 ### Tier 1 — High Impact (address next)
 
@@ -394,6 +396,7 @@ These features are **not found in any competitor** (or found in very few):
 | **Notification audio chime** | Two-tone sound on push/local notifications via AudioContext | No |
 | **PWA offline fallback** | Arabic-styled offline page with geometric patterns | No |
 | **Custom Arabic-style branding** | Bot logo with Islamic geometric star patterns | No |
+| **Tips feed panel** | Inline AI tips + RSS aggregation (8 feeds) with category tabs, tip-of-the-day, source links | No |
 | **Zero-framework architecture** | Vanilla JS, 4 npm dependencies — lightest footprint | No |
 | **Error pattern analytics** | 9-category error classification, timeline, per-tool breakdown, recent errors | Sniffly has CLI-only analysis |
 | **Cost dashboard with daily chart** | Full analytics dashboard with bar chart + session table | Opcode has basic analytics |
@@ -403,7 +406,7 @@ These features are **not found in any competitor** (or found in very few):
 ## Implementation Progress
 
 **Last updated**: March 7, 2026
-**Completed**: 14 / 14 (Phase 1-3) + 6 / 6 (Phase 5)
+**Completed**: 14 / 14 (Phase 1-3) + 7 / 7 (Phase 5)
 
 ### Phase 1 — Quick Wins (Low Effort, High Impact)
 - [x] 1. Model switching (dropdown in header)
@@ -435,7 +438,8 @@ These features are **not found in any competitor** (or found in very few):
 - [x] 18b. Custom Arabic-style bot logo (SVG + PNG icons)
 - [ ] 18. Voice input / dictation
 - [x] 19. **Error pattern analytics** — 9 error categories, timeline, per-tool breakdown, recent errors
-- [ ] 20. CLAUDE.md editor
+- [x] 20. **Tips feed panel** — Curated AI tips + 8 RSS feeds (DEV.to, Substack, Simon Willison), category tabs, tip-of-the-day, source links, resizable
+- [ ] 21. CLAUDE.md editor
 
 ---
 
@@ -460,7 +464,7 @@ Based on competitive gaps and market trends:
 ### Where shawkat-ai leads:
 - **Deepest AI features**: Workflows, prompt templates, project commands/skills, parallel mode — no competitor matches this depth
 - **Best cost analytics**: Only Opcode comes close, but shawkat-ai has daily charts + session-level tracking + streaming counter
-- **Most unique features**: 13 features not found in any competitor (see table above)
+- **Most unique features**: 14 features not found in any competitor (see table above)
 - **Lightest footprint**: 4 npm deps vs 20-50+ for competitors
 
 ### Where shawkat-ai trails:
@@ -485,7 +489,7 @@ Based on competitive gaps and market trends:
 
 ## Summary
 
-shawkat-ai remains the most feature-rich Claude Code web UI in AI-powered features (workflows, parallel mode, prompt templates, project commands, diff viewer). Phase 3 power features (file explorer, git integration, MCP management) are now complete, closing the biggest feature gaps versus CloudCLI and CodePilot. The repos management feature opens a new category. PWA support now includes offline fallback with Arabic-styled branding, notification audio chimes, and a custom bot logo — giving shawkat-ai a distinctive identity among competitors.
+shawkat-ai remains the most feature-rich Claude Code web UI in AI-powered features (workflows, parallel mode, prompt templates, project commands, diff viewer). Phase 3 power features (file explorer, git integration, MCP management) are now complete, closing the biggest feature gaps versus CloudCLI and CodePilot. The repos management feature opens a new category. PWA support now includes offline fallback with Arabic-styled branding, notification audio chimes, and a custom bot logo — giving shawkat-ai a distinctive identity among competitors. The new tips feed panel adds an AI learning layer unique in the market — curated tips across 5 categories plus 8 live RSS feeds from DEV.to, Substack, and Simon Willison's blog, helping users sharpen their AI skills while working.
 
 **Immediate priorities**: Authentication (#4) to enable remote usage, mobile responsive (#6) to compete with CloudCLI and Anthropic Remote Control.
 

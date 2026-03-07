@@ -247,6 +247,17 @@ export async function createLinearIssue({ title, description, teamId, stateId })
   return res.json();
 }
 
+// Tips
+export async function fetchTips() {
+  const res = await fetch("/api/tips");
+  return res.json();
+}
+
+export async function fetchRssFeed(url) {
+  const res = await fetch(`/api/tips/rss?url=${encodeURIComponent(url)}`);
+  return res.json();
+}
+
 // Repos
 async function throwApiError(res) {
   const text = await res.text();

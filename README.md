@@ -36,24 +36,24 @@ Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth lo
 ```
 browser ──────── WebSocket ──────── server.js ──────── Claude Code SDK
    |                                    |
-   ├── js/main.js (entry point)       ├── server/routes/ (10 route modules)
+   ├── js/main.js (entry point)       ├── server/routes/ (11 route modules)
    │   ├── store.js (reactive state)  ├── server/ws-handler.js
    │   ├── ws.js (WebSocket client)   ├── db.js (SQLite)
    │   ├── api.js (fetch calls)       ├── folders.json (projects)
    │   ├── chat.js, messages.js ...   ├── repos.json (repositories)
-   │   └── 25+ more modules           ├── prompts.json (16 templates)
+   │   └── 26+ more modules           ├── prompts.json (16 templates)
    │                                   └── workflows.json (3 workflows)
-   ├── css/ (21 focused stylesheets)
+   ├── css/ (22 focused stylesheets)
    └── index.html
 ```
 
 - **WebSocket** streams assistant text, tool calls, and results in real time
 - **Reconnect with backoff** — exponential backoff (2s → 4s → 8s → ... → 30s cap, 0-25% jitter), distinct `ws:reconnected` event triggers state sync
 - **State sync on reconnect** — reconciles background sessions, resets streaming panes, reloads messages from DB, refreshes session list
-- **Modular frontend** — 30+ ES modules (`<script type="module">`) with no bundler
+- **Modular frontend** — 31+ ES modules (`<script type="module">`) with no bundler
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
-- **Modular backend** — 11 Express Router modules + shared WS handler
+- **Modular backend** — 12 Express Router modules + shared WS handler
 - **SQLite + WAL** persists sessions, messages, costs, and Claude session mappings
 - **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
 - **Prepared statements** for all DB queries (no SQL injection risk)
@@ -191,6 +191,12 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | GET    | /api/linear/teams                 | List Linear teams                                |
 | GET    | /api/linear/teams/:teamId/states  | List workflow states for a team                  |
 | POST   | /api/linear/issues                | Create a new issue (title, teamId, description, stateId) |
+
+### Tips Feed
+| Method | Path                 | Description                              |
+| ------ | -------------------- | ---------------------------------------- |
+| GET    | /api/tips            | Serve curated tips + feed definitions    |
+| GET    | /api/tips/rss        | Proxy RSS/Atom feed (15-min cache, limit 20 items) |
 
 ### Stats & System
 | Method | Path                 | Description                              |
@@ -332,6 +338,7 @@ Open via **Tools > Analytics** or `/analytics` slash command. Full analytics wit
 | `Cmd+Shift+E`  | Open Files tab            |
 | `Cmd+Shift+G`  | Open Git tab              |
 | `Cmd+Shift+R`  | Open Repos tab            |
+| `Cmd+Shift+T`  | Toggle tips feed          |
 | `Cmd+1`–`4`    | Focus parallel pane 1–4   |
 | `Escape`       | Close any open modal      |
 | `Enter`        | Send message              |
@@ -578,6 +585,21 @@ Browser notifications for events that happen while the tab is unfocused, **inclu
 - Dedup tags prevent notification spam (e.g. same session won't stack)
 - Graceful degradation: if VAPID keys are missing, push is a no-op; if PushManager is unavailable, local notifications still work
 
+### 34. Tips Feed Panel
+Inline tips panel that sits side-by-side with chat messages to help sharpen AI skills while working:
+- **Curated tips** — 20 tips across 5 categories: Prompting (`>`), MCP (`#`), Workflows (`~`), Commands (`/`), CLAUDE.md (`@`)
+- **Tip of the day** — rotates daily from the curated set, highlighted with accent border
+- **RSS feed aggregation** — proxied server-side with 15-min cache, supports RSS 2.0 and Atom formats
+- **8 RSS sources**: DEV.to (MCP, AI Agents, Prompting, Claude, LLM, AI), Build to Launch (Substack), Simon Willison's blog
+- **Category filter tabs** — click to filter by category, wrapping layout, persisted to `localStorage`
+- **External source links** — each tip and RSS item has an external link icon pointing to reference/source URL
+- **Resizable** — drag the left edge to resize (260px–600px), width persisted to `localStorage`
+- **Toggle**: header lightbulb button, `Cmd+Shift+T`, or `/tips` slash command
+- **Parallel mode safety** — auto-closes when entering parallel mode, toggle button disabled
+- **State persistence** — open/closed state, category filter, and width all saved to `localStorage`
+- Data stored in `public/data/tips.json` (no database), served via `GET /api/tips`
+- RSS proxy via `GET /api/tips/rss?url=<encoded>` with regex XML parser (no dependencies)
+
 ### 33. Persistent Confirmation Modals
 The background-session and permission approval modals are persistent — they can only be dismissed via their action buttons. Overlay clicks, Escape key, and close buttons are disabled to prevent accidental dismissal of critical decisions.
 
@@ -604,6 +626,7 @@ The background-session and permission approval modals are persistent — they ca
 | /repos           | Open Repos tab in right panel  |
 | /mcp             | Open MCP server manager modal  |
 | /notifications   | Toggle browser notifications   |
+| /tips            | Toggle tips feed panel         |
 
 ### CLI
 | Command       | Description                     |
@@ -759,13 +782,16 @@ shawkat-ai/
 │       ├── exec.js        Shell command execution
 │       ├── linear.js      Linear API proxy (issues, teams, states)
 │       ├── mcp.js         MCP server CRUD (~/.claude/settings.json)
-│       └── repos.js       Repos CRUD (groups + repos from repos.json)
+│       ├── repos.js       Repos CRUD (groups + repos from repos.json)
+│       └── tips.js        Tips feed API + RSS proxy (15-min cache)
 ├── package.json           5 runtime dependencies
 ├── folders.json           Project configurations
 ├── repos.json             Repository groups + repos
 ├── prompts.json           16 prompt templates
 ├── workflows.json         3 multi-step workflows
 ├── data.db                SQLite database (auto-created)
+├── public/data/
+│   └── tips.json          20 curated tips + RSS feed definitions
 └── public/
     ├── index.html         HTML structure + modals + SW registration
     ├── manifest.json      PWA Web App Manifest
@@ -796,6 +822,7 @@ shawkat-ai/
     │   ├── git-panel.css      Git status, staging, commit, log, branches
     │   ├── mcp-manager.css    MCP server modal, cards, form
     │   ├── image-attachments.css Image preview strip, chat thumbnails, overlay
+    │   ├── tips-feed.css      Tips feed panel, cards, tabs, resize handle
     │   ├── linear-panel.css   Linear tasks panel + create issue modal
     │   ├── theme.css          Scanline overlay, animations, scrollbar
     │   └── print.css          Print-friendly styles
@@ -831,6 +858,7 @@ shawkat-ai/
         ├── repos-panel.js     Repos tree, groups, add/remove, context menus, search
         ├── git-panel.js       Git status, staging, commit, branch, log
         ├── mcp-manager.js     MCP server CRUD modal
+        ├── tips-feed.js       Tips feed panel + RSS rendering + resize
         ├── linear-panel.js    Linear tasks panel + create issue modal
         ├── shortcuts.js       Global keyboard shortcuts
         └── chat.js            Send/stop logic, WS message handler, boot
@@ -895,6 +923,9 @@ The following data flows through the app at runtime but is **not** saved to the 
 | `shawkat-repos-expanded` | Expanded group IDs in repos panel |
 | `shawkat-notifications` | Browser notifications enabled (1/0) |
 | `shawkat-notifications-sound` | Notification sound enabled (default on, set to 0 to disable) |
+| `shawkat-tips-feed` | Tips feed panel open/closed state (1/0) |
+| `shawkat-tips-category` | Active tips category filter (all/prompting/mcp/workflows/commands/claude-md) |
+| `shawkat-tips-width` | Tips feed panel width in pixels |
 
 There is no server-side user preferences table — all client preferences are lost if localStorage is cleared or a different browser is used.
 

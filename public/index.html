@@ -128,6 +128,13 @@
         </div>
       </div>
 
+      <button id="tips-feed-toggle-btn" class="header-icon-btn" title="Toggle tips feed (Cmd+Shift+T)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18h6"/><path d="M10 22h4"/>
+          <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>
+        </svg>
+      </button>
+
       <button id="right-panel-toggle-btn" class="header-icon-btn" title="Toggle right panel (Cmd+B)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/>
@@ -197,49 +204,65 @@
 
     <!-- Main Chat Area -->
     <main class="chat-area">
-      <div id="messages" class="messages"></div>
+      <div class="chat-area-main">
+        <div id="messages" class="messages"></div>
 
-      <div id="image-preview-strip" class="image-preview-strip hidden"></div>
-      <input type="file" id="image-file-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
-      <div class="input-bar">
-        <button id="workflow-btn" title="Workflows" class="toolbox-toggle">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-          </svg>
-        </button>
-        <button id="attach-btn" title="Attach files" class="toolbox-toggle" style="position:relative;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-          </svg>
-          <span id="attach-badge" class="attach-badge hidden">0</span>
-        </button>
-        <button id="image-btn" title="Attach images (paste / drop)" class="toolbox-toggle">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-        </button>
-        <button id="toolbox-btn" title="Prompt Toolbox" class="toolbox-toggle">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-          </svg>
-        </button>
-        <textarea id="message-input" placeholder="> type a message or / for commands..." rows="1"></textarea>
-        <button id="send-btn" title="Send">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M3 10l7-7m0 0l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90, 10, 10)"/>
-          </svg>
-        </button>
-        <button id="stop-btn" title="Stop" class="hidden">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="4" y="4" width="12" height="12" rx="2" fill="currentColor"/>
-          </svg>
-        </button>
-        <div id="slash-autocomplete" class="slash-autocomplete hidden"></div>
+        <div id="image-preview-strip" class="image-preview-strip hidden"></div>
+        <input type="file" id="image-file-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+        <div class="input-bar">
+          <button id="workflow-btn" title="Workflows" class="toolbox-toggle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </button>
+          <button id="attach-btn" title="Attach files" class="toolbox-toggle" style="position:relative;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+            <span id="attach-badge" class="attach-badge hidden">0</span>
+          </button>
+          <button id="image-btn" title="Attach images (paste / drop)" class="toolbox-toggle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </button>
+          <button id="toolbox-btn" title="Prompt Toolbox" class="toolbox-toggle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+            </svg>
+          </button>
+          <textarea id="message-input" placeholder="> type a message or / for commands..." rows="1"></textarea>
+          <button id="send-btn" title="Send">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M3 10l7-7m0 0l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90, 10, 10)"/>
+            </svg>
+          </button>
+          <button id="stop-btn" title="Stop" class="hidden">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="4" y="4" width="12" height="12" rx="2" fill="currentColor"/>
+            </svg>
+          </button>
+          <div id="slash-autocomplete" class="slash-autocomplete hidden"></div>
+        </div>
+        <div id="toolbox-panel" class="toolbox-panel hidden"></div>
+        <div id="workflow-panel" class="toolbox-panel hidden"></div>
       </div>
-      <div id="toolbox-panel" class="toolbox-panel hidden"></div>
-      <div id="workflow-panel" class="toolbox-panel hidden"></div>
+
+      <aside id="tips-feed-panel" class="tips-feed-panel hidden">
+        <div id="tips-feed-resize" class="tips-feed-resize"></div>
+        <div class="tips-feed-header">
+          <span class="tips-feed-title"><span class="tips-feed-title-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>
+            </svg>
+          </span> Tips Feed</span>
+          <button id="tips-feed-close" class="tips-feed-close" title="Close">&times;</button>
+        </div>
+        <div class="tips-feed-tabs"></div>
+        <div id="tips-feed-content" class="tips-feed-content"></div>
+      </aside>
     </main>
 
     <!-- Right Panel (tabbed: Tasks / Files / Git) -->
@@ -416,6 +439,7 @@
         <tr><td><span class="kbd">&#8984;&#8679;G</span></td><td>Open git panel</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;R</span></td><td>Open repos panel</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;A</span></td><td>Open analytics dashboard</td></tr>
+        <tr><td><span class="kbd">&#8984;&#8679;T</span></td><td>Toggle tips feed</td></tr>
         <tr><td><span class="kbd">&#8984;1</span>–<span class="kbd">&#8984;4</span></td><td>Focus parallel pane 1–4</td></tr>
         <tr><td><span class="kbd">Esc</span></td><td>Close any open modal</td></tr>
         <tr><td><span class="kbd">Enter</span></td><td>Send message</td></tr>
