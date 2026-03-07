@@ -205,6 +205,11 @@ export async function toggleSessionPin(sessionId) {
   await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/pin`, { method: "PUT" });
 }
 
+export async function generateSummary(sessionId) {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/summary`, { method: "POST" });
+  return res.json();
+}
+
 export async function saveSystemPromptApi(path, systemPrompt) {
   await fetch("/api/projects/system-prompt", {
     method: "PUT",

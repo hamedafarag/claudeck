@@ -69,6 +69,8 @@ try { db.exec(`ALTER TABLE costs ADD COLUMN cache_creation_tokens INTEGER DEFAUL
 try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_id TEXT DEFAULT NULL`); } catch { /* exists */ }
 try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_step_index INTEGER DEFAULT NULL`); } catch { /* exists */ }
 try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_step_label TEXT DEFAULT NULL`); } catch { /* exists */ }
+// AI-generated session summary
+try { db.exec(`ALTER TABLE sessions ADD COLUMN summary TEXT DEFAULT NULL`); } catch { /* exists */ }
 
 // Indexes for query performance
 db.exec(`
@@ -147,6 +149,9 @@ const stmts = {
   ),
   toggleSessionPin: db.prepare(
     `UPDATE sessions SET pinned = CASE WHEN pinned = 1 THEN 0 ELSE 1 END WHERE id = ?`
+  ),
+  updateSessionSummary: db.prepare(
+    `UPDATE sessions SET summary = ? WHERE id = ?`
   ),
   searchSessions: db.prepare(
     `SELECT s.*, ${MODE_CASE}
@@ -279,6 +284,10 @@ export function updateSessionTitle(id, title) {
 
 export function toggleSessionPin(id) {
   stmts.toggleSessionPin.run(id);
+}
+
+export function updateSessionSummary(id, summary) {
+  stmts.updateSessionSummary.run(summary, id);
 }
 
 export function searchSessions(query, limit = 20, projectPath) {

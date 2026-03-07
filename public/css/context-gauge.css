@@ -1,0 +1,39 @@
+/* Context Window Gauge */
+.context-gauge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: default;
+}
+
+.context-gauge-bar {
+  width: 48px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.context-gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--success, #3fb950);
+  transition: width 0.3s ease, background 0.3s ease;
+  width: 0%;
+}
+
+.context-gauge-fill.warning {
+  background: #d29922;
+}
+
+.context-gauge-fill.critical {
+  background: var(--error, #f85149);
+}
+
+.context-gauge-label {
+  white-space: nowrap;
+  color: var(--text-secondary);
+}

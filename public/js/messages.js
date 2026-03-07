@@ -243,10 +243,11 @@ export function addResultSummary(msg, pane) {
     parts.push(`${secs}s`);
   }
   if (msg.cost_usd != null) parts.push(`$${msg.cost_usd.toFixed(4)}`);
-  const totalTokens = (msg.input_tokens || 0) + (msg.output_tokens || 0);
-  if (totalTokens > 0) {
-    const fmt = totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens);
-    parts.push(`${fmt} tokens`);
+  const inTok = msg.input_tokens || 0;
+  const outTok = msg.output_tokens || 0;
+  if (inTok > 0 || outTok > 0) {
+    const fmtTok = (n) => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
+    parts.push(`${fmtTok(inTok)} in / ${fmtTok(outTok)} out`);
   }
   if (msg.stop_reason && msg.stop_reason !== "success") {
     parts.push(`[${msg.stop_reason}]`);

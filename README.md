@@ -41,9 +41,9 @@ browser ──────── WebSocket ──────── server.js �
    │   ├── ws.js (WebSocket client)   ├── db.js (SQLite)
    │   ├── api.js (fetch calls)       ├── folders.json (projects)
    │   ├── chat.js, messages.js ...   ├── repos.json (repositories)
-   │   └── 26+ more modules           ├── prompts.json (16 templates)
+   │   └── 28+ more modules           ├── prompts.json (16 templates)
    │                                   └── workflows.json (3 workflows)
-   ├── css/ (22 focused stylesheets)
+   ├── css/ (24 focused stylesheets)
    └── index.html
 ```
 
@@ -79,6 +79,7 @@ browser ──────── WebSocket ──────── server.js �
 | project_path      | TEXT    | Filesystem path (used as CWD)        |
 | title             | TEXT    | Auto-generated or manually edited    |
 | pinned            | INTEGER | 0 or 1, pinned sessions sort to top  |
+| summary           | TEXT    | AI-generated session summary (via Claude Haiku) |
 | created_at        | INTEGER | Unix timestamp                       |
 | last_used_at      | INTEGER | Unix timestamp, updated on each use  |
 
@@ -132,6 +133,7 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | DELETE | /api/sessions/:id           | Delete session + all related data      |
 | PUT    | /api/sessions/:id/title     | Rename session                         |
 | PUT    | /api/sessions/:id/pin       | Toggle pin/unpin                       |
+| POST   | /api/sessions/:id/summary   | Generate/regenerate AI summary         |
 
 ### Messages
 | Method | Path                              | Description                     |
@@ -338,6 +340,7 @@ Open via **Tools > Analytics** or `/analytics` slash command. Full analytics wit
 | `Cmd+Shift+E`  | Open Files tab            |
 | `Cmd+Shift+G`  | Open Git tab              |
 | `Cmd+Shift+R`  | Open Repos tab            |
+| `Cmd+Shift+V`  | Open Events tab           |
 | `Cmd+Shift+T`  | Toggle tips feed          |
 | `Cmd+1`–`4`    | Focus parallel pane 1–4   |
 | `Escape`       | Close any open modal      |
@@ -603,6 +606,38 @@ Inline tips panel that sits side-by-side with chat messages to help sharpen AI s
 ### 33. Persistent Confirmation Modals
 The background-session and permission approval modals are persistent — they can only be dismissed via their action buttons. Overlay clicks, Escape key, and close buttons are disabled to prevent accidental dismissal of critical decisions.
 
+### 35. Context Gauge
+A progress bar in the header showing cumulative session token usage against the model's context window (200k default):
+- Tracks input, output, cache read, and cache creation tokens across all queries in a session
+- Color-coded: green (normal), yellow (>50%), red (>80%)
+- Hover tooltip shows token breakdown by category
+- Resets on new session, loads from history when switching sessions
+- Auto-hidden when no tokens recorded
+
+### 36. Event Stream Panel
+A structured activity log in the right panel's "Events" tab:
+- Logs all tool calls, results, errors, and completion events in real time
+- Each event shows timestamp, type badge (TOOL/OK/ERR/DONE), and summary
+- Click to expand and see full event details (JSON input, full output)
+- Filter by type: All, Tools, Errors, Results
+- Search across event text
+- Auto-scroll toggle to follow latest events
+- Clear button to reset the log
+- Loads historical events when switching sessions
+- Open via `Cmd+Shift+V` or `/events`
+
+### 37. AI-Generated Session Summaries
+After a query completes, Claude Haiku automatically generates a 1-sentence summary of the conversation:
+- Uses the Claude Code SDK with `claude-haiku-4-5-20251001` model (fire-and-forget, ~$0.0001/call)
+- Summary stored in `sessions.summary` column
+- Hover over a session card in the sidebar to see the summary as a tooltip
+- Right-click any session and select "Generate Summary" to manually generate or regenerate
+- On-demand endpoint: `POST /api/sessions/:id/summary`
+- Graceful degradation: if the API call fails, no crash — just no summary
+
+### 38. Per-Message Token Breakdown
+Result summaries on each message now show input and output tokens separately (`Xk in / Yk out`) instead of a single total, giving better visibility into token distribution per query.
+
 ---
 
 ## Slash Commands
@@ -624,6 +659,7 @@ The background-session and permission approval modals are persistent — they ca
 | /files           | Open Files tab in right panel  |
 | /git             | Open Git tab in right panel    |
 | /repos           | Open Repos tab in right panel  |
+| /events          | Open Events tab in right panel |
 | /mcp             | Open MCP server manager modal  |
 | /notifications   | Toggle browser notifications   |
 | /tips            | Toggle tips feed panel         |
@@ -771,6 +807,7 @@ shawkat-ai/
 ├── .env.example           Environment variable template
 ├── server/
 │   ├── ws-handler.js      WebSocket handler with stale session retry + stderr capture
+│   ├── summarizer.js      AI session summary generation via Claude Haiku
 │   └── routes/
 │       ├── projects.js    Project CRUD + system prompts + commands
 │       ├── sessions.js    Session CRUD + pin/unpin
@@ -824,6 +861,8 @@ shawkat-ai/
     │   ├── image-attachments.css Image preview strip, chat thumbnails, overlay
     │   ├── tips-feed.css      Tips feed panel, cards, tabs, resize handle
     │   ├── linear-panel.css   Linear tasks panel + create issue modal
+    │   ├── context-gauge.css  Context window usage gauge
+    │   ├── event-stream.css   Event stream panel styles
     │   ├── theme.css          Scanline overlay, animations, scrollbar
     │   └── print.css          Print-friendly styles
     └── js/
@@ -861,6 +900,8 @@ shawkat-ai/
         ├── tips-feed.js       Tips feed panel + RSS rendering + resize
         ├── linear-panel.js    Linear tasks panel + create issue modal
         ├── shortcuts.js       Global keyboard shortcuts
+        ├── context-gauge.js   Session token usage progress bar
+        ├── event-stream.js    Event stream panel (structured activity log)
         └── chat.js            Send/stop logic, WS message handler, boot
 ```
 

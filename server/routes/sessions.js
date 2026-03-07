@@ -7,6 +7,7 @@ import {
   searchSessions,
 } from "../../db.js";
 import { getActiveSessionIds } from "../ws-handler.js";
+import { generateSessionSummary } from "../summarizer.js";
 
 const router = Router();
 
@@ -84,6 +85,16 @@ router.put("/:id/pin", (req, res) => {
   try {
     toggleSessionPin(req.params.id);
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Generate/regenerate summary on demand
+router.post("/:id/summary", async (req, res) => {
+  try {
+    const summary = await generateSessionSummary(req.params.id);
+    res.json({ ok: true, summary });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

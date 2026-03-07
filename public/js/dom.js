@@ -74,6 +74,11 @@ export const $ = {
   // Session search
   sessionSearchInput: document.getElementById("session-search"),
 
+  // Context gauge
+  contextGauge: document.getElementById("context-gauge"),
+  contextGaugeFill: document.getElementById("context-gauge-fill"),
+  contextGaugeLabel: document.getElementById("context-gauge-label"),
+
   // Streaming tokens
   streamingTokens: document.getElementById("streaming-tokens"),
 
@@ -113,6 +118,13 @@ export const $ = {
   rightPanel: document.getElementById("right-panel"),
   rightPanelToggleBtn: document.getElementById("right-panel-toggle-btn"),
   rightPanelClose: document.getElementById("right-panel-close"),
+
+  // Event stream (inside right panel events tab)
+  eventStreamSearch: document.getElementById("event-stream-search"),
+  eventStreamList: document.getElementById("event-stream-list"),
+  eventStreamCount: document.getElementById("event-stream-count"),
+  eventStreamClear: document.getElementById("event-stream-clear"),
+  eventAutoscroll: document.getElementById("event-autoscroll"),
 
   // Linear panel (inside right panel tasks tab)
   linearRefreshBtn: document.getElementById("linear-refresh-btn"),

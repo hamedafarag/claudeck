@@ -6,6 +6,7 @@ import { escapeHtml } from './utils.js';
 import * as api from './api.js';
 import { panes, enterParallelMode, exitParallelMode } from './parallel.js';
 import { renderMessagesIntoPane } from './messages.js';
+import { loadContextGauge } from './context-gauge.js';
 
 const SESSION_STORAGE_KEY = "shawkat-ai-session-id";
 
@@ -55,16 +56,25 @@ function renderSessions(sessions) {
       : '<span class="session-mode single">single</span>';
     const displayTitle = s.title || s.project_name || "Session";
     const isPinned = s.pinned === 1;
+    const summaryTooltip = s.summary ? escapeHtml(s.summary) : "";
     li.innerHTML = `
-      <button class="session-pin${isPinned ? " pinned" : ""}" title="${isPinned ? "Unpin" : "Pin"} session">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="${isPinned ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 17v5"/><path d="M9 2h6l-1 7h4l-5 8h-2l-5-8h4z"/>
-        </svg>
-      </button>
-      <button class="session-delete" title="Delete session">&times;</button>
-      <span class="session-title" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</span> ${modeBadge}
+      <div class="session-card-header">
+        <span class="session-title" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</span>
+        ${modeBadge}
+        <span class="session-card-actions">
+          <button class="session-pin${isPinned ? " pinned" : ""}" title="${isPinned ? "Unpin" : "Pin"} session">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="${isPinned ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 17v5"/><path d="M9 2h6l-1 7h4l-5 8h-2l-5-8h4z"/>
+            </svg>
+          </button>
+          <button class="session-delete" title="Delete session">&times;</button>
+        </span>
+      </div>
       <span class="session-preview">${time}</span>
     `;
+    if (summaryTooltip) {
+      li.setAttribute("data-summary", summaryTooltip);
+    }
     li.querySelector(".session-pin").addEventListener("click", async (e) => {
       e.stopPropagation();
       await api.toggleSessionPin(s.id);
@@ -184,6 +194,7 @@ export async function loadMessages(sid) {
   try {
     const messages = await api.fetchSingleMessages(sid);
     renderMessagesIntoPane(messages, pane);
+    loadContextGauge(sid);
   } catch (err) {
     console.error("Failed to load messages:", err);
   }
@@ -243,6 +254,17 @@ function showSessionContextMenu(e, session) {
     });
     sessionCtxMenu.appendChild(btn);
   }
+
+  // Generate Summary action
+  const summaryBtn = document.createElement("button");
+  summaryBtn.innerHTML = `<span class="ctx-label">Generate Summary</span><span class="ctx-value">${session.summary ? "Regenerate" : "No summary yet"}</span>`;
+  summaryBtn.addEventListener("click", async () => {
+    summaryBtn.querySelector(".ctx-label").textContent = "Generating...";
+    const result = await api.generateSummary(session.id);
+    hideSessionContextMenu();
+    if (result.summary) loadSessions($.sessionSearchInput.value.trim() || undefined);
+  });
+  sessionCtxMenu.appendChild(summaryBtn);
 
   sessionCtxMenu.style.left = e.clientX + "px";
   sessionCtxMenu.style.top = e.clientY + "px";

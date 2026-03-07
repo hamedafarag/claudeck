@@ -21,6 +21,7 @@ import { isBackgroundSession, removeBackgroundSession, showCompletionToast, show
 import { enqueuePermissionRequest, getPermissionMode, clearSessionPermissions } from './permissions.js';
 import { getSelectedModel } from './model-selector.js';
 import { getMaxTurns } from './max-turns.js';
+import { updateContextGauge, resetContextGauge, loadContextGauge } from './context-gauge.js';
 
 export function sendMessage(pane) {
   pane = pane || getPane(null);
@@ -234,6 +235,7 @@ function handleServerMessage(msg) {
   switch (msg.type) {
     case "session":
       setState("sessionId", msg.sessionId);
+      resetContextGauge();
       loadSessions();
       showThinking("Thinking...", pane);
       break;
@@ -255,6 +257,7 @@ function handleServerMessage(msg) {
     case "result":
       removeThinking(pane);
       addResultSummary(msg, pane);
+      updateContextGauge(msg.input_tokens, msg.output_tokens, msg.cache_read_tokens, msg.cache_creation_tokens);
       if (msg.totalCost != null) {
         $.totalCostEl.textContent = "$" + msg.totalCost.toFixed(2);
       }

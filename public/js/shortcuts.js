@@ -76,6 +76,13 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // Cmd+Shift+V — Open Events tab
+  if (isMeta && e.shiftKey && e.key === "V") {
+    e.preventDefault();
+    openRightPanel("events");
+    return;
+  }
+
   // Cmd+Shift+A — Open Analytics
   if (isMeta && e.shiftKey && e.key === "A") {
     e.preventDefault();
@@ -124,5 +131,13 @@ registerCommand("git", {
   description: "Open git panel",
   execute() {
     openRightPanel("git");
+  },
+});
+
+registerCommand("events", {
+  category: "app",
+  description: "Open events panel",
+  execute() {
+    openRightPanel("events");
   },
 });

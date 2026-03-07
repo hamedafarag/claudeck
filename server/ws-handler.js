@@ -14,6 +14,7 @@ import {
 } from "../db.js";
 import { getProjectSystemPrompt } from "./routes/projects.js";
 import { sendPushNotification } from "./push-sender.js";
+import { generateSessionSummary } from "./summarizer.js";
 
 // Tools that are read-only and safe to auto-approve in "confirmDangerous" mode
 const READ_ONLY_TOOLS = new Set([
@@ -621,6 +622,12 @@ export function setupWebSocket(wss, sessionIds) {
         const session = resolvedSid ? getSession(resolvedSid) : null;
         const pushTitle = session?.title || "Session complete";
         sendPushNotification("Shawkat AI", pushTitle, `chat-${resolvedSid}`);
+        // Fire-and-forget summary generation
+        if (resolvedSid) {
+          generateSessionSummary(resolvedSid).catch(err =>
+            console.error("Summary generation error:", err.message)
+          );
+        }
       }
     });
   });

@@ -27,6 +27,8 @@ import './model-selector.js';
 import './max-turns.js';
 import './right-panel.js';
 import './header-dropdowns.js';
+import './context-gauge.js';
+import './event-stream.js';
 import './shortcuts.js';
 import './chat.js';
 import './linear-panel.js';

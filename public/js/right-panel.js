@@ -9,7 +9,7 @@ const OLD_LINEAR_KEY = "shawkat-linear-panel";
 const MIN_WIDTH = 200;
 const MAX_WIDTH_RATIO = 0.6; // 60vw
 
-const TABS = ["tasks", "files", "git", "repos"];
+const TABS = ["tasks", "files", "git", "repos", "events"];
 
 function isPanelOpen() {
   return !$.rightPanel.classList.contains("hidden");

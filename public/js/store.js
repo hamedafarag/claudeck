@@ -14,6 +14,7 @@ const state = {
   savedChatArea: null,
   backgroundSessions: new Map(),
   notificationsEnabled: false,
+  sessionTokens: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
 };
 
 const listeners = {};

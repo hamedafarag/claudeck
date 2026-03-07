@@ -347,7 +347,7 @@
 
 .session-list li {
   position: relative;
-  padding: 9px 16px;
+  padding: 8px 12px;
   font-size: 12px;
   cursor: pointer;
   color: var(--text-secondary);
@@ -366,19 +366,47 @@
   background: var(--accent-dim);
 }
 
+/* Card header — title + badges + actions in one row */
+.session-card-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+}
+
+.session-card-header .session-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.session-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.session-list li:hover .session-card-actions {
+  opacity: 1;
+}
+
+/* Always show pin icon when pinned */
+.session-card-actions:has(.session-pin.pinned) {
+  opacity: 1;
+}
+
 .session-pin {
-  position: absolute;
-  top: 8px;
-  right: 30px;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   background: none;
   border: none;
   color: var(--text-dim);
   font-size: 14px;
   cursor: pointer;
   border-radius: 4px;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
@@ -386,34 +414,28 @@
 }
 
 .session-pin.pinned {
-  display: flex;
   color: var(--warning);
 }
 
-.session-list li:hover .session-pin { display: flex; }
 .session-pin:hover { background: var(--accent-dim); color: var(--accent); }
 .session-pin.pinned:hover { background: var(--accent-dim); color: var(--accent); }
 
 .session-delete {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   background: none;
   border: none;
   color: var(--text-dim);
   font-size: 14px;
   cursor: pointer;
   border-radius: 4px;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
   transition: background 0.1s, color 0.1s;
 }
 
-.session-list li:hover .session-delete { display: flex; }
 .session-delete:hover { background: var(--error); color: #fff; }
 
 .session-list li .session-preview {
@@ -424,6 +446,39 @@
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 2px;
+}
+
+/* Summary tooltip on hover */
+.session-list li[data-summary] {
+  position: relative;
+}
+
+.session-list li[data-summary]::after {
+  content: attr(data-summary);
+  position: absolute;
+  left: 16px;
+  top: 100%;
+  z-index: 1000;
+  max-width: 280px;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text);
+  white-space: normal;
+  word-wrap: break-word;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.session-list li[data-summary]:hover::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .session-mode {

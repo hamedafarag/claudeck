@@ -142,6 +142,10 @@
       </button>
 
       <div class="term-costs">
+        <span id="context-gauge" class="context-gauge hidden" title="Session context usage">
+          <span class="context-gauge-bar"><span id="context-gauge-fill" class="context-gauge-fill"></span></span>
+          <span id="context-gauge-label" class="context-gauge-label">0/200k</span>
+        </span>
         <span id="streaming-tokens" class="streaming-tokens hidden">~0 tokens</span>
         <span class="term-cost-label">proj</span>
         <span class="term-cost-value" id="project-cost">$0.00</span>
@@ -273,6 +277,7 @@
         <button class="right-panel-tab" data-tab="files">Files</button>
         <button class="right-panel-tab" data-tab="git">Git</button>
         <button class="right-panel-tab" data-tab="repos">Repos</button>
+        <button class="right-panel-tab" data-tab="events">Events</button>
         <button id="right-panel-close" class="right-panel-close" title="Close panel">&times;</button>
       </div>
       <div class="right-panel-content">
@@ -361,6 +366,27 @@
           </div>
           <div id="repos-tree" class="repos-tree"></div>
         </div>
+
+        <!-- Events pane -->
+        <div class="right-panel-pane" data-tab="events">
+          <div class="event-stream-toolbar">
+            <div class="event-stream-filters">
+              <button class="event-filter-btn active" data-filter="all">All</button>
+              <button class="event-filter-btn" data-filter="tool">Tools</button>
+              <button class="event-filter-btn" data-filter="error">Errors</button>
+              <button class="event-filter-btn" data-filter="result">Results</button>
+            </div>
+            <input id="event-stream-search" type="text" placeholder="Search events..." autocomplete="off" class="event-stream-search">
+            <button id="event-stream-clear" class="event-stream-clear-btn" title="Clear">Clear</button>
+          </div>
+          <div id="event-stream-list" class="event-stream-list"></div>
+          <div class="event-stream-footer">
+            <span id="event-stream-count">0 events</span>
+            <label class="event-autoscroll-toggle" title="Auto-scroll to latest">
+              <input type="checkbox" id="event-autoscroll" checked> Auto
+            </label>
+          </div>
+        </div>
       </div>
     </aside>
   </div>
@@ -438,6 +464,7 @@
         <tr><td><span class="kbd">&#8984;&#8679;E</span></td><td>Open file explorer</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;G</span></td><td>Open git panel</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;R</span></td><td>Open repos panel</td></tr>
+        <tr><td><span class="kbd">&#8984;&#8679;V</span></td><td>Open events panel</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;A</span></td><td>Open analytics dashboard</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;T</span></td><td>Toggle tips feed</td></tr>
         <tr><td><span class="kbd">&#8984;1</span>–<span class="kbd">&#8984;4</span></td><td>Focus parallel pane 1–4</td></tr>
