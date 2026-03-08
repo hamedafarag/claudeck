@@ -51,6 +51,15 @@ db.exec(`
     keys_auth TEXT NOT NULL,
     created_at INTEGER DEFAULT (unixepoch())
   );
+
+  CREATE TABLE IF NOT EXISTS todos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text TEXT NOT NULL,
+    done INTEGER DEFAULT 0,
+    position INTEGER DEFAULT 0,
+    created_at INTEGER DEFAULT (unixepoch()),
+    updated_at INTEGER DEFAULT (unixepoch())
+  );
 `);
 
 // Migrations
@@ -71,6 +80,8 @@ try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_step_index INTEGER DEFAU
 try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_step_label TEXT DEFAULT NULL`); } catch { /* exists */ }
 // AI-generated session summary
 try { db.exec(`ALTER TABLE sessions ADD COLUMN summary TEXT DEFAULT NULL`); } catch { /* exists */ }
+// Todo archive
+try { db.exec(`ALTER TABLE todos ADD COLUMN archived INTEGER DEFAULT 0`); } catch { /* exists */ }
 
 // Indexes for query performance
 db.exec(`
@@ -192,6 +203,14 @@ const stmts = {
      GROUP BY date(c.created_at, 'unixepoch')
      ORDER BY date ASC`
   ),
+  // Todo CRUD
+  listTodos: db.prepare(`SELECT * FROM todos WHERE archived = 0 ORDER BY position ASC, id ASC`),
+  listArchivedTodos: db.prepare(`SELECT * FROM todos WHERE archived = 1 ORDER BY updated_at DESC`),
+  createTodo: db.prepare(`INSERT INTO todos (text, position) VALUES (?, (SELECT COALESCE(MAX(position),0)+1 FROM todos))`),
+  updateTodo: db.prepare(`UPDATE todos SET text = COALESCE(?, text), done = COALESCE(?, done), updated_at = unixepoch() WHERE id = ?`),
+  archiveTodo: db.prepare(`UPDATE todos SET archived = ?, updated_at = unixepoch() WHERE id = ?`),
+  deleteTodo: db.prepare(`DELETE FROM todos WHERE id = ?`),
+
   getCostTimelineByProject: db.prepare(
     `SELECT date(c.created_at, 'unixepoch') AS date,
             SUM(c.cost_usd) AS cost
@@ -922,6 +941,15 @@ export function getCacheEfficiency(projectPath) {
     ? analyticsStmts.cacheEfficiencyByProject.all(projectPath)
     : analyticsStmts.cacheEfficiencyAll.all();
 }
+
+// ── Todo CRUD ────────────────────────────────────────────────
+export function listTodos(archived = false) {
+  return archived ? stmts.listArchivedTodos.all() : stmts.listTodos.all();
+}
+export function createTodo(text) { return stmts.createTodo.run(text); }
+export function updateTodo(id, text, done) { return stmts.updateTodo.run(text, done, id); }
+export function archiveTodo(id, archived) { return stmts.archiveTodo.run(archived ? 1 : 0, id); }
+export function deleteTodo(id) { return stmts.deleteTodo.run(id); }
 
 // ── Push subscription queries ────────────────────────────────
 const pushStmts = {

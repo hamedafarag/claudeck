@@ -131,6 +131,17 @@ export const $ = {
   linearIssuesList: document.getElementById("linear-issues-list"),
   linearFooter: document.getElementById("linear-footer"),
 
+  // Tasks split
+  tasksLinearSection: document.getElementById("tasks-linear-section"),
+  tasksSplitHandle: document.getElementById("tasks-split-handle"),
+  tasksTodoSection: document.getElementById("tasks-todo-section"),
+
+  // Todo panel
+  todoAddBtn: document.getElementById("todo-add-btn"),
+  todoList: document.getElementById("todo-list"),
+  todoInput: document.getElementById("todo-input"),
+  todoInputBar: document.getElementById("todo-input-bar"),
+
   // File explorer (inside right panel files tab)
   fileExplorerSearch: document.getElementById("file-explorer-search"),
   fileRefreshBtn: document.getElementById("file-refresh-btn"),

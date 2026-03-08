@@ -263,6 +263,34 @@ export async function fetchRssFeed(url) {
   return res.json();
 }
 
+// Todos
+const CT = { "Content-Type": "application/json" };
+
+export async function fetchTodos(archived = false) {
+  const res = await fetch("/api/todos" + (archived ? "?archived=1" : ""));
+  return res.json();
+}
+
+export async function archiveTodoApi(id, archived = true) {
+  const res = await fetch(`/api/todos/${id}/archive`, { method: "PUT", headers: CT, body: JSON.stringify({ archived }) });
+  return res.json();
+}
+
+export async function createTodoApi(text) {
+  const res = await fetch("/api/todos", { method: "POST", headers: CT, body: JSON.stringify({ text }) });
+  return res.json();
+}
+
+export async function updateTodoApi(id, data) {
+  const res = await fetch(`/api/todos/${id}`, { method: "PUT", headers: CT, body: JSON.stringify(data) });
+  return res.json();
+}
+
+export async function deleteTodoApi(id) {
+  const res = await fetch(`/api/todos/${id}`, { method: "DELETE" });
+  return res.json();
+}
+
 // Repos
 async function throwApiError(res) {
   const text = await res.text();

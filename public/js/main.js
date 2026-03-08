@@ -38,3 +38,4 @@ import './repos-panel.js';
 import './mcp-manager.js';
 import './tips-feed.js';
 import './assistant-bot.js';
+import './todo-panel.js';

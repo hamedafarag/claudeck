@@ -36,15 +36,15 @@ Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth lo
 ```
 browser ──────── WebSocket ──────── server.js ──────── Claude Code SDK
    |                                    |
-   ├── js/main.js (entry point)       ├── server/routes/ (11 route modules)
+   ├── js/main.js (entry point)       ├── server/routes/ (12 route modules)
    │   ├── store.js (reactive state)  ├── server/ws-handler.js
    │   ├── ws.js (WebSocket client)   ├── db.js (SQLite)
    │   ├── api.js (fetch calls)       ├── folders.json (projects)
    │   ├── chat.js, messages.js ...   ├── repos.json (repositories)
-   │   └── 29+ more modules           ├── prompts.json (16 templates)
+   │   └── 30+ more modules           ├── prompts.json (16 templates)
    │                                   ├── bot-prompt.json (assistant bot prompt)
    │                                   └── workflows.json (3 workflows)
-   ├── css/ (25 focused stylesheets)
+   ├── css/ (26 focused stylesheets)
    └── index.html
 ```
 
@@ -54,7 +54,7 @@ browser ──────── WebSocket ──────── server.js �
 - **Modular frontend** — 32+ ES modules (`<script type="module">`) with no bundler
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
-- **Modular backend** — 13 Express Router modules + shared WS handler
+- **Modular backend** — 14 Express Router modules + shared WS handler
 - **SQLite + WAL** persists sessions, messages, costs, and Claude session mappings
 - **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
 - **Prepared statements** for all DB queries (no SQL injection risk)
@@ -118,6 +118,17 @@ browser ──────── WebSocket ──────── server.js �
 | keys_p256dh | TEXT    | Client public key for encryption         |
 | keys_auth   | TEXT    | Client auth secret                       |
 | created_at  | INTEGER | Unix timestamp                           |
+
+### todos
+| Column      | Type    | Description                            |
+| ----------- | ------- | -------------------------------------- |
+| id          | INTEGER | Auto-increment PK                      |
+| text        | TEXT    | Todo item text                         |
+| done        | INTEGER | 0 or 1                                 |
+| position    | INTEGER | Sort order (auto-incremented on create)|
+| archived    | INTEGER | 0 (active) or 1 (archived)             |
+| created_at  | INTEGER | Unix timestamp                         |
+| updated_at  | INTEGER | Unix timestamp                         |
 
 Migrations run automatically on startup (ADD COLUMN with try/catch).
 
@@ -206,6 +217,15 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | ------ | -------------------- | ---------------------------------------- |
 | GET    | /api/bot/prompt      | Get bot system prompt from bot-prompt.json |
 | PUT    | /api/bot/prompt      | Update bot system prompt                 |
+
+### Todos
+| Method | Path                    | Description                              |
+| ------ | ----------------------- | ---------------------------------------- |
+| GET    | /api/todos              | List active todos (add `?archived=1` for archived) |
+| POST   | /api/todos              | Create todo `{ text }`                   |
+| PUT    | /api/todos/:id          | Update todo `{ text?, done? }`           |
+| PUT    | /api/todos/:id/archive  | Archive/unarchive `{ archived }`         |
+| DELETE | /api/todos/:id          | Delete todo                              |
 
 ### Stats & System
 | Method | Path                 | Description                              |
@@ -464,7 +484,7 @@ The guard dialog intercepts session clicks, project switches, and the New Sessio
 
 ### 22. Linear Integration
 Side panel for viewing and creating Linear issues directly from the app:
-- **Tasks panel** — toggle via header button; shows assigned open issues with priority, state, labels, due date
+- **Tasks panel** — top half of the Tasks tab; shows assigned open issues with priority, state, labels, due date
 - **Create issue** — modal with title, description, team selector, and workflow state (loaded dynamically per team)
 - **Auto-assign** — new issues auto-assigned via `LINEAR_ASSIGNEE_EMAIL` env var
 - 60-second client-side cache with manual refresh
@@ -473,7 +493,7 @@ Side panel for viewing and creating Linear issues directly from the app:
 
 ### 23. Tabbed Right Panel
 The right side of the UI hosts a resizable tabbed panel with four tabs:
-- **Tasks** — Linear issues (from the Linear integration)
+- **Tasks** — split view with Linear issues (top) and local Todo list (bottom), separated by a draggable resize handle
 - **Files** — file explorer
 - **Git** — git integration
 - **Repos** — repository management
@@ -657,6 +677,19 @@ A floating chat bubble widget (bottom-left corner) that provides a personal AI a
 
 ### 39. Per-Message Token Breakdown
 Result summaries on each message now show input and output tokens separately (`Xk in / Yk out`) instead of a single total, giving better visibility into token distribution per query.
+
+### 40. Local Todo List
+A persistent todo list in the bottom half of the Tasks tab, stored in SQLite:
+- **Split layout** — Tasks tab is split vertically: Linear issues on top, Todo list on bottom
+- **Draggable divider** — 6px drag handle between sections to adjust the split ratio; ratio persisted to `localStorage`
+- **Add todos** — click "+" button, type in the input bar, press Enter
+- **Toggle done** — checkbox marks items as done (strikethrough + dimmed)
+- **Inline edit** — double-click text to edit in place, Enter to save, Escape to cancel
+- **Archive** — per-item archive button (box icon) moves completed items out of the active list
+- **Archive view** — toggle archive icon in the header to switch between active and archived todos; unarchive button to restore items
+- **Delete** — per-item × button to permanently remove
+- **Persistent** — todos stored in SQLite `todos` table, survive server restarts
+- **Lazy loading** — todos fetched from API when the Tasks tab is first shown
 
 ---
 

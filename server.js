@@ -23,6 +23,7 @@ import mcpRouter from "./server/routes/mcp.js";
 import reposRouter from "./server/routes/repos.js";
 import tipsRouter from "./server/routes/tips.js";
 import botRouter from "./server/routes/bot.js";
+import todosRouter from "./server/routes/todos.js";
 import notificationsRouter, { setVapidPublicKey } from "./server/routes/notifications.js";
 import { setupWebSocket } from "./server/ws-handler.js";
 
@@ -96,6 +97,7 @@ app.use("/api/repos", reposRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/tips", tipsRouter);
 app.use("/api/bot", botRouter);
+app.use("/api/todos", todosRouter);
 
 // WebSocket
 setupWebSocket(wss, sessionIds);
