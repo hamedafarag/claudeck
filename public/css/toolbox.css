@@ -14,6 +14,56 @@
   box-shadow: var(--glow);
 }
 
+/* Tooltips */
+.toolbox-toggle[data-tooltip] {
+  position: relative;
+}
+
+.toolbox-toggle[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+
+.toolbox-toggle[data-tooltip]::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--border);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+
+.toolbox-toggle[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.toolbox-toggle[data-tooltip]:hover::before {
+  opacity: 1;
+}
+
 .toolbox-panel {
   max-width: calc(var(--chat-max-w) + 48px);
   width: 100%;

@@ -13,6 +13,9 @@
   --accent-dim:    rgba(51,209,122,0.08);
   --accent-solid:  #2ec27e;
   --purple:        #c69ff5;
+  --user:          #7b9bf5;
+  --user-dim:      rgba(123,155,245,0.08);
+  --user-solid:    #6b8de5;
   --success:       #33d17a;
   --warning:       #e5a50a;
   --error:         #ed333b;
@@ -45,6 +48,9 @@ html[data-theme="light"] {
   --warning:       #8a6500;
   --error:         #c41a22;
   --purple:        #6a40b0;
+  --user:          #3a6fd8;
+  --user-dim:      rgba(58,111,216,0.08);
+  --user-solid:    #3060c0;
   --glow:          none;
   --glow-strong:   none;
 }

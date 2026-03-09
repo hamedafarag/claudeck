@@ -6,6 +6,7 @@ const state = {
   streamingCharCount: 0,
   prompts: [],
   workflows: [],
+  agents: [],
   projectsData: [],
   attachedFiles: [],
   imageAttachments: [],

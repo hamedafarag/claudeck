@@ -27,6 +27,10 @@ export const $ = {
   workflowBtn: document.getElementById("workflow-btn"),
   workflowPanel: document.getElementById("workflow-panel"),
 
+  // Agents
+  agentBtn: document.getElementById("agent-btn"),
+  agentPanel: document.getElementById("agent-panel"),
+
   // System prompt
   spBadge: document.getElementById("system-prompt-badge"),
   spEditBtn: document.getElementById("system-prompt-edit-btn"),

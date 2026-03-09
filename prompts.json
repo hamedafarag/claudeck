@@ -78,5 +78,15 @@
     "title": "Quick Fix",
     "description": "Fix linting errors and auto-fixable code style issues",
     "prompt": "Run the project's linter (eslint, prettier, or whatever is configured) and fix all auto-fixable issues. For non-auto-fixable issues, apply the fixes manually. Show me what changed."
+  },
+  {
+    "title": "Current Branch",
+    "description": "Get Current Branch",
+    "prompt": "What is the current active branch?"
+  },
+  {
+    "title": "Stage & Commit",
+    "description": "Move Files to stage then Commit",
+    "prompt": "check the current staged files and create a git commit with suitable message"
   }
 ]

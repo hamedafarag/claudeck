@@ -1,0 +1,46 @@
+[
+  {
+    "id": "review-pr",
+    "title": "PR Reviewer",
+    "description": "Autonomously reviews current changes, finds bugs, and writes a detailed review",
+    "icon": "search",
+    "goal": "Thoroughly review all current code changes (staged and unstaged). Read the diffs, understand the intent, check for bugs, security issues, performance problems, and code style violations. Produce a comprehensive review with actionable feedback and code suggestions.",
+    "constraints": {
+      "maxTurns": 50,
+      "timeoutMs": 300000
+    }
+  },
+  {
+    "id": "bug-hunter",
+    "title": "Bug Hunter",
+    "description": "Searches the codebase for bugs, anti-patterns, and security vulnerabilities",
+    "icon": "bug",
+    "goal": "Systematically scan the codebase for bugs, security vulnerabilities, anti-patterns, and potential runtime errors. Prioritize findings by severity and provide concrete fixes for each issue found.",
+    "constraints": {
+      "maxTurns": 80,
+      "timeoutMs": 600000
+    }
+  },
+  {
+    "id": "test-writer",
+    "title": "Test Writer",
+    "description": "Analyzes code and autonomously writes comprehensive tests",
+    "icon": "check",
+    "goal": "Analyze the codebase to identify untested or under-tested code. Write comprehensive tests covering edge cases, error paths, and happy paths. Use the project's existing test framework and conventions.",
+    "constraints": {
+      "maxTurns": 80,
+      "timeoutMs": 600000
+    }
+  },
+  {
+    "id": "refactor",
+    "title": "Refactoring Agent",
+    "description": "Identifies code smells and executes refactoring improvements",
+    "icon": "tool",
+    "goal": "Analyze the codebase for code smells, duplication, overly complex functions, and poor abstractions. Identify the highest-impact refactoring opportunities and execute them, ensuring existing functionality is preserved.",
+    "constraints": {
+      "maxTurns": 60,
+      "timeoutMs": 600000
+    }
+  }
+]

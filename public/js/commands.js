@@ -22,7 +22,7 @@ export function handleSlashAutocomplete(pane) {
   const matches = Object.entries(commandRegistry)
     .filter(([name]) => name.startsWith(partial))
     .sort((a, b) => {
-      const catOrder = { project: 0, skill: 1, app: 2, cli: 3, workflow: 4, prompt: 5 };
+      const catOrder = { project: 0, skill: 1, agent: 2, app: 3, cli: 4, workflow: 5, prompt: 6 };
       const ca = catOrder[a[1].category] ?? 3;
       const cb = catOrder[b[1].category] ?? 3;
       return ca - cb || a[0].localeCompare(b[0]);

@@ -17,6 +17,7 @@ import promptsRouter from "./server/routes/prompts.js";
 import statsRouter from "./server/routes/stats.js";
 import filesRouter from "./server/routes/files.js";
 import workflowsRouter from "./server/routes/workflows.js";
+import agentsRouter from "./server/routes/agents.js";
 import execRouter from "./server/routes/exec.js";
 import linearRouter from "./server/routes/linear.js";
 import mcpRouter from "./server/routes/mcp.js";
@@ -90,6 +91,7 @@ app.get("/api/account", (req, res, next) => {
 });
 app.use("/api/files", filesRouter);
 app.use("/api/workflows", workflowsRouter);
+app.use("/api/agents", agentsRouter);
 app.use("/api/exec", execRouter);
 app.use("/api/linear", linearRouter);
 app.use("/api/mcp", mcpRouter);

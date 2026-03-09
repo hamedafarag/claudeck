@@ -1,0 +1,162 @@
+/* ── Agents ───────────────────────────────────────────── */
+
+/* Agent card in panel */
+.agent-card .agent-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+  color: var(--cyan, #56b6c2);
+}
+
+/* Agent header card in chat */
+.agent-header {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cyan, #56b6c2);
+  border-radius: var(--radius);
+  padding: 0;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.agent-header-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(86, 182, 194, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.agent-header-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--cyan, #56b6c2);
+}
+
+.agent-header-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--cyan, #56b6c2);
+  text-transform: uppercase;
+}
+
+.agent-status-badge {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.agent-status-badge.running {
+  color: var(--cyan, #56b6c2);
+  background: rgba(86, 182, 194, 0.12);
+  animation: agentPulse 2s ease-in-out infinite;
+}
+
+.agent-status-badge.completed {
+  color: var(--success);
+  background: rgba(51, 209, 122, 0.12);
+}
+
+.agent-status-badge.error {
+  color: var(--error);
+  background: rgba(237, 51, 59, 0.12);
+}
+
+@keyframes agentPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.agent-header-goal {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.agent-header-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.agent-stat-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+}
+
+/* Activity log */
+.agent-activity-log {
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 6px 14px;
+}
+
+.agent-activity-log:empty {
+  display: none;
+}
+
+.agent-log-entry {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-log-entry::before {
+  content: "> ";
+  color: var(--cyan, #56b6c2);
+}
+
+.agent-log-action {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Agent category in slash autocomplete */
+.slash-autocomplete-item .cmd-category[data-cat="agent"] {
+  color: #56b6c2;
+  background: rgba(86, 182, 194, 0.1);
+}
+
+/* Light theme overrides */
+html[data-theme="light"] .agent-header {
+  border-left-color: #2a8a9a;
+}
+
+html[data-theme="light"] .agent-header-top {
+  background: rgba(42, 138, 154, 0.06);
+}
+
+html[data-theme="light"] .agent-header-icon,
+html[data-theme="light"] .agent-header-title,
+html[data-theme="light"] .agent-card .agent-icon {
+  color: #2a8a9a;
+}
+
+html[data-theme="light"] .agent-status-badge.running {
+  color: #2a8a9a;
+  background: rgba(42, 138, 154, 0.1);
+}
+
+html[data-theme="light"] .agent-log-entry::before {
+  color: #2a8a9a;
+}

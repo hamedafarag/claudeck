@@ -45,9 +45,9 @@
 }
 
 .msg-user {
-  background: var(--bg-secondary);
+  background: var(--user-dim);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--user);
   border-radius: var(--radius);
   padding: 0;
   font-size: 13px;
@@ -62,8 +62,8 @@
   font-weight: 700;
   font-family: var(--font-mono);
   letter-spacing: 1.2px;
-  color: var(--accent);
-  background: var(--accent-dim);
+  color: var(--user);
+  background: var(--user-dim);
   border-bottom: 1px solid var(--border-subtle);
   user-select: none;
 }
@@ -77,7 +77,7 @@
 
 html[data-theme="light"] .msg-user {
   border-color: var(--border);
-  border-left-color: var(--accent);
+  border-left-color: var(--user);
 }
 
 .msg-assistant {

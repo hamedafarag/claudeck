@@ -12,6 +12,7 @@ import { loadStats, loadAccountInfo } from './cost-dashboard.js';
 import { loadProjects } from './projects.js';
 import { loadPrompts } from './prompts.js';
 import { loadWorkflows } from './workflows.js';
+import { loadAgents, handleAgentMessage } from './agents.js';
 import { connectWebSocket } from './ws.js';
 import { updateAttachmentBadge, getImageAttachments, clearImageAttachments } from './attachments.js';
 import { applyTheme } from './theme.js';
@@ -303,6 +304,14 @@ function handleServerMessage(msg) {
       addStatus("Workflow completed", false, pane);
       break;
 
+    case "agent_started":
+    case "agent_progress":
+    case "agent_completed":
+    case "agent_error":
+    case "agent_aborted":
+      handleAgentMessage(msg, pane);
+      break;
+
     case "permission_request":
       enqueuePermissionRequest(msg);
       break;
@@ -388,7 +397,7 @@ registerCommand("help", {
   category: "app",
   description: "Show all available commands",
   execute(args, pane) {
-    const grouped = { app: [], cli: [], workflow: [], prompt: [] };
+    const grouped = { app: [], cli: [], agent: [], workflow: [], prompt: [] };
     for (const [name, cmd] of Object.entries(commandRegistry)) {
       (grouped[cmd.category] || []).push({ name, ...cmd });
     }
@@ -470,3 +479,4 @@ loadStats();
 loadPrompts();
 connectWebSocket();
 loadWorkflows();
+loadAgents();

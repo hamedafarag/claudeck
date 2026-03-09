@@ -15,6 +15,7 @@ import {
 import { getProjectSystemPrompt } from "./routes/projects.js";
 import { sendPushNotification } from "./push-sender.js";
 import { generateSessionSummary } from "./summarizer.js";
+import { runAgent } from "./agent-loop.js";
 
 // Tools that are read-only and safe to auto-approve in "confirmDangerous" mode
 const READ_ONLY_TOOLS = new Set([
@@ -54,7 +55,7 @@ export function getActiveSessionIds() {
  * Creates a canUseTool callback that sends permission requests over WebSocket
  * and waits for the client to approve/deny.
  */
-function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId) {
+export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId) {
   return async (toolName, toolInput, options) => {
     // Bypass mode — auto-approve everything
     if (permissionMode === "bypass") {
@@ -391,6 +392,28 @@ export function setupWebSocket(wss, sessionIds) {
         wfSend({ type: "workflow_completed" });
         wfSend({ type: "done" });
         sendPushNotification("Shawkat AI", `Workflow "${workflow.title}" completed`, `wf-${resolvedSid}`);
+        return;
+      }
+
+      // Agent handler
+      if (msg.type === "agent") {
+        const { agentDef, cwd, sessionId: clientSid, projectName, permissionMode: agentPermMode, model: agentModel, userContext } = msg;
+        if (!agentDef) return;
+
+        runAgent({
+          ws,
+          agentDef,
+          cwd,
+          sessionId: clientSid,
+          projectName,
+          permissionMode: agentPermMode,
+          model: agentModel,
+          sessionIds,
+          pendingApprovals,
+          makeCanUseTool,
+          userContext,
+          activeQueries,
+        });
         return;
       }
 

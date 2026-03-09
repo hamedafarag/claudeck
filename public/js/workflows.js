@@ -112,6 +112,8 @@ $.workflowBtn.addEventListener("click", () => {
   const isOpen = !$.workflowPanel.classList.contains("hidden");
   $.toolboxPanel.classList.add("hidden");
   $.toolboxBtn.classList.remove("active");
+  if ($.agentPanel) { $.agentPanel.classList.add("hidden"); }
+  if ($.agentBtn) { $.agentBtn.classList.remove("active"); }
   if (isOpen) {
     $.workflowPanel.classList.add("hidden");
     $.workflowBtn.classList.remove("active");

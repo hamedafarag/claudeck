@@ -20,6 +20,7 @@ import './projects.js';
 import './attachments.js';
 import './prompts.js';
 import './workflows.js';
+import './agents.js';
 import './cost-dashboard.js';
 import './analytics.js';
 import './permissions.js';

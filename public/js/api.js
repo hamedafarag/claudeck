@@ -83,6 +83,11 @@ export async function fetchWorkflows() {
   return res.json();
 }
 
+export async function fetchAgents() {
+  const res = await fetch("/api/agents");
+  return res.json();
+}
+
 export async function browseFolders(dir) {
   const url = dir
     ? `/api/projects/browse?dir=${encodeURIComponent(dir)}`
