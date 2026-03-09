@@ -6,7 +6,7 @@ import { getState, setState } from './store.js';
 import { $ } from './dom.js';
 import { getPane } from './parallel.js';
 
-export function addUserMessage(text, pane, images = []) {
+export function addUserMessage(text, pane, images = [], filePaths = []) {
   pane = pane || getPane(null);
   pane.currentAssistantMsg = null;
   const div = document.createElement("div");
@@ -16,11 +16,25 @@ export function addUserMessage(text, pane, images = []) {
   label.className = "msg-user-label";
   label.textContent = "YOU";
 
+  div.appendChild(label);
+
+  if (filePaths && filePaths.length > 0) {
+    const filesDiv = document.createElement("div");
+    filesDiv.className = "msg-user-files";
+    for (const fp of filePaths) {
+      const fileTag = document.createElement("span");
+      fileTag.className = "msg-user-file-tag";
+      fileTag.textContent = fp;
+      fileTag.title = fp;
+      filesDiv.appendChild(fileTag);
+    }
+    div.appendChild(filesDiv);
+  }
+
   const body = document.createElement("span");
   body.className = "msg-user-body";
   body.textContent = text;
 
-  div.appendChild(label);
   div.appendChild(body);
 
   if (images && images.length > 0) {
@@ -302,9 +316,19 @@ export function renderMessagesIntoPane(messages, pane) {
   for (const msg of messages) {
     const data = JSON.parse(msg.content);
     switch (msg.role) {
-      case "user":
-        addUserMessage(data.text, pane, data.images || []);
+      case "user": {
+        // Extract file paths from saved <file path="..."> blocks
+        const filePathMatches = (data.text || "").match(/<file path="([^"]+)">/g);
+        const savedFilePaths = filePathMatches
+          ? filePathMatches.map(m => m.match(/<file path="([^"]+)">/)[1])
+          : [];
+        // Show only the user's actual text, not the file content blocks
+        const cleanText = savedFilePaths.length > 0
+          ? (data.text || "").replace(/<file path="[^"]*">[\s\S]*?<\/file>\s*/g, "").trim()
+          : (data.text || "");
+        addUserMessage(cleanText, pane, data.images || [], savedFilePaths);
         break;
+      }
       case "assistant":
         appendAssistantText(data.text, pane);
         break;

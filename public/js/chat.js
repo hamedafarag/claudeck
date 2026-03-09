@@ -90,7 +90,8 @@ export function sendMessage(pane) {
   }
 
   const images = getImageAttachments();
-  addUserMessage(text, pane, images);
+  const filePaths = attachedFiles.map(f => f.path);
+  addUserMessage(text, pane, images, filePaths);
   pane.messageInput.value = "";
   pane.messageInput.style.height = "auto";
   setState("streamingCharCount", 0);

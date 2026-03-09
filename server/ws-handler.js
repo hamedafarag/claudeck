@@ -196,6 +196,8 @@ async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, chatId, 
           totalCost: getTotalCost(),
           input_tokens: inputTokens,
           output_tokens: outputTokens,
+          cache_read_tokens: cacheReadTokens,
+          cache_creation_tokens: cacheCreationTokens,
           model,
           stop_reason: "success",
         });
@@ -558,8 +560,8 @@ export function setupWebSocket(wss, sessionIds) {
               const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
               const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
               if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens, { model, stopReason: "success", isError: 0, cacheReadTokens, cacheCreationTokens });
-              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, model, stop_reason: "success" });
-              if (resolvedSid) addMessage(resolvedSid, "result", JSON.stringify({ duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, input_tokens: inputTokens, output_tokens: outputTokens, model, stop_reason: "success" }), chatId || null);
+              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "success" });
+              if (resolvedSid) addMessage(resolvedSid, "result", JSON.stringify({ duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "success" }), chatId || null);
             } else if (sdkMsg.subtype === "error_max_turns") {
               // Max turns reached — treat as a normal completion with a notice
               const sid = resolvedSid || [...sessionIds.entries()].find(([, v]) => v === claudeSessionId)?.[0];
@@ -569,7 +571,7 @@ export function setupWebSocket(wss, sessionIds) {
               const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
               const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
               if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens, { model, stopReason: "error_max_turns", isError: 0, cacheReadTokens, cacheCreationTokens });
-              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, model, stop_reason: "error_max_turns" });
+              wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "error_max_turns" });
               wsSend({ type: "error", error: `Reached max turns limit (${sdkMsg.num_turns}). Send another message to continue.` });
             } else if (sdkMsg.subtype?.startsWith("error")) {
               const errMsg = sdkMsg.errors?.join(", ") || sdkMsg.error || sdkMsg.message || "Unknown error";

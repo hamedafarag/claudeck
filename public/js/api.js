@@ -271,6 +271,11 @@ export async function fetchRssFeed(url) {
 // Todos
 const CT = { "Content-Type": "application/json" };
 
+export async function fetchTodoCounts() {
+  const res = await fetch("/api/todos/counts");
+  return res.json();
+}
+
 export async function fetchTodos(archived = false) {
   const res = await fetch("/api/todos" + (archived ? "?archived=1" : ""));
   return res.json();
@@ -293,6 +298,21 @@ export async function updateTodoApi(id, data) {
 
 export async function deleteTodoApi(id) {
   const res = await fetch(`/api/todos/${id}`, { method: "DELETE" });
+  return res.json();
+}
+
+export async function bragTodoApi(id, summary) {
+  const res = await fetch(`/api/todos/${id}/brag`, { method: "POST", headers: CT, body: JSON.stringify({ summary }) });
+  return res.json();
+}
+
+export async function fetchBrags() {
+  const res = await fetch("/api/todos/brags");
+  return res.json();
+}
+
+export async function deleteBragApi(id) {
+  const res = await fetch(`/api/todos/brags/${id}`, { method: "DELETE" });
   return res.json();
 }
 

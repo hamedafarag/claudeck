@@ -82,6 +82,19 @@ try { db.exec(`ALTER TABLE messages ADD COLUMN workflow_step_label TEXT DEFAULT 
 try { db.exec(`ALTER TABLE sessions ADD COLUMN summary TEXT DEFAULT NULL`); } catch { /* exists */ }
 // Todo archive
 try { db.exec(`ALTER TABLE todos ADD COLUMN archived INTEGER DEFAULT 0`); } catch { /* exists */ }
+// Todo priority (0=none, 1=low, 2=medium, 3=high)
+try { db.exec(`ALTER TABLE todos ADD COLUMN priority INTEGER DEFAULT 0`); } catch { /* exists */ }
+
+// Brags table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS brags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    todo_id INTEGER REFERENCES todos(id),
+    text TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    created_at INTEGER DEFAULT (unixepoch())
+  );
+`);
 
 // Indexes for query performance
 db.exec(`
@@ -207,9 +220,20 @@ const stmts = {
   listTodos: db.prepare(`SELECT * FROM todos WHERE archived = 0 ORDER BY position ASC, id ASC`),
   listArchivedTodos: db.prepare(`SELECT * FROM todos WHERE archived = 1 ORDER BY updated_at DESC`),
   createTodo: db.prepare(`INSERT INTO todos (text, position) VALUES (?, (SELECT COALESCE(MAX(position),0)+1 FROM todos))`),
-  updateTodo: db.prepare(`UPDATE todos SET text = COALESCE(?, text), done = COALESCE(?, done), updated_at = unixepoch() WHERE id = ?`),
+  updateTodo: db.prepare(`UPDATE todos SET text = COALESCE(?, text), done = COALESCE(?, done), priority = COALESCE(?, priority), updated_at = unixepoch() WHERE id = ?`),
   archiveTodo: db.prepare(`UPDATE todos SET archived = ?, updated_at = unixepoch() WHERE id = ?`),
   deleteTodo: db.prepare(`DELETE FROM todos WHERE id = ?`),
+  todoCounts: db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM todos WHERE archived = 0) AS active,
+      (SELECT COUNT(*) FROM todos WHERE archived = 1) AS archived,
+      (SELECT COUNT(*) FROM brags) AS brags
+  `),
+
+  // Brag CRUD
+  createBrag: db.prepare(`INSERT INTO brags (todo_id, text, summary) VALUES (?, ?, ?)`),
+  listBrags: db.prepare(`SELECT * FROM brags ORDER BY created_at DESC`),
+  deleteBrag: db.prepare(`DELETE FROM brags WHERE id = ?`),
 
   getCostTimelineByProject: db.prepare(
     `SELECT date(c.created_at, 'unixepoch') AS date,
@@ -947,9 +971,16 @@ export function listTodos(archived = false) {
   return archived ? stmts.listArchivedTodos.all() : stmts.listTodos.all();
 }
 export function createTodo(text) { return stmts.createTodo.run(text); }
-export function updateTodo(id, text, done) { return stmts.updateTodo.run(text, done, id); }
+export function updateTodo(id, text, done, priority) { return stmts.updateTodo.run(text, done, priority, id); }
 export function archiveTodo(id, archived) { return stmts.archiveTodo.run(archived ? 1 : 0, id); }
 export function deleteTodo(id) { return stmts.deleteTodo.run(id); }
+
+export function getTodoCounts() { return stmts.todoCounts.get(); }
+
+// ── Brag CRUD ─────────────────────────────────────────────────
+export function createBrag(todoId, text, summary) { return stmts.createBrag.run(todoId, text, summary); }
+export function listBrags() { return stmts.listBrags.all(); }
+export function deleteBrag(id) { return stmts.deleteBrag.run(id); }
 
 // ── Push subscription queries ────────────────────────────────
 const pushStmts = {
