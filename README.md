@@ -41,19 +41,19 @@ browser ──────── WebSocket ──────── server.js �
    │   ├── ws.js (WebSocket client)   ├── server/agent-loop.js
    │   ├── api.js (fetch calls)       ├── db.js (SQLite)
    │   ├── chat.js, messages.js ...   ├── folders.json (projects)
-   │   └── 30+ more modules           ├── repos.json (repositories)
+   │   └── 33+ more modules           ├── repos.json (repositories)
    │                                   ├── prompts.json (16 templates)
    │                                   ├── bot-prompt.json (assistant bot prompt)
    │                                   ├── agents.json (4 autonomous agents)
    │                                   └── workflows.json (3 workflows)
-   ├── css/ (28 focused stylesheets)
+   ├── css/ (29 focused stylesheets)
    └── index.html
 ```
 
 - **WebSocket** streams assistant text, tool calls, and results in real time
 - **Reconnect with backoff** — exponential backoff (2s → 4s → 8s → ... → 30s cap, 0-25% jitter), distinct `ws:reconnected` event triggers state sync
 - **State sync on reconnect** — reconciles background sessions, resets streaming panes, reloads messages from DB, refreshes session list
-- **Modular frontend** — 32+ ES modules (`<script type="module">`) with no bundler
+- **Modular frontend** — 35+ ES modules (`<script type="module">`) with no bundler
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
 - **Modular backend** — 15 Express Router modules + shared WS handler + agent loop
@@ -524,12 +524,22 @@ Side panel for viewing and creating Linear issues directly from the app:
 - Panel state (open/closed) persisted to `localStorage`
 - Requires `LINEAR_API_KEY` env var (gracefully degrades with hint if missing)
 
-### 23. Tabbed Right Panel
-The right side of the UI hosts a resizable tabbed panel with four tabs:
+### 23. Tabbed Right Panel (with Tab SDK)
+The right side of the UI hosts a resizable tabbed panel with built-in and plugin tabs:
 - **Tasks** — split view with Linear issues (top) and local Todo list (bottom), separated by a draggable resize handle
 - **Files** — file explorer
 - **Git** — git integration
 - **Repos** — repository management
+- **Events** — structured activity log (plugin tab via Tab SDK)
+- **"+" button** — opens Developer Documentation, guiding developers to add new tabs
+
+**Tab SDK plugin system** — developers can register new tabs with a single `registerTab()` call in a JS module, with no HTML or `dom.js` changes required:
+- `registerTab({ id, title, icon, init(ctx) })` — creates tab button and pane dynamically
+- **Context object (ctx)** — provides event bus (`on`/`emit`), reactive store (`getState`/`onState`), API module, badge/title helpers
+- **Lifecycle hooks** — `onActivate`, `onDeactivate`, `onDestroy`
+- **Lazy initialization** — `lazy: true` defers `init()` until the tab is first opened
+- **Positional insert** — `position` option to control tab order
+- See `event-stream-tab.js` for a complete working example
 
 Panel state (open/closed), active tab, and width are persisted to `localStorage`. Resizable by dragging the left edge. Toggle via header button or `Cmd+B`.
 
@@ -674,8 +684,8 @@ A progress bar in the header showing cumulative session token usage against the 
 - Resets on new session, loads from history when switching sessions
 - Auto-hidden when no tokens recorded
 
-### 36. Event Stream Panel
-A structured activity log in the right panel's "Events" tab:
+### 36. Event Stream Panel (Tab SDK Plugin)
+A structured activity log registered as a plugin tab via the Tab SDK (`event-stream-tab.js`):
 - Logs all tool calls, results, errors, and completion events in real time
 - Each event shows timestamp, type badge (TOOL/OK/ERR/DONE), and summary
 - Click to expand and see full event details (JSON input, full output)
@@ -684,6 +694,8 @@ A structured activity log in the right panel's "Events" tab:
 - Auto-scroll toggle to follow latest events
 - Clear button to reset the log
 - Loads historical events when switching sessions
+- Badge count on tab button showing total events
+- Fully self-contained — all DOM built in `init(ctx)`, no HTML template needed
 - Open via `Cmd+Shift+V` or `/events`
 
 ### 37. AI-Generated Session Summaries
@@ -752,10 +764,22 @@ A 24px footer bar at the bottom of the page showing key information at a glance:
 - **Project** — selected project name with folder icon, synced via MutationObserver on project dropdown, click to focus project selector
 - **Activity indicator** — flashes "active" during WebSocket message streaming
 - **Background sessions** — count of active background sessions
-- **Model** — current model selection, synced via MutationObserver on header model display
-- **Permission mode** — current permission mode
+- **Model** — current model selection with hover tooltip ("Model: controls which Claude model is used"), synced via MutationObserver on header model display, click to open Session dropdown
+- **Permission mode** — current permission mode with hover tooltip ("Approval: controls when tool calls require your confirmation"), click to open Session dropdown
+- **Max Turns** — current max turns value (or ∞ for unlimited) with hover tooltip ("Max Turns: maximum agentic turns per query"), synced via MutationObserver, click to open Session dropdown
 - **Cost** — total session cost, synced via MutationObserver on header cost elements, click to open cost dashboard
+- **Tooltips** — model, approval, and max turns items show descriptive tooltips on hover (arrow-pointed, themed)
 - All reactive syncing uses MutationObservers to avoid duplicating logic from other modules
+
+### 43. Developer Documentation
+An in-app documentation modal for developers extending the application, accessible via **Tools > Dev Docs** or the **"+" button** in the right panel tab bar:
+- **Sidebar navigation** — left nav with icons, active state highlighting, extensible section list
+- **3 built-in sections**: Tab SDK guide (quick start, config table, ctx reference, lifecycle), Architecture overview (module loading, patterns, events, store keys), Adding Features (step-by-step guides for tabs, API endpoints, DB tables, CSS modules)
+- **Extensible** — new sections added via `registerDocSection({ id, title, icon, render })` from any module
+- **Cached rendering** — each section's HTML is rendered once and cached
+- **Keyboard** — Escape to close, click outside to close
+- **Responsive** — sidebar collapses to icon-only on narrow viewports
+- Opens directly to Tab SDK section from the "+" button in the right panel
 
 ---
 
@@ -926,11 +950,11 @@ Supports `{{variable}}` placeholders that show a fill-in form.
 All colors are CSS custom properties on `:root` (defined in `css/variables.css`). The light theme overrides them via `html[data-theme="light"]`. No page reload required.
 
 ### Layout
-- **Header** (36px): background session indicator, **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, analytics), panel toggle — all right-aligned. Active project name centered. Token counter at far right
+- **Header** (36px): background session indicator, **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, analytics, notifications, dev docs), panel toggle — all right-aligned. Active project name centered. Token counter at far right
 - **Sidebar** (272px): project selector (with add project button), session search, session list (with right-click context menu), parallel toggle
 - **Main area**: messages (820px max-width), input bar (with tooltipped action buttons), toolbox/workflow/agent panels
-- **Right panel** (300px, resizable): tabbed container with Tasks (Linear + Todo), Files (explorer + preview), Git (status + commit + log), Repos (repository management)
-- **Status bar** (24px): connection dot, git branch, project name, activity, background sessions, model, permission mode, cost — all reactive via MutationObservers and event bus
+- **Right panel** (300px, resizable): tabbed container with Tasks (Linear + Todo), Files (explorer + preview), Git (status + commit + log), Repos (repository management), Events (SDK plugin), "+" button (dev docs)
+- **Status bar** (24px): connection dot, git branch, project name, activity, background sessions, model (tooltip), permission mode (tooltip), max turns (tooltip), cost — all reactive via MutationObservers and event bus
 
 ---
 
@@ -995,7 +1019,7 @@ shawkat-ai/
     │   ├── cost-dashboard.css Cost dashboard cards, table, chart
     │   ├── background-sessions.css Confirm dialog, toast notifications, bg indicator
     │   ├── permissions.css    Header control labels + permission modal styles
-    │   ├── right-panel.css    Tabbed right panel + resize handle
+    │   ├── right-panel.css    Tabbed right panel + resize handle + add-tab button
     │   ├── file-explorer.css  File tree, search, preview, context menu, refresh
     │   ├── repos-panel.css    Repos tree, groups, context menu, manual form
     │   ├── git-panel.css      Git status, staging, commit, log, branches
@@ -1007,7 +1031,8 @@ shawkat-ai/
     │   ├── event-stream.css   Event stream panel styles
     │   ├── assistant-bot.css  Floating assistant bot panel styles
     │   ├── agents.css         Autonomous agent panel + status cards
-    │   ├── status-bar.css     VS Code-style footer status bar
+    │   ├── status-bar.css     VS Code-style footer status bar + tooltips
+    │   ├── dev-docs.css      Developer documentation modal + nav + typography
     │   ├── theme.css          Scanline overlay, animations, scrollbar
     │   └── print.css          Print-friendly styles
     └── js/
@@ -1037,7 +1062,8 @@ shawkat-ai/
         ├── permissions.js     Permission modes, approval queue, modal logic
         ├── model-selector.js  Model selection dropdown (auto/sonnet/opus/haiku)
         ├── max-turns.js       Max turns selector (10/30/50/100/unlimited)
-        ├── right-panel.js     Tabbed right panel (Tasks/Files/Git) + resize
+        ├── tab-sdk.js         Tab SDK — plugin API for registering custom right panel tabs
+        ├── right-panel.js     Tabbed right panel (Tasks/Files/Git) + resize + Tab SDK init
         ├── file-explorer.js   File tree, lazy loading, search, context menu, drag
         ├── repos-panel.js     Repos tree, groups, add/remove, context menus, search
         ├── git-panel.js       Git status, staging, commit, branch, log
@@ -1046,10 +1072,11 @@ shawkat-ai/
         ├── linear-panel.js    Linear tasks panel + create issue modal
         ├── shortcuts.js       Global keyboard shortcuts
         ├── context-gauge.js   Session token usage progress bar
-        ├── event-stream.js    Event stream panel (structured activity log)
+        ├── event-stream-tab.js Event stream tab (Tab SDK plugin, structured activity log)
+        ├── dev-docs.js        Developer documentation modal (extensible sections)
         ├── assistant-bot.js   Floating assistant bot (chat bubble + panel)
         ├── agents.js          Autonomous agent panel + execution + slash commands
-        ├── status-bar.js      VS Code-style footer status bar (reactive via MutationObservers)
+        ├── status-bar.js      VS Code-style footer status bar (reactive via MutationObservers, tooltips)
         └── chat.js            Send/stop logic, WS message handler, boot
 ```
 
@@ -1106,7 +1133,7 @@ The following data flows through the app at runtime but is **not** saved to the 
 | `shawkat-model` | Selected model (auto/sonnet/opus/haiku) |
 | `shawkat-max-turns` | Max turns per query (10/30/50/100/0) |
 | `shawkat-right-panel` | Right panel open/closed state |
-| `shawkat-right-panel-tab` | Active right panel tab (tasks/files/git/repos) |
+| `shawkat-right-panel-tab` | Active right panel tab (tasks/files/git/repos/events + plugin tabs) |
 | `shawkat-right-panel-width` | Right panel width in pixels |
 | `shawkat-ai-session-id` | Active session ID (restored on page load with auto-message loading) |
 | `shawkat-ai-bg-sessions` | Background sessions map (serialized, survives disconnects and page refreshes) |

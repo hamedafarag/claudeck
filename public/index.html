@@ -125,6 +125,13 @@
             </svg>
             <span id="notifications-label">Notifications</span>
           </button>
+          <div style="height:1px;background:var(--border);margin:4px 8px;"></div>
+          <button class="header-dropdown-item" id="dev-docs-btn" title="Developer Documentation">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+            <span>Dev Docs</span>
+          </button>
         </div>
       </div>
 
@@ -210,6 +217,10 @@
 
         <div id="image-preview-strip" class="image-preview-strip hidden"></div>
         <input type="file" id="image-file-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+        <div id="input-waiting" class="input-waiting hidden">
+          <span class="input-waiting-dot"></span>
+          <span class="input-waiting-text">Claude is waiting for your response</span>
+        </div>
         <div class="input-bar">
           <button id="agent-btn" data-tooltip="Agents" class="toolbox-toggle">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -280,7 +291,6 @@
         <button class="right-panel-tab" data-tab="files">Files</button>
         <button class="right-panel-tab" data-tab="git">Git</button>
         <button class="right-panel-tab" data-tab="repos">Repos</button>
-        <button class="right-panel-tab" data-tab="events">Events</button>
         <button id="right-panel-close" class="right-panel-close" title="Close panel">&times;</button>
       </div>
       <div class="right-panel-content">
@@ -394,26 +404,7 @@
           <div id="repos-tree" class="repos-tree"></div>
         </div>
 
-        <!-- Events pane -->
-        <div class="right-panel-pane" data-tab="events">
-          <div class="event-stream-toolbar">
-            <div class="event-stream-filters">
-              <button class="event-filter-btn active" data-filter="all">All</button>
-              <button class="event-filter-btn" data-filter="tool">Tools</button>
-              <button class="event-filter-btn" data-filter="error">Errors</button>
-              <button class="event-filter-btn" data-filter="result">Results</button>
-            </div>
-            <input id="event-stream-search" type="text" placeholder="Search events..." autocomplete="off" class="event-stream-search">
-            <button id="event-stream-clear" class="event-stream-clear-btn" title="Clear">Clear</button>
-          </div>
-          <div id="event-stream-list" class="event-stream-list"></div>
-          <div class="event-stream-footer">
-            <span id="event-stream-count">0 events</span>
-            <label class="event-autoscroll-toggle" title="Auto-scroll to latest">
-              <input type="checkbox" id="event-autoscroll" checked> Auto
-            </label>
-          </div>
-        </div>
+        <!-- Plugin tabs are injected here by tab-sdk.js -->
       </div>
     </aside>
   </div>
@@ -705,13 +696,21 @@
         <span id="sb-bg-count">0</span> bg
       </span>
       <span class="sb-sep sb-bg-sep hidden" id="sb-bg-sep"></span>
-      <span class="sb-item sb-model" id="sb-model" title="Model">
+      <span class="sb-item sb-model sb-has-tooltip" id="sb-model">
         <span id="sb-model-name">auto</span>
+        <span class="sb-tooltip">Model: controls which Claude model is used for responses</span>
       </span>
       <span class="sb-sep"></span>
-      <span class="sb-item sb-perm" id="sb-perm" title="Permission mode">
+      <span class="sb-item sb-perm sb-has-tooltip" id="sb-perm">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <span id="sb-perm-mode">confirm</span>
+        <span class="sb-tooltip">Approval: controls when tool calls require your confirmation</span>
+      </span>
+      <span class="sb-sep"></span>
+      <span class="sb-item sb-max-turns sb-has-tooltip" id="sb-max-turns">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <span id="sb-max-turns-val">30</span>
+        <span class="sb-tooltip">Max Turns: maximum agentic turns per query</span>
       </span>
       <span class="sb-sep"></span>
       <span class="sb-item sb-cost" id="sb-cost" title="Session cost / Total cost">

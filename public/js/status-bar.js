@@ -143,6 +143,34 @@ if (permDisplay) {
 }
 updatePermMode();
 
+// ── Max Turns ──
+const sbMaxTurns = document.getElementById("sb-max-turns-val");
+
+function updateMaxTurns() {
+  const val = $.maxTurnsSelect?.value || "30";
+  sbMaxTurns.textContent = val === "0" ? "\u221e" : val;
+}
+
+if ($.maxTurnsSelect) {
+  $.maxTurnsSelect.addEventListener("change", updateMaxTurns);
+}
+// Listen for header dropdown display changes
+const maxTurnsDisplay = document.getElementById("max-turns-display");
+if (maxTurnsDisplay) {
+  const observer = new MutationObserver(() => {
+    const val = maxTurnsDisplay.textContent?.trim() || "30";
+    sbMaxTurns.textContent = val === "0" ? "\u221e" : val;
+  });
+  observer.observe(maxTurnsDisplay, { childList: true, characterData: true, subtree: true });
+}
+updateMaxTurns();
+
+// Click max turns → toggle session dropdown
+document.getElementById("sb-max-turns")?.addEventListener("click", () => {
+  const trigger = document.querySelector('.header-dropdown-trigger');
+  if (trigger) trigger.click();
+});
+
 // ── Costs ──
 // Mirror the header cost values
 function syncCosts() {

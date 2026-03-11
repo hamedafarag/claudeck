@@ -152,6 +152,36 @@ export function showCompletionToast(sessionId, title, projectPath) {
   container.appendChild(toast);
 }
 
+export function showInputNeededToast(sessionId, title, projectPath) {
+  sendNotification('Input Needed', `${title} is waiting for your response`, `input-${sessionId}`);
+
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  toast.className = "bg-toast bg-toast-input";
+  toast.innerHTML = `
+    <span class="bg-toast-dot input-needed"></span>
+    <div class="bg-toast-body">
+      <div class="bg-toast-label">Waiting for your input</div>
+      <div class="bg-toast-title">${escapeForHtml(title)}</div>
+    </div>
+    <button class="bg-toast-switch" title="Switch to session">&#8594;</button>
+    <button class="bg-toast-close" title="Dismiss">&times;</button>
+  `;
+
+  toast.querySelector(".bg-toast-switch").addEventListener("click", () => {
+    dismissToast(toast);
+    switchToSession(sessionId, projectPath);
+  });
+
+  toast.querySelector(".bg-toast-close").addEventListener("click", () => {
+    dismissToast(toast);
+  });
+
+  container.appendChild(toast);
+}
+
 function escapeForHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
@@ -330,7 +360,114 @@ on("ws:disconnected", () => {
   // reconcileBackgroundSessions() is called on ws:reconnected.
 });
 
+// ── Hover popup on background indicator ──
+
+function initBgHoverPopup() {
+  const indicator = $.bgSessionIndicator;
+  if (!indicator) return;
+
+  let popup = null;
+
+  function formatElapsed(startedAt) {
+    if (!startedAt) return '';
+    const sec = Math.floor((Date.now() - startedAt) / 1000);
+    if (sec < 60) return `${sec}s`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m ${sec % 60}s`;
+    return `${Math.floor(min / 60)}h ${min % 60}m`;
+  }
+
+  function show() {
+    const map = getBackgroundSessions();
+    if (map.size === 0) return;
+
+    if (popup) popup.remove();
+    popup = document.createElement('div');
+    popup.className = 'bg-popup';
+
+    let html = '<div class="bg-popup-header">Background Sessions</div>';
+    for (const [sid, info] of map.entries()) {
+      const shortId = sid.slice(0, 8);
+      const elapsed = formatElapsed(info.startedAt);
+      html += `
+        <div class="bg-popup-row" data-sid="${sid}">
+          <span class="bg-popup-dot"></span>
+          <div class="bg-popup-info">
+            <div class="bg-popup-title">${escapeForHtml(info.title || 'Untitled')}</div>
+            <div class="bg-popup-meta">
+              <span class="bg-popup-id">${shortId}</span>
+              ${info.projectName ? `<span class="bg-popup-sep">&middot;</span><span>${escapeForHtml(info.projectName)}</span>` : ''}
+              ${elapsed ? `<span class="bg-popup-sep">&middot;</span><span>${elapsed}</span>` : ''}
+            </div>
+          </div>
+          <button class="bg-popup-switch" title="Switch to session">&rarr;</button>
+        </div>
+      `;
+    }
+    popup.innerHTML = html;
+
+    // Switch buttons
+    popup.querySelectorAll('.bg-popup-switch').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sid = btn.closest('.bg-popup-row').dataset.sid;
+        const info = map.get(sid);
+        hide();
+        if (info) switchToSession(sid, info.projectPath || '');
+      });
+    });
+
+    // Rows clickable too
+    popup.querySelectorAll('.bg-popup-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const sid = row.dataset.sid;
+        const info = map.get(sid);
+        hide();
+        if (info) switchToSession(sid, info.projectPath || '');
+      });
+    });
+
+    // Hide when mouse leaves the popup
+    popup.addEventListener('mouseleave', () => {
+      setTimeout(() => {
+        if (popup && !popup.matches(':hover') && !indicator.matches(':hover')) {
+          hide();
+        }
+      }, 100);
+    });
+
+    document.body.appendChild(popup);
+
+    // Position below indicator
+    const rect = indicator.getBoundingClientRect();
+    popup.style.top = (rect.bottom + 4) + 'px';
+    popup.style.left = Math.max(8, rect.left + rect.width / 2 - popup.offsetWidth / 2) + 'px';
+  }
+
+  function hide() {
+    if (popup) { popup.remove(); popup = null; }
+  }
+
+  indicator.addEventListener('mouseenter', show);
+  indicator.addEventListener('mouseleave', (e) => {
+    // Don't hide if moving into the popup
+    setTimeout(() => {
+      if (popup && !popup.matches(':hover') && !indicator.matches(':hover')) {
+        hide();
+      }
+    }, 100);
+  });
+
+  // Also hide when clicking outside
+  document.addEventListener('click', (e) => {
+    if (popup && !popup.contains(e.target) && !indicator.contains(e.target)) {
+      hide();
+    }
+  });
+}
+
 // ── Init ──
 
 restoreBgSessions();
 initConfirmDialog();
+initBgHoverPopup();

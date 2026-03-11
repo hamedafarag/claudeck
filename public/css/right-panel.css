@@ -87,8 +87,68 @@
   border-bottom-color: var(--accent);
 }
 
-.right-panel-close {
+/* Tab icon + title layout */
+.right-panel-tab .tab-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+.right-panel-tab .tab-icon svg {
+  width: 12px;
+  height: 12px;
+}
+.right-panel-tab .tab-title {
+  vertical-align: middle;
+}
+
+/* Tab badge (for plugin tabs) */
+.right-panel-tab {
+  position: relative;
+}
+.right-panel-tab-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 7px;
+  pointer-events: none;
+}
+
+/* Add-tab "+" button */
+.right-panel-add-tab {
   margin-left: auto;
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.right-panel-add-tab:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.right-panel-close {
+  margin-left: 4px;
   background: none;
   border: none;
   color: var(--text-dim);

@@ -572,6 +572,60 @@ html[data-theme="light"] .msg-user {
 }
 
 /* ── Input Bar ────────────────────────────────────────── */
+/* ── Waiting for input indicator ──────────────────────── */
+.input-waiting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 24px;
+  max-width: calc(var(--chat-max-w) + 48px);
+  width: 100%;
+  margin: 0 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  animation: inputWaitingFadeIn 0.3s ease;
+}
+
+.input-waiting.hidden {
+  display: none;
+}
+
+.input-waiting-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: inputWaitingPulse 1.5s ease-in-out infinite;
+}
+
+.input-waiting-text {
+  letter-spacing: 0.02em;
+}
+
+@keyframes inputWaitingPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--accent); }
+  50% { opacity: 0.3; box-shadow: none; }
+}
+
+@keyframes inputWaitingFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Input bar glow when waiting for response */
+.input-bar.waiting-for-input textarea {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(51, 209, 122, 0.2);
+  animation: inputBarPulse 2s ease-in-out infinite;
+}
+
+@keyframes inputBarPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(51, 209, 122, 0.15); }
+  50% { box-shadow: 0 0 14px rgba(51, 209, 122, 0.3); }
+}
+
 .input-bar {
   position: relative;
   padding: 12px 24px 16px;

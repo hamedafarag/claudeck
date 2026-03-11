@@ -1,6 +1,7 @@
-// Right Panel — tabbed container for Tasks, Files, Git
+// Right Panel — tabbed container for Tasks, Files, Git, and plugin tabs
 import { $ } from "./dom.js";
 import { emit, on } from "./events.js";
+import { initTabSDK } from "./tab-sdk.js";
 
 const STORAGE_KEY = "shawkat-right-panel";
 const TAB_KEY = "shawkat-right-panel-tab";
@@ -8,8 +9,6 @@ const WIDTH_KEY = "shawkat-right-panel-width";
 const OLD_LINEAR_KEY = "shawkat-linear-panel";
 const MIN_WIDTH = 200;
 const MAX_WIDTH_RATIO = 0.6; // 60vw
-
-const TABS = ["tasks", "files", "git", "repos", "events"];
 
 function isPanelOpen() {
   return !$.rightPanel.classList.contains("hidden");
@@ -20,8 +19,12 @@ function getActiveTab() {
   return btn ? btn.dataset.tab : TABS[0];
 }
 
+function isValidTab(tabName) {
+  return !!$.rightPanel.querySelector(`.right-panel-tab[data-tab="${tabName}"]`);
+}
+
 export function openRightPanel(tabName) {
-  if (tabName && TABS.includes(tabName)) {
+  if (tabName && isValidTab(tabName)) {
     switchTab(tabName);
   }
   $.rightPanel.classList.remove("hidden");
@@ -51,14 +54,14 @@ export function toggleRightPanel(tabName) {
 }
 
 function switchTab(tabName) {
-  if (!TABS.includes(tabName)) return;
+  if (!isValidTab(tabName)) return;
   applyTab(tabName);
   emit("rightPanel:tabChanged", tabName);
 }
 
 // Visual-only tab switch (no event emitted) — used during init restore
 function restoreTab(tabName) {
-  if (!TABS.includes(tabName)) return;
+  if (!isValidTab(tabName)) return;
   applyTab(tabName);
 }
 
@@ -99,9 +102,12 @@ function initRightPanel() {
   // Header toggle button
   $.rightPanelToggleBtn.addEventListener("click", () => toggleRightPanel());
 
+  // Initialize Tab SDK — allows plugin tabs to register
+  initTabSDK();
+
   // Restore saved tab (silently — no event, listeners aren't ready yet)
   const savedTab = localStorage.getItem(TAB_KEY);
-  if (savedTab && TABS.includes(savedTab)) {
+  if (savedTab && isValidTab(savedTab)) {
     restoreTab(savedTab);
   }
 

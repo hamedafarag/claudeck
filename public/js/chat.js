@@ -18,11 +18,47 @@ import { updateAttachmentBadge, getImageAttachments, clearImageAttachments } fro
 import { applyTheme } from './theme.js';
 import { exportAsMarkdown, exportAsHtml } from './export.js';
 import * as api from './api.js';
-import { isBackgroundSession, removeBackgroundSession, showCompletionToast, showErrorToast, reconcileBackgroundSessions } from './background-sessions.js';
+import { isBackgroundSession, removeBackgroundSession, showCompletionToast, showErrorToast, showInputNeededToast, reconcileBackgroundSessions } from './background-sessions.js';
 import { enqueuePermissionRequest, getPermissionMode, clearSessionPermissions } from './permissions.js';
 import { getSelectedModel } from './model-selector.js';
 import { getMaxTurns } from './max-turns.js';
 import { updateContextGauge, resetContextGauge, loadContextGauge } from './context-gauge.js';
+
+// ── "Waiting for input" indicator ──
+const inputWaitingEl = document.getElementById("input-waiting");
+
+function isQuestionText(text) {
+  if (!text) return false;
+  // Get the last meaningful line (skip empty lines, code blocks, lists)
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  const last = lines[lines.length - 1]?.trim() || '';
+  // Check if it ends with a question mark (ignoring trailing markdown/whitespace)
+  return /\?\s*[`*_)}\]]*\s*$/.test(last);
+}
+
+function showWaitingForInput(pane) {
+  pane = pane || getPane(null);
+  const parallelMode = getState("parallelMode");
+
+  if (inputWaitingEl) inputWaitingEl.classList.remove("hidden");
+
+  const inputBar = parallelMode
+    ? pane.messageInput?.closest('.input-bar')
+    : $.messageInput?.closest('.input-bar');
+  if (inputBar) inputBar.classList.add("waiting-for-input");
+}
+
+function hideWaitingForInput(pane) {
+  pane = pane || getPane(null);
+  const parallelMode = getState("parallelMode");
+
+  if (inputWaitingEl) inputWaitingEl.classList.add("hidden");
+
+  const inputBar = parallelMode
+    ? pane.messageInput?.closest('.input-bar')
+    : $.messageInput?.closest('.input-bar');
+  if (inputBar) inputBar.classList.remove("waiting-for-input");
+}
 
 export function sendMessage(pane) {
   pane = pane || getPane(null);
@@ -105,6 +141,7 @@ export function sendMessage(pane) {
     clearImageAttachments();
   }
 
+  hideWaitingForInput(pane);
   pane.isStreaming = true;
   const parallelMode = getState("parallelMode");
 
@@ -199,12 +236,22 @@ function handleServerMessage(msg) {
       enqueuePermissionRequest(msg);
       return;
     }
+    // Track last assistant text for question detection
+    if (msg.type === "text") {
+      const bgMap = getState("backgroundSessions");
+      const info = bgMap.get(msg.sessionId);
+      if (info) info._lastText = (info._lastText || '') + msg.text;
+    }
     if (msg.type === "done") {
       const bgMap = getState("backgroundSessions");
       const info = bgMap.get(msg.sessionId);
       const title = info?.title || "Background session";
       const projectPath = info?.projectPath || "";
-      showCompletionToast(msg.sessionId, title, projectPath);
+      if (info?._lastText && isQuestionText(info._lastText)) {
+        showInputNeededToast(msg.sessionId, title, projectPath);
+      } else {
+        showCompletionToast(msg.sessionId, title, projectPath);
+      }
       removeBackgroundSession(msg.sessionId);
       loadSessions();
     }
@@ -241,6 +288,7 @@ function handleServerMessage(msg) {
     case "session":
       setState("sessionId", msg.sessionId);
       resetContextGauge();
+      hideWaitingForInput(pane);
       loadSessions();
       showThinking("Thinking...", pane);
       break;
@@ -270,9 +318,16 @@ function handleServerMessage(msg) {
       if ($.streamingTokens) $.streamingTokens.classList.add("hidden");
       break;
 
-    case "done":
+    case "done": {
+      // Check if the last assistant message ends with a question
+      const lastMsg = pane.currentAssistantMsg;
+      const rawText = lastMsg?.dataset?.raw || lastMsg?.textContent || '';
       finishStreamingHandler(pane);
+      if (isQuestionText(rawText)) {
+        showWaitingForInput(pane);
+      }
       break;
+    }
 
     case "aborted":
       finishStreamingHandler(pane);
@@ -322,17 +377,25 @@ function handleServerMessage(msg) {
 // Listen for WebSocket messages via event bus
 on("ws:message", handleServerMessage);
 
+// ── Background session reconciliation ──
+// Shared helper — reconcile bg sessions against the server's active list.
+async function reconcileBgSessionsFromServer() {
+  try {
+    const activeSessionIds = await api.fetchActiveSessionIds();
+    reconcileBackgroundSessions(activeSessionIds);
+  } catch (err) {
+    console.error("Background session reconciliation failed:", err);
+  }
+}
+
 // Reconnect state sync — recover from connection drops
 on("ws:reconnected", async () => {
   console.log("WebSocket reconnected — syncing state...");
   try {
-    // 1. Fetch active session IDs from server
-    const activeSessionIds = await api.fetchActiveSessionIds();
+    // 1. Reconcile background sessions
+    await reconcileBgSessionsFromServer();
 
-    // 2. Reconcile background sessions
-    reconcileBackgroundSessions(activeSessionIds);
-
-    // 3. If any foreground pane was streaming, reset it and reload from DB
+    // 2. If any foreground pane was streaming, reset it and reload from DB
     for (const pane of panes.values()) {
       if (pane.isStreaming) {
         finishStreamingHandler(pane);
@@ -345,10 +408,24 @@ on("ws:reconnected", async () => {
       await loadMessages(currentSessionId);
     }
 
-    // 4. Refresh session list
+    // 3. Refresh session list
     loadSessions();
   } catch (err) {
     console.error("Reconnect sync failed:", err);
+  }
+});
+
+// Initial connect — reconcile stale bg sessions from localStorage (PWA cold start)
+on("ws:connected", () => {
+  reconcileBgSessionsFromServer();
+});
+
+// PWA visibility — reconcile when app returns to foreground.
+// Handles cases where the WS stayed "connected" but messages were lost
+// while the PWA was suspended by the OS.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && getState("ws")?.readyState === WebSocket.OPEN) {
+    reconcileBgSessionsFromServer();
   }
 });
 
