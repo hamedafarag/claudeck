@@ -260,14 +260,6 @@
   opacity: 0.8;
 }
 
-.streaming-tokens {
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 600;
-  margin-right: 4px;
-  animation: tokenPulse 2s ease-in-out infinite;
-}
-
 @keyframes tokenPulse {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.6; }

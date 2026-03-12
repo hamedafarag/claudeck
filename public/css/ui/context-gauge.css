@@ -4,36 +4,73 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   cursor: default;
 }
 
 .context-gauge-bar {
-  width: 48px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--bg-tertiary);
+  display: block;
+  width: 60px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
   overflow: hidden;
   flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .context-gauge-fill {
+  display: block;
   height: 100%;
-  border-radius: 3px;
-  background: var(--success, #3fb950);
-  transition: width 0.3s ease, background 0.3s ease;
+  border-radius: 4px;
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+  transition: width 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
   width: 0%;
 }
 
 .context-gauge-fill.warning {
-  background: #d29922;
+  background: #facc15;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
 }
 
 .context-gauge-fill.critical {
-  background: var(--error, #f85149);
+  background: #f87171;
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
 }
 
 .context-gauge-label {
   white-space: nowrap;
-  color: var(--text-secondary);
+  color: var(--text);
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.context-gauge.warning .context-gauge-label {
+  color: #facc15;
+}
+
+.context-gauge.critical .context-gauge-label {
+  color: #f87171;
+}
+
+/* Light theme */
+html[data-theme="light"] .context-gauge-bar {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .context-gauge-fill {
+  background: #22c55e;
+  box-shadow: none;
+}
+
+html[data-theme="light"] .context-gauge-fill.warning {
+  background: #ca8a04;
+  box-shadow: none;
+}
+
+html[data-theme="light"] .context-gauge-fill.critical {
+  background: #dc2626;
+  box-shadow: none;
 }

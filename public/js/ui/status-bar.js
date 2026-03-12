@@ -11,8 +11,6 @@ const sbConnText = document.getElementById("sb-connection-text");
 const sbBranchName = document.getElementById("sb-branch-name");
 const sbProjectName = document.getElementById("sb-project-name");
 const sbActivity = document.getElementById("sb-activity");
-const sbModelName = document.getElementById("sb-model-name");
-const sbPermMode = document.getElementById("sb-perm-mode");
 const sbSessionCost = document.getElementById("sb-session-cost");
 const sbTotalCost = document.getElementById("sb-total-cost");
 const sbBgSessions = document.getElementById("sb-bg-sessions");
@@ -91,84 +89,6 @@ document.getElementById("sb-branch")?.addEventListener("click", () => {
 // Click project → focus project selector
 document.getElementById("sb-project")?.addEventListener("click", () => {
   $.projectSelect?.focus();
-});
-
-// ── Model ──
-function updateModel() {
-  const val = $.modelSelect?.value || "";
-  sbModelName.textContent = val || "auto";
-}
-
-if ($.modelSelect) {
-  $.modelSelect.addEventListener("change", updateModel);
-}
-// Also listen for header dropdown changes
-const modelDisplay = document.getElementById("model-display");
-if (modelDisplay) {
-  const observer = new MutationObserver(() => {
-    sbModelName.textContent = modelDisplay.textContent?.trim() || "auto";
-  });
-  observer.observe(modelDisplay, { childList: true, characterData: true, subtree: true });
-}
-updateModel();
-
-// Click model → toggle session dropdown
-document.getElementById("sb-model")?.addEventListener("click", () => {
-  const trigger = document.querySelector('.header-dropdown-trigger');
-  if (trigger) trigger.click();
-});
-
-// ── Permission mode ──
-function updatePermMode() {
-  const val = $.permModeSelect?.value || "confirmDangerous";
-  const labels = {
-    bypass: "bypass",
-    confirmDangerous: "confirm",
-    confirmAll: "confirm all",
-    plan: "plan",
-  };
-  sbPermMode.textContent = labels[val] || val;
-}
-
-if ($.permModeSelect) {
-  $.permModeSelect.addEventListener("change", updatePermMode);
-}
-// Listen for header dropdown display changes
-const permDisplay = document.getElementById("perm-mode-display");
-if (permDisplay) {
-  const observer = new MutationObserver(() => {
-    sbPermMode.textContent = permDisplay.textContent?.trim() || "confirm";
-  });
-  observer.observe(permDisplay, { childList: true, characterData: true, subtree: true });
-}
-updatePermMode();
-
-// ── Max Turns ──
-const sbMaxTurns = document.getElementById("sb-max-turns-val");
-
-function updateMaxTurns() {
-  const val = $.maxTurnsSelect?.value || "30";
-  sbMaxTurns.textContent = val === "0" ? "\u221e" : val;
-}
-
-if ($.maxTurnsSelect) {
-  $.maxTurnsSelect.addEventListener("change", updateMaxTurns);
-}
-// Listen for header dropdown display changes
-const maxTurnsDisplay = document.getElementById("max-turns-display");
-if (maxTurnsDisplay) {
-  const observer = new MutationObserver(() => {
-    const val = maxTurnsDisplay.textContent?.trim() || "30";
-    sbMaxTurns.textContent = val === "0" ? "\u221e" : val;
-  });
-  observer.observe(maxTurnsDisplay, { childList: true, characterData: true, subtree: true });
-}
-updateMaxTurns();
-
-// Click max turns → toggle session dropdown
-document.getElementById("sb-max-turns")?.addEventListener("click", () => {
-  const trigger = document.querySelector('.header-dropdown-trigger');
-  if (trigger) trigger.click();
 });
 
 // ── Costs ──

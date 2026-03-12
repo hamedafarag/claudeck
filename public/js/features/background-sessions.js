@@ -303,6 +303,7 @@ function initConfirmDialog() {
       $.sendBtn.disabled = false;
     }
     if ($.streamingTokens) $.streamingTokens.classList.add("hidden");
+    if ($.streamingTokensSep) $.streamingTokensSep.classList.add("hidden");
 
     const proceed = pendingProceed;
     closeModal();
@@ -337,6 +338,7 @@ function initConfirmDialog() {
       $.sendBtn.disabled = false;
     }
     if ($.streamingTokens) $.streamingTokens.classList.add("hidden");
+    if ($.streamingTokensSep) $.streamingTokensSep.classList.add("hidden");
 
     const proceed = pendingProceed;
     closeModal();

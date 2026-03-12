@@ -199,6 +199,7 @@ export function finishStreamingHandler(pane) {
   removeThinking(pane);
 
   if ($.streamingTokens) $.streamingTokens.classList.add("hidden");
+  if ($.streamingTokensSep) $.streamingTokensSep.classList.add("hidden");
 
   const parallelMode = getState("parallelMode");
   if (parallelMode) {
@@ -315,6 +316,7 @@ function handleServerMessage(msg) {
       }
       loadStats();
       if ($.streamingTokens) $.streamingTokens.classList.add("hidden");
+      if ($.streamingTokensSep) $.streamingTokensSep.classList.add("hidden");
       break;
 
     case "done": {

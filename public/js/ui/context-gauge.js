@@ -1,6 +1,8 @@
-// Context Window Indicator — cumulative session token gauge
+// Context Window Indicator — cumulative session token gauge (status bar)
 import { getState, setState } from '../core/store.js';
 import { $ } from '../core/dom.js';
+
+const sbGaugeSep = document.getElementById("sb-gauge-sep");
 
 const MODEL_LIMITS = {
   default: 200_000,
@@ -25,16 +27,20 @@ function renderGauge(tokens) {
 
   // Show gauge
   $.contextGauge.classList.remove('hidden');
+  if (sbGaugeSep) sbGaugeSep.classList.remove('hidden');
 
   // Fill width
   $.contextGaugeFill.style.width = pct + '%';
 
   // Color class
   $.contextGaugeFill.classList.remove('warning', 'critical');
+  $.contextGauge.classList.remove('warning', 'critical');
   if (pct >= 80) {
     $.contextGaugeFill.classList.add('critical');
+    $.contextGauge.classList.add('critical');
   } else if (pct >= 50) {
     $.contextGaugeFill.classList.add('warning');
+    $.contextGauge.classList.add('warning');
   }
 
   // Label
@@ -64,6 +70,7 @@ export function resetContextGauge() {
   const fresh = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
   setState('sessionTokens', fresh);
   if ($.contextGauge) $.contextGauge.classList.add('hidden');
+  if (sbGaugeSep) sbGaugeSep.classList.add('hidden');
 }
 
 export async function loadContextGauge(sessionId) {

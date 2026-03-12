@@ -83,8 +83,10 @@ export const $ = {
   contextGaugeFill: document.getElementById("context-gauge-fill"),
   contextGaugeLabel: document.getElementById("context-gauge-label"),
 
-  // Streaming tokens
-  streamingTokens: document.getElementById("streaming-tokens"),
+  // Streaming tokens (status bar)
+  streamingTokens: document.getElementById("sb-streaming-tokens"),
+  streamingTokensValue: document.getElementById("sb-tokens-value"),
+  streamingTokensSep: document.getElementById("sb-tokens-sep"),
 
   // Model selector
   modelSelect: document.getElementById("model-select"),

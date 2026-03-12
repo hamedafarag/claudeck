@@ -28,6 +28,7 @@ import './features/telegram.js';
 import './ui/permissions.js';
 import './ui/model-selector.js';
 import './ui/max-turns.js';
+import './ui/input-meta.js';
 import './ui/right-panel.js';
 import './ui/header-dropdowns.js';
 import './ui/context-gauge.js';

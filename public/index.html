@@ -155,11 +155,6 @@
       </button>
 
       <div class="term-costs">
-        <span id="context-gauge" class="context-gauge hidden" title="Session context usage">
-          <span class="context-gauge-bar"><span id="context-gauge-fill" class="context-gauge-fill"></span></span>
-          <span id="context-gauge-label" class="context-gauge-label">0/200k</span>
-        </span>
-        <span id="streaming-tokens" class="streaming-tokens hidden">~0 tokens</span>
         <span class="term-cost-value hidden" id="project-cost">$0.00</span>
         <span class="term-cost-value hidden" id="total-cost">$0.00</span>
       </div>
@@ -256,7 +251,23 @@
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
             </svg>
           </button>
-          <textarea id="message-input" placeholder="> type a message or / for commands..." rows="1"></textarea>
+          <div class="input-textarea-wrap">
+            <textarea id="message-input" placeholder="> type a message or / for commands..." rows="1"></textarea>
+            <div class="input-meta">
+              <span class="input-meta-item" id="input-meta-model" title="Selected model"></span>
+              <span class="input-meta-sep">&middot;</span>
+              <span class="input-meta-item" id="input-meta-perm" title="Permission mode"></span>
+              <span class="input-meta-sep">&middot;</span>
+              <span class="input-meta-item" id="input-meta-turns" title="Max turns per query"></span>
+              <span class="input-meta-sep">&middot;</span>
+              <span class="input-meta-shortcuts">
+                <span class="input-meta-kbd" title="Toggle right panel">&#8984;B</span>
+                <span class="input-meta-kbd" title="New session">&#8984;N</span>
+                <span class="input-meta-kbd" title="Search sessions">&#8984;K</span>
+                <span class="input-meta-kbd" title="Show all shortcuts">&#8984;/</span>
+              </span>
+            </div>
+          </div>
           <button id="send-btn" title="Send">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M3 10l7-7m0 0l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90, 10, 10)"/>
@@ -751,23 +762,17 @@
         <span id="sb-bg-count">0</span> bg
       </span>
       <span class="sb-sep sb-bg-sep hidden" id="sb-bg-sep"></span>
-      <span class="sb-item sb-model sb-has-tooltip" id="sb-model">
-        <span id="sb-model-name">auto</span>
-        <span class="sb-tooltip">Model: controls which Claude model is used for responses</span>
+      <span class="sb-item sb-tokens hidden" id="sb-streaming-tokens" title="Streaming tokens">
+        <span id="sb-tokens-value">~0 tokens</span>
       </span>
-      <span class="sb-sep"></span>
-      <span class="sb-item sb-perm sb-has-tooltip" id="sb-perm">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span id="sb-perm-mode">confirm</span>
-        <span class="sb-tooltip">Approval: controls when tool calls require your confirmation</span>
+      <span class="sb-sep sb-tokens-sep hidden" id="sb-tokens-sep"></span>
+      <span class="sb-item sb-context-gauge" id="sb-context-gauge-item">
+        <span id="context-gauge" class="context-gauge hidden" title="Session context usage">
+          <span class="context-gauge-bar"><span id="context-gauge-fill" class="context-gauge-fill"></span></span>
+          <span id="context-gauge-label" class="context-gauge-label">0/200k</span>
+        </span>
       </span>
-      <span class="sb-sep"></span>
-      <span class="sb-item sb-max-turns sb-has-tooltip" id="sb-max-turns">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        <span id="sb-max-turns-val">30</span>
-        <span class="sb-tooltip">Max Turns: maximum agentic turns per query</span>
-      </span>
-      <span class="sb-sep"></span>
+      <span class="sb-sep hidden" id="sb-gauge-sep"></span>
       <span class="sb-item sb-cost" id="sb-cost" title="Session cost / Total cost">
         <span id="sb-session-cost">$0.00</span>
         <span class="sb-cost-pipe">/</span>

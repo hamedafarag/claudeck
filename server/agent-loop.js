@@ -226,6 +226,8 @@ export async function runAgent({
             totalCost: getTotalCost(),
             input_tokens: inputTokens,
             output_tokens: outputTokens,
+            cache_read_tokens: cacheReadTokens,
+            cache_creation_tokens: cacheCreationTokens,
             model: resultModel,
             stop_reason: sdkMsg.subtype,
           });

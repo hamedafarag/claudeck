@@ -96,8 +96,9 @@ export function appendAssistantText(text, pane) {
   setState("streamingCharCount", count);
   const tokenEst = Math.round(count / 4);
   if ($.streamingTokens) {
-    $.streamingTokens.textContent = `~${tokenEst} tokens`;
+    if ($.streamingTokensValue) $.streamingTokensValue.textContent = `~${tokenEst} tokens`;
     $.streamingTokens.classList.remove("hidden");
+    if ($.streamingTokensSep) $.streamingTokensSep.classList.remove("hidden");
   }
 }
 
@@ -359,6 +360,7 @@ export function renderMessagesIntoPane(messages, pane) {
   // Hide token counter and reset — loading saved messages shouldn't show streaming stats
   setState("streamingCharCount", 0);
   if ($.streamingTokens) $.streamingTokens.classList.add("hidden");
+  if ($.streamingTokensSep) $.streamingTokensSep.classList.add("hidden");
   highlightCodeBlocks(pane.messagesDiv);
   addCopyButtons(pane.messagesDiv);
   renderMermaidBlocks(pane.messagesDiv);

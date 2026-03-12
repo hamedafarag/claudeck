@@ -628,7 +628,7 @@ html[data-theme="light"] .msg-user {
 
 .input-bar {
   position: relative;
-  padding: 12px 24px 16px;
+  padding: 12px 24px 8px;
   border-top: 1px solid var(--border);
   display: flex;
   gap: 8px;
@@ -638,8 +638,15 @@ html[data-theme="light"] .msg-user {
   margin: 0 auto;
 }
 
-.input-bar textarea {
+.input-textarea-wrap {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.input-textarea-wrap textarea {
+  width: 100%;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -653,11 +660,12 @@ html[data-theme="light"] .msg-user {
   line-height: 1.5;
   transition: border-color 0.15s, box-shadow 0.15s;
   caret-color: var(--accent);
+  box-sizing: border-box;
 }
 
-.input-bar textarea:focus { border-color: var(--accent); box-shadow: var(--glow); }
+.input-textarea-wrap textarea:focus { border-color: var(--accent); box-shadow: var(--glow); }
 
-.input-bar textarea::placeholder {
+.input-textarea-wrap textarea::placeholder {
   color: var(--text-dim);
   font-style: normal;
 }
@@ -673,6 +681,11 @@ html[data-theme="light"] .msg-user {
   justify-content: center;
   flex-shrink: 0;
   transition: opacity 0.15s, background 0.15s;
+  margin-bottom: 23px;
+}
+
+.input-bar .toolbox-toggle {
+  margin-bottom: 23px;
 }
 
 #send-btn             { background: var(--accent-solid); color: #000; }
@@ -680,6 +693,56 @@ html[data-theme="light"] .msg-user {
 #send-btn:disabled    { opacity: 0.25; cursor: not-allowed; }
 #stop-btn             { background: var(--error); color: #fff; }
 #stop-btn:hover       { opacity: 0.85; }
+
+/* ── Input Meta Labels ────────────────────────────────── */
+.input-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 2px 0;
+  user-select: none;
+}
+
+.input-meta-item {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.55;
+  letter-spacing: 0.3px;
+}
+
+.input-meta-sep {
+  font-size: 8px;
+  color: var(--text-dim);
+  opacity: 0.25;
+}
+
+.input-meta-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.input-meta-kbd {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  opacity: 0.4;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 16px;
+  cursor: pointer;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.input-meta-kbd:hover {
+  opacity: 0.85;
+  color: var(--accent);
+  border-color: var(--accent);
+}
 
 /* ── Mermaid Diagrams ───────────────────────────────── */
 .mermaid-container {
