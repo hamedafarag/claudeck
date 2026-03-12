@@ -8,7 +8,7 @@ import {
   getTopSessionsByCost, getToolUsage, getToolErrors, getSessionDepth,
   getMsgLengthDistribution, getTopBashCommands, getTopFiles,
   getErrorCategories, getErrorTimeline, getErrorsByTool, getRecentErrors,
-  getModelUsage, getCacheEfficiency,
+  getModelUsage, getCacheEfficiency, getYearlyActivity,
 } from "../../db.js";
 
 const router = Router();
@@ -85,6 +85,17 @@ router.get("/analytics", (req, res) => {
       modelUsage: getModelUsage(projectPath),
       cacheEfficiency: getCacheEfficiency(projectPath),
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Home page data — yearly activity grid + overview
+router.get("/home", (req, res) => {
+  try {
+    const yearlyActivity = getYearlyActivity();
+    const overview = getAnalyticsOverview();
+    res.json({ yearlyActivity, overview });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

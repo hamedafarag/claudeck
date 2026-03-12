@@ -1,11 +1,10 @@
 // Keyboard shortcuts
 import { $ } from '../core/dom.js';
-import { getState } from '../core/store.js';
+import { getState, setState } from '../core/store.js';
 import { CHAT_IDS } from '../core/constants.js';
 import { panes } from './parallel.js';
 import { registerCommand } from './commands.js';
 import { toggleRightPanel, openRightPanel } from './right-panel.js';
-import { openAnalytics } from '../features/analytics.js';
 import { toggleTipsFeed } from '../panels/tips-feed.js';
 
 function closeAllModals() {
@@ -83,10 +82,11 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Cmd+Shift+A — Open Analytics
+  // Cmd+Shift+A — Go to Home (Analytics)
   if (isMeta && e.shiftKey && e.key === "A") {
     e.preventDefault();
-    openAnalytics();
+    setState("view", "home");
+    setState("sessionId", null);
     return;
   }
 

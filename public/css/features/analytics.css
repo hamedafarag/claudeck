@@ -1,18 +1,4 @@
 /* ── Analytics Dashboard ─────────────────────────── */
-.analytics-modal {
-  width: 900px;
-  max-width: 95vw;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.analytics-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .analytics-project-filter {
   background: var(--bg);
   color: var(--text);

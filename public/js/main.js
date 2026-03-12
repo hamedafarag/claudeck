@@ -33,6 +33,7 @@ import './ui/right-panel.js';
 import './ui/header-dropdowns.js';
 import './ui/context-gauge.js';
 import './ui/shortcuts.js';
+import './features/home.js';
 import './features/chat.js';
 import './panels/file-explorer.js';
 import './panels/git-panel.js';

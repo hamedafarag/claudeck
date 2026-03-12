@@ -113,12 +113,6 @@
             </svg>
             <span>MCP Servers</span>
           </button>
-          <button class="header-dropdown-item" id="analytics-btn" title="Analytics Dashboard (Cmd+Shift+A)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-            </svg>
-            <span>Analytics</span>
-          </button>
           <button class="header-dropdown-item" id="notifications-toggle-btn" title="Toggle browser notifications">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -165,6 +159,12 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
+        <button id="home-btn" class="home-btn active" title="Home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </button>
         <h1>shawkat-ai</h1>
         <button id="theme-toggle-btn" class="theme-toggle-btn" title="Toggle light/dark theme">
           <svg id="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
@@ -213,7 +213,43 @@
 
     <!-- Main Chat Area -->
     <main class="chat-area">
-      <div class="chat-area-main">
+      <div id="home-page" class="home-page">
+        <div class="home-section">
+          <div class="home-section-header">
+            <h2>AI Activity</h2>
+            <span class="home-subtitle" id="home-year-label"></span>
+          </div>
+          <div class="home-grid-container">
+            <div class="home-grid-months" id="home-grid-months"></div>
+            <div class="home-grid-body">
+              <div class="home-grid-days">
+                <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+              </div>
+              <div id="home-activity-grid" class="home-activity-grid"></div>
+            </div>
+            <div class="home-grid-legend">
+              <span>Less</span>
+              <span class="home-legend-cell" data-level="0"></span>
+              <span class="home-legend-cell" data-level="1"></span>
+              <span class="home-legend-cell" data-level="2"></span>
+              <span class="home-legend-cell" data-level="3"></span>
+              <span class="home-legend-cell" data-level="4"></span>
+              <span>More</span>
+            </div>
+          </div>
+        </div>
+        <div class="home-cards" id="home-cards"></div>
+        <div class="home-section home-analytics-section">
+          <div class="home-section-header">
+            <h2>Analytics</h2>
+            <select id="home-analytics-filter" class="analytics-project-filter">
+              <option value="">All Projects</option>
+            </select>
+          </div>
+          <div id="home-analytics-content" class="analytics-content"></div>
+        </div>
+      </div>
+      <div class="chat-area-main hidden">
         <div id="messages" class="messages"></div>
 
         <div id="image-preview-strip" class="image-preview-strip hidden"></div>
@@ -434,7 +470,7 @@
         <tr><td><span class="kbd">&#8984;&#8679;G</span></td><td>Open git panel</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;R</span></td><td>Open repos panel</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;V</span></td><td>Open events panel</td></tr>
-        <tr><td><span class="kbd">&#8984;&#8679;A</span></td><td>Open analytics dashboard</td></tr>
+        <tr><td><span class="kbd">&#8984;&#8679;A</span></td><td>Go to home page</td></tr>
         <tr><td><span class="kbd">&#8984;&#8679;T</span></td><td>Toggle tips feed</td></tr>
         <tr><td><span class="kbd">&#8984;1</span>–<span class="kbd">&#8984;4</span></td><td>Focus parallel pane 1–4</td></tr>
         <tr><td><span class="kbd">Esc</span></td><td>Close any open modal</td></tr>
@@ -471,24 +507,6 @@
           <h4>Daily Costs (Last 30 Days)</h4>
           <div class="cost-chart" id="cost-chart"></div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Analytics Dashboard Modal -->
-  <div id="analytics-modal" class="modal-overlay hidden">
-    <div class="modal analytics-modal">
-      <div class="modal-header">
-        <h3>Analytics Dashboard</h3>
-        <div class="analytics-header-actions">
-          <select id="analytics-project-filter" class="analytics-project-filter">
-            <option value="">All Projects</option>
-          </select>
-          <button id="analytics-close" class="modal-close">&times;</button>
-        </div>
-      </div>
-      <div id="analytics-content" class="analytics-content">
-        <div class="analytics-loading">Loading analytics...</div>
       </div>
     </div>
   </div>

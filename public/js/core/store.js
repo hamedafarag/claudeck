@@ -1,5 +1,6 @@
 // Centralized reactive state store
 const state = {
+  view: "home",
   ws: null,
   sessionId: null,
   parallelMode: false,

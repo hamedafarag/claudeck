@@ -1,5 +1,9 @@
 // Centralized DOM references
 export const $ = {
+  // Home
+  homeBtn: document.getElementById("home-btn"),
+  homePage: document.getElementById("home-page"),
+
   // Main controls
   projectSelect: document.getElementById("project-select"),
   newSessionBtn: document.getElementById("new-session-btn"),
@@ -63,12 +67,6 @@ export const $ = {
   // Cost dashboard
   costDashboardModal: document.getElementById("cost-dashboard-modal"),
   costModalClose: document.getElementById("cost-modal-close"),
-
-  // Analytics
-  analyticsModal: document.getElementById("analytics-modal"),
-  analyticsClose: document.getElementById("analytics-close"),
-  analyticsContent: document.getElementById("analytics-content"),
-  analyticsBtn: document.getElementById("analytics-btn"),
 
   // Theme
   themeToggleBtn: document.getElementById("theme-toggle-btn"),

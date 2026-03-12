@@ -49,6 +49,11 @@ export async function fetchStats(projectPath) {
   return res.json();
 }
 
+export async function fetchHomeData() {
+  const res = await fetch("/api/stats/home");
+  return res.json();
+}
+
 export async function fetchDashboard(projectPath) {
   const url = projectPath
     ? `/api/stats/dashboard?project_path=${encodeURIComponent(projectPath)}`

@@ -1,8 +1,8 @@
-// Analytics dashboard
+// Analytics dashboard — renders inline on the home page
 import { $ } from '../core/dom.js';
 import { escapeHtml } from '../core/utils.js';
+import { getState } from '../core/store.js';
 import * as api from '../core/api.js';
-import { registerCommand } from '../ui/commands.js';
 
 function formatCost(n) {
   if (n >= 100) return '$' + n.toFixed(0);
@@ -105,8 +105,7 @@ function section(title) {
   return div;
 }
 
-function renderAnalytics(data) {
-  const el = $.analyticsContent;
+function renderAnalytics(data, el) {
   el.innerHTML = '';
 
   // 1. Overview cards
@@ -251,7 +250,6 @@ function renderAnalytics(data) {
     const errToolSec = section('Top Failing Tools');
     const errToolChart = document.createElement('div');
     errToolChart.className = 'cost-chart analytics-error-bar';
-    // Pivot: group by tool, sum errors, collect top 2 categories
     const toolMap = new Map();
     for (const row of data.errorsByTool) {
       if (!toolMap.has(row.tool)) toolMap.set(row.tool, { tool: row.tool, errors: 0, categories: [] });
@@ -364,58 +362,36 @@ function renderAnalytics(data) {
   }
 }
 
-function populateProjectFilter() {
-  const select = document.getElementById('analytics-project-filter');
-  const options = $.projectSelect.options;
-  select.innerHTML = '<option value="">All Projects</option>';
-  for (let i = 0; i < options.length; i++) {
-    if (options[i].value) {
-      const opt = document.createElement('option');
-      opt.value = options[i].value;
-      opt.textContent = options[i].textContent;
-      select.appendChild(opt);
-    }
-  }
-  if ($.projectSelect.value) {
-    select.value = $.projectSelect.value;
-  }
-}
+// ── Home page analytics ────────────────────────────────
+const homeAnalyticsFilter = document.getElementById('home-analytics-filter');
+const homeAnalyticsContent = document.getElementById('home-analytics-content');
 
-export async function openAnalytics() {
-  $.analyticsModal.classList.remove('hidden');
-  populateProjectFilter();
-  await loadAnalyticsData();
-}
-
-async function loadAnalyticsData() {
-  const filter = document.getElementById('analytics-project-filter');
-  const projectPath = filter ? filter.value : '';
-  $.analyticsContent.innerHTML = '<div class="analytics-loading">Loading analytics...</div>';
+async function loadAnalyticsData(projectPath) {
+  homeAnalyticsContent.innerHTML = '<div class="analytics-loading">Loading analytics...</div>';
   try {
     const data = await api.fetchAnalytics(projectPath || undefined);
-    renderAnalytics(data);
+    renderAnalytics(data, homeAnalyticsContent);
   } catch (err) {
-    $.analyticsContent.innerHTML = `<div class="analytics-empty">Failed to load analytics: ${escapeHtml(err.message)}</div>`;
+    homeAnalyticsContent.innerHTML = `<div class="analytics-empty">Failed to load analytics: ${escapeHtml(err.message)}</div>`;
   }
 }
 
-function closeAnalytics() {
-  $.analyticsModal.classList.add('hidden');
+export async function loadHomeAnalytics() {
+  // Populate project filter — use store data or fetch directly
+  let projects = getState('projectsData');
+  if (!projects || projects.length === 0) {
+    try { projects = await api.fetchProjects(); } catch { projects = []; }
+  }
+  homeAnalyticsFilter.innerHTML = '<option value="">All Projects</option>';
+  for (const p of projects) {
+    const opt = document.createElement('option');
+    opt.value = p.path;
+    opt.textContent = p.name;
+    homeAnalyticsFilter.appendChild(opt);
+  }
+  await loadAnalyticsData(homeAnalyticsFilter.value);
 }
 
-// Event listeners
-$.analyticsBtn.addEventListener('click', openAnalytics);
-$.analyticsClose.addEventListener('click', closeAnalytics);
-$.analyticsModal.addEventListener('click', (e) => {
-  if (e.target === $.analyticsModal) closeAnalytics();
-});
-
-document.getElementById('analytics-project-filter').addEventListener('change', loadAnalyticsData);
-
-registerCommand('analytics', {
-  category: 'app',
-  description: 'Open analytics dashboard',
-  execute() {
-    openAnalytics();
-  },
+homeAnalyticsFilter.addEventListener('change', () => {
+  loadAnalyticsData(homeAnalyticsFilter.value);
 });

@@ -321,6 +321,7 @@ $.projectSelect.addEventListener("change", async () => {
 $.newSessionBtn.addEventListener("click", async () => {
   const { guardSwitch } = await import('./background-sessions.js');
   guardSwitch(() => {
+    setState("view", "chat");
     setState("sessionId", null);
     if (getState("parallelMode")) {
       for (const chatId of CHAT_IDS) {

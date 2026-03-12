@@ -30,11 +30,15 @@ onState("sessionId", (val) => {
 export async function loadSessions(searchTerm) {
   try {
     const cwd = $.projectSelect.value;
+    if (!cwd) {
+      renderSessions([]);
+      return;
+    }
     let sessions;
     if (searchTerm) {
-      sessions = await api.searchSessions(searchTerm, cwd || undefined);
+      sessions = await api.searchSessions(searchTerm, cwd);
     } else {
-      sessions = await api.fetchSessions(cwd || undefined);
+      sessions = await api.fetchSessions(cwd);
     }
     renderSessions(sessions);
   } catch (err) {
@@ -93,6 +97,7 @@ function renderSessions(sessions) {
       if (e.target.closest(".session-delete") || e.target.closest(".session-pin") || e.target.closest(".session-title-edit")) return;
       const { guardSwitch } = await import('./background-sessions.js');
       guardSwitch(async () => {
+        setState("view", "chat");
         setState("sessionId", s.id);
         if (s.project_path) {
           $.projectSelect.value = s.project_path;

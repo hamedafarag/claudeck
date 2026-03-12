@@ -235,6 +235,20 @@ const stmts = {
   listBrags: db.prepare(`SELECT * FROM brags ORDER BY created_at DESC`),
   deleteBrag: db.prepare(`DELETE FROM brags WHERE id = ?`),
 
+  yearlyActivity: db.prepare(
+    `SELECT
+      date(c.created_at, 'unixepoch') AS date,
+      COUNT(DISTINCT c.session_id) AS sessions,
+      COUNT(*) AS queries,
+      COALESCE(SUM(c.cost_usd), 0) AS cost,
+      COALESCE(SUM(c.input_tokens), 0) AS input_tokens,
+      COALESCE(SUM(c.output_tokens), 0) AS output_tokens,
+      COALESCE(SUM(c.num_turns), 0) AS turns
+    FROM costs c
+    WHERE c.created_at >= unixepoch() - 365 * 86400
+    GROUP BY date(c.created_at, 'unixepoch')
+    ORDER BY date ASC`
+  ),
   getCostTimelineByProject: db.prepare(
     `SELECT date(c.created_at, 'unixepoch') AS date,
             SUM(c.cost_usd) AS cost
@@ -958,6 +972,10 @@ export function getModelUsage(projectPath) {
   return projectPath
     ? analyticsStmts.modelUsageByProject.all(projectPath)
     : analyticsStmts.modelUsageAll.all();
+}
+
+export function getYearlyActivity() {
+  return stmts.yearlyActivity.all();
 }
 
 export function getCacheEfficiency(projectPath) {
