@@ -87,8 +87,18 @@ import { $ } from '../core/dom.js';
 import { emit, on } from '../core/events.js';
 import { getState, on as onState } from '../core/store.js';
 import * as api from '../core/api.js';
+import {
+  getAvailablePlugins, getEnabledPluginNames, setEnabledPluginNames,
+  getPluginMeta, loadPluginByName, isPluginLoaded,
+  trackPluginTab, getPluginTabId, getPluginTabMap,
+  setTabIdResolver, getSortedPlugins, setPluginOrder,
+} from '../core/plugin-loader.js';
 
 const registeredTabs = new Map();
+const unregisteredConfigs = new Map(); // stores configs for re-registration
+
+// Wire up the tab ID resolver so plugin-loader can auto-detect tab IDs
+setTabIdResolver(() => [...registeredTabs.keys()]);
 let tabBarEl = null;
 let contentEl = null;
 let closeBtn = null;
@@ -121,6 +131,9 @@ export function registerTab(config) {
     return;
   }
 
+  // Store original config for potential re-registration
+  unregisteredConfigs.set(config.id, config);
+
   const tab = {
     ...config,
     lazy: config.lazy ?? false,
@@ -137,6 +150,17 @@ export function registerTab(config) {
   } else {
     pendingTabs.push(tab);
   }
+}
+
+/**
+ * Re-register a previously unregistered tab from its stored config.
+ */
+export function reRegisterTab(tabId) {
+  if (registeredTabs.has(tabId)) return true;
+  const config = unregisteredConfigs.get(tabId);
+  if (!config) return false;
+  registerTab(config);
+  return true;
 }
 
 /**
@@ -320,15 +344,12 @@ export function initTabSDK() {
 
   initialized = true;
 
-  // Add "+" button to open Dev Docs (insert before close button)
+  // Add "+" button to open Plugin Marketplace (insert before close button)
   const addBtn = document.createElement('button');
   addBtn.className = 'right-panel-add-tab';
-  addBtn.title = 'Add tab — Developer Docs';
+  addBtn.title = 'Plugin Marketplace';
   addBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-  addBtn.addEventListener('click', async () => {
-    const { openDevDocs } = await import('../panels/dev-docs.js');
-    openDevDocs('tab-sdk');
-  });
+  addBtn.addEventListener('click', () => openMarketplace());
   tabBarEl.insertBefore(addBtn, closeBtn);
 
   // Mount any tabs registered before init (inserted before "+" button)
@@ -337,7 +358,266 @@ export function initTabSDK() {
   }
   pendingTabs.length = 0;
 
+  // Apply saved plugin order
+  const savedEnabled = getEnabledPluginNames();
+  if (savedEnabled.length) reorderPluginTabs(savedEnabled);
+
   // Listen for tab changes to fire lifecycle hooks
   on('rightPanel:tabChanged', onTabActivated);
   on('rightPanel:opened', onTabActivated);
+}
+
+// ── Plugin Marketplace ──────────────────────────────────
+
+function openMarketplace() {
+  // Don't open multiple
+  if (document.querySelector('.marketplace-overlay')) return;
+
+  const plugins = getSortedPlugins();
+  const enabled = new Set(getEnabledPluginNames());
+
+  // Overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'marketplace-overlay';
+
+  // Popup
+  const popup = document.createElement('div');
+  popup.className = 'marketplace-popup';
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'marketplace-header';
+  header.innerHTML = `
+    <h3>Plugin Marketplace</h3>
+    <span class="marketplace-subtitle">${plugins.length} plugin${plugins.length !== 1 ? 's' : ''} available · drag to reorder</span>
+  `;
+  popup.appendChild(header);
+
+  // Plugin list
+  const list = document.createElement('div');
+  list.className = 'marketplace-list';
+
+  if (!plugins.length) {
+    list.innerHTML = '<div class="marketplace-empty">No plugins available.<br>Drop files into <code>plugins/</code> to get started.</div>';
+  }
+
+  // Track pending selections (start from current state)
+  const pending = new Set(enabled);
+
+  // ── Drag state ──
+  let dragItem = null;
+  let dragPlaceholder = null;
+
+  for (const plugin of plugins) {
+    const meta = getPluginMeta(plugin.name);
+    const tabId = getPluginTabId(plugin.name);
+    const loaded = tabId && registeredTabs.has(tabId);
+
+    const item = document.createElement('div');
+    item.className = 'marketplace-item';
+    item.dataset.plugin = plugin.name;
+    item.draggable = true;
+    if (pending.has(plugin.name)) item.classList.add('selected');
+
+    item.innerHTML = `
+      <div class="marketplace-drag-handle" title="Drag to reorder">⠿</div>
+      <div class="marketplace-item-icon">${meta.icon}</div>
+      <div class="marketplace-item-info">
+        <div class="marketplace-item-name">${formatPluginName(plugin.name)}</div>
+        <div class="marketplace-item-desc">${meta.description}</div>
+      </div>
+      <div class="marketplace-item-status">
+        ${loaded ? '<span class="marketplace-loaded">loaded</span>' : ''}
+      </div>
+      <div class="marketplace-item-toggle">
+        <div class="marketplace-checkbox ${pending.has(plugin.name) ? 'checked' : ''}"></div>
+      </div>
+    `;
+
+    // Toggle selection (ignore clicks on drag handle)
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.marketplace-drag-handle')) return;
+      const cb = item.querySelector('.marketplace-checkbox');
+      if (pending.has(plugin.name)) {
+        pending.delete(plugin.name);
+        cb.classList.remove('checked');
+        item.classList.remove('selected');
+      } else {
+        pending.add(plugin.name);
+        cb.classList.add('checked');
+        item.classList.add('selected');
+      }
+    });
+
+    // ── Drag events ──
+    item.addEventListener('dragstart', (e) => {
+      dragItem = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+
+      // Create placeholder
+      dragPlaceholder = document.createElement('div');
+      dragPlaceholder.className = 'marketplace-drop-indicator';
+
+      requestAnimationFrame(() => { item.style.opacity = '0.4'; });
+    });
+
+    item.addEventListener('dragend', () => {
+      if (dragItem) {
+        dragItem.classList.remove('dragging');
+        dragItem.style.opacity = '';
+      }
+      if (dragPlaceholder && dragPlaceholder.parentNode) {
+        dragPlaceholder.remove();
+      }
+      dragItem = null;
+      dragPlaceholder = null;
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (!dragItem || dragItem === item) return;
+
+      const rect = item.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const after = e.clientY > midY;
+
+      if (after) {
+        item.after(dragPlaceholder);
+      } else {
+        item.before(dragPlaceholder);
+      }
+    });
+
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!dragItem || dragItem === item) return;
+
+      // Insert dragged item where the placeholder is
+      if (dragPlaceholder && dragPlaceholder.parentNode) {
+        dragPlaceholder.before(dragItem);
+        dragPlaceholder.remove();
+      }
+
+      dragItem.classList.remove('dragging');
+      dragItem.style.opacity = '';
+      dragItem = null;
+      dragPlaceholder = null;
+    });
+
+    list.appendChild(item);
+  }
+
+  popup.appendChild(list);
+
+  // Footer with Apply / Cancel
+  const footer = document.createElement('div');
+  footer.className = 'marketplace-footer';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'marketplace-btn marketplace-btn-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => overlay.remove());
+
+  const applyBtn = document.createElement('button');
+  applyBtn.className = 'marketplace-btn marketplace-btn-apply';
+  applyBtn.textContent = 'Apply';
+  applyBtn.addEventListener('click', async () => {
+    // Read order from current DOM positions
+    const orderedNames = [...list.querySelectorAll('.marketplace-item')]
+      .map(el => el.dataset.plugin)
+      .filter(Boolean);
+
+    setPluginOrder(orderedNames);
+
+    // Only enabled in the order they appear
+    const newEnabled = orderedNames.filter(n => pending.has(n));
+    setEnabledPluginNames(newEnabled);
+
+    // Unload (hide) disabled plugins first
+    for (const [id] of [...registeredTabs]) {
+      if (!isPluginTab(id)) continue;
+      const belongsToAny = newEnabled.some(n => getPluginTabId(n) === id);
+      if (!belongsToAny) {
+        unregisterTab(id);
+      }
+    }
+
+    // Load newly enabled plugins in order
+    for (const name of newEnabled) {
+      const existingTabId = getPluginTabId(name);
+
+      if (existingTabId && registeredTabs.has(existingTabId)) continue;
+
+      if (existingTabId && reRegisterTab(existingTabId)) continue;
+
+      if (!isPluginLoaded(name)) {
+        await loadPluginByName(name);
+      }
+    }
+
+    // Reorder tab buttons & panes in the DOM to match marketplace order
+    reorderPluginTabs(newEnabled);
+
+    overlay.remove();
+  });
+
+  footer.appendChild(cancelBtn);
+  footer.appendChild(applyBtn);
+  popup.appendChild(footer);
+
+  overlay.appendChild(popup);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  // Close on Escape
+  const onKey = (e) => {
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); }
+  };
+  document.addEventListener('keydown', onKey);
+
+  document.body.appendChild(overlay);
+}
+
+/**
+ * Reorder plugin tab buttons and panes in the DOM to match the given order.
+ * Built-in tabs stay in place; plugin tabs are repositioned after them.
+ */
+function reorderPluginTabs(enabledNames) {
+  if (!tabBarEl || !contentEl) return;
+
+  const addBtn = tabBarEl.querySelector('.right-panel-add-tab');
+  const insertBeforeBtn = addBtn || closeBtn;
+
+  // Resolve ordered tab IDs from plugin names
+  const orderedTabIds = enabledNames
+    .map(name => getPluginTabId(name))
+    .filter(id => id && registeredTabs.has(id));
+
+  // Move each plugin tab button (in order) right before the "+" button
+  for (const tabId of orderedTabIds) {
+    const tab = registeredTabs.get(tabId);
+    if (tab?._btnEl) {
+      tabBarEl.insertBefore(tab._btnEl, insertBeforeBtn);
+    }
+    if (tab?._paneEl) {
+      contentEl.appendChild(tab._paneEl);
+    }
+  }
+}
+
+/** Built-in (hardcoded) tab IDs that are never managed by the marketplace */
+const BUILTIN_TABS = new Set(['files', 'git', 'mcp', 'tips', 'assistant', 'tab-sdk', 'architecture', 'adding-features']);
+
+function isPluginTab(tabId) {
+  return !BUILTIN_TABS.has(tabId);
+}
+
+function formatPluginName(name) {
+  return name
+    .replace(/-tab$/, '')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
 }
