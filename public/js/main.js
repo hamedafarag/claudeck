@@ -37,7 +37,7 @@ import './features/chat.js';
 import './panels/linear-panel.js';
 import './panels/file-explorer.js';
 import './panels/git-panel.js';
-import './panels/repos-panel.js';
+
 import './panels/mcp-manager.js';
 import './panels/tips-feed.js';
 import './panels/assistant-bot.js';

@@ -1,6 +1,17 @@
 import { query } from "@anthropic-ai/claude-code";
 import { execPath } from "process";
 import { existsSync } from "fs";
+
+// Map short model names to current model IDs
+const MODEL_MAP = {
+  haiku: "claude-haiku-4-5-20251001",
+  sonnet: "claude-sonnet-4-6",
+  opus: "claude-opus-4-6",
+};
+function resolveModel(name) {
+  if (!name) return undefined;
+  return MODEL_MAP[name] || name;
+}
 import {
   createSession,
   updateClaudeSessionId,
@@ -99,7 +110,7 @@ export async function runAgent({
   if (!useBypass && !usePlan) {
     opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, null);
   }
-  if (model) opts.model = model;
+  if (model) opts.model = resolveModel(model);
 
   const projectPrompt = getProjectSystemPrompt(cwd);
   if (projectPrompt) opts.appendSystemPrompt = projectPrompt;

@@ -13,6 +13,17 @@ import {
   updateSessionTitle,
 } from "../db.js";
 import { getProjectSystemPrompt } from "./routes/projects.js";
+
+// Map short model names to current model IDs
+const MODEL_MAP = {
+  haiku: "claude-haiku-4-5-20251001",
+  sonnet: "claude-sonnet-4-6",
+  opus: "claude-opus-4-6",
+};
+function resolveModel(name) {
+  if (!name) return undefined;
+  return MODEL_MAP[name] || name;
+}
 import { sendPushNotification } from "./push-sender.js";
 import { sendTelegramNotification } from "./telegram-sender.js";
 import { generateSessionSummary } from "./summarizer.js";
@@ -362,7 +373,7 @@ export function setupWebSocket(wss, sessionIds) {
           if (!useBypass && !usePlan) {
             stepOpts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, null);
           }
-          if (wfModel) stepOpts.model = wfModel;
+          if (wfModel) stepOpts.model = resolveModel(wfModel);
 
           const projectPrompt = getProjectSystemPrompt(cwd);
           if (projectPrompt) stepOpts.appendSystemPrompt = projectPrompt;
@@ -453,7 +464,7 @@ export function setupWebSocket(wss, sessionIds) {
       if (!useBypass && !usePlan) {
         opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, chatId);
       }
-      if (chatModel) opts.model = chatModel;
+      if (chatModel) opts.model = resolveModel(chatModel);
 
       const projectPrompt = getProjectSystemPrompt(cwd);
       if (projectPrompt) opts.appendSystemPrompt = projectPrompt;

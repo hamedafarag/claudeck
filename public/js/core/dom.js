@@ -162,12 +162,6 @@ export const $ = {
   filePreviewImage: document.getElementById("file-preview-image"),
   filePreviewClose: document.getElementById("file-preview-close"),
 
-  // Repos panel (inside right panel repos tab)
-  reposSearch: document.getElementById("repos-search"),
-  reposRefreshBtn: document.getElementById("repos-refresh-btn"),
-  reposAddGroupBtn: document.getElementById("repos-add-group-btn"),
-  reposAddRepoBtn: document.getElementById("repos-add-repo-btn"),
-  reposTree: document.getElementById("repos-tree"),
 
   // Git panel (inside right panel git tab)
   gitBranchSelect: document.getElementById("git-branch-select"),

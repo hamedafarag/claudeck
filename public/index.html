@@ -307,7 +307,6 @@
         <button class="right-panel-tab active" data-tab="tasks">Tasks</button>
         <button class="right-panel-tab" data-tab="files">Files</button>
         <button class="right-panel-tab" data-tab="git">Git</button>
-        <button class="right-panel-tab" data-tab="repos">Repos</button>
         <button id="right-panel-close" class="right-panel-close" title="Close panel">&times;</button>
       </div>
       <div class="right-panel-content">
@@ -397,29 +396,7 @@
           </div>
         </div>
 
-        <!-- Repos pane -->
-        <div class="right-panel-pane" data-tab="repos">
-          <div class="repos-toolbar">
-            <input id="repos-search" type="text" placeholder="Filter repos..." autocomplete="off" class="repos-search">
-            <button id="repos-add-group-btn" class="repos-toolbar-btn" title="Add group">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
-              </svg>
-            </button>
-            <button id="repos-add-repo-btn" class="repos-toolbar-btn" title="Add repo">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
-            <button id="repos-refresh-btn" class="repos-toolbar-btn" title="Refresh">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-              </svg>
-            </button>
-          </div>
-          <div id="repos-tree" class="repos-tree"></div>
-        </div>
+
 
         <!-- Plugin tabs are injected here by tab-sdk.js -->
       </div>

@@ -4,24 +4,15 @@ import { on } from '../core/events.js';
 import { getState } from '../core/store.js';
 import { renderMarkdown, highlightCodeBlocks, addCopyButtons } from '../ui/formatting.js';
 import * as api from '../core/api.js';
-import { getPermissionMode } from '../ui/permissions.js';
 import { getSelectedModel } from '../ui/model-selector.js';
 import { $ } from '../core/dom.js';
 
 const SESSIONS_KEY = 'shawkat-bot-sessions';
-const MODE_KEY = 'shawkat-bot-mode'; // 'linked' | 'free'
-
 let panel, messagesDiv, inputEl, sendBtn, stopBtn, settingsOverlay, promptTextarea;
-let contextToggleEl = null;
-let botSessionId = null;
-let freeBotSessionId = null; // separate session for free mode
+let freeBotSessionId = null;
 let isStreaming = false;
 let currentAssistantEl = null;
 let cachedSystemPrompt = null;
-
-function isLinkedMode() {
-  return (localStorage.getItem(MODE_KEY) || 'linked') === 'linked';
-}
 
 // ── Session management ──────────────────────────────────
 
@@ -41,11 +32,6 @@ function getCurrentProject() {
   return $.projectSelect?.value || '';
 }
 
-function loadBotSessionId() {
-  const project = getCurrentProject();
-  if (!project) { botSessionId = null; return; }
-  botSessionId = getBotSessions()[project] || null;
-}
 
 // ── DOM creation ────────────────────────────────────────
 
@@ -63,11 +49,6 @@ function createBotDOM() {
   panel.innerHTML = `
     <div class="bot-header">
       <span class="bot-header-title">Assistant Bot</span>
-      <label class="bot-context-toggle" title="Linked: uses project context. Free: no context, just answers.">
-        <input type="checkbox" class="bot-context-checkbox">
-        <span class="bot-context-slider"></span>
-        <span class="bot-context-label"></span>
-      </label>
       <button class="bot-header-btn bot-new-btn" title="New chat">&#x21bb;</button>
       <button class="bot-header-btn bot-settings-btn" title="Settings">&#x2699;</button>
       <button class="bot-header-btn bot-close-btn" title="Close">&times;</button>
@@ -104,14 +85,7 @@ function createBotDOM() {
   stopBtn = panel.querySelector('.bot-stop-btn');
   settingsOverlay = panel.querySelector('.bot-settings-overlay');
   promptTextarea = panel.querySelector('.bot-prompt-textarea');
-  contextToggleEl = panel.querySelector('.bot-context-checkbox');
-
-  // Init toggle state
-  contextToggleEl.checked = isLinkedMode();
-  updateContextLabel();
-
   // Event listeners
-  contextToggleEl.addEventListener('change', onContextToggle);
   panel.querySelector('.bot-close-btn').addEventListener('click', closePanel);
   panel.querySelector('.bot-new-btn').addEventListener('click', newBotSession);
   panel.querySelector('.bot-settings-btn').addEventListener('click', openSettings);
@@ -147,11 +121,7 @@ function togglePanel() {
 
 function openPanel() {
   panel.classList.add('open');
-  if (isLinkedMode()) {
-    loadBotSessionId();
-  } else {
-    freeBotSessionId = getBotSessions()['__free__'] || null;
-  }
+  freeBotSessionId = getBotSessions()['__free__'] || null;
   loadBotHistory();
   inputEl.focus();
 }
@@ -159,32 +129,6 @@ function openPanel() {
 function closePanel() {
   panel.classList.remove('open');
   closeSettings();
-}
-
-// ── Context toggle ──────────────────────────────────────
-
-function updateContextLabel() {
-  const label = panel.querySelector('.bot-context-label');
-  label.textContent = isLinkedMode() ? 'Linked' : 'Free';
-}
-
-function onContextToggle() {
-  const linked = contextToggleEl.checked;
-  localStorage.setItem(MODE_KEY, linked ? 'linked' : 'free');
-  updateContextLabel();
-  // Clear messages and load correct session on mode switch
-  if (isStreaming) {
-    stopBotGeneration();
-    finishStreaming();
-  }
-  currentAssistantEl = null;
-  if (linked) {
-    loadBotSessionId();
-  } else {
-    // Free mode uses its own session stored under a fixed key
-    freeBotSessionId = getBotSessions()['__free__'] || null;
-  }
-  loadBotHistory();
 }
 
 // ── System prompt ───────────────────────────────────────
@@ -228,7 +172,7 @@ async function saveSettings() {
 // ── Send message ────────────────────────────────────────
 
 function getActiveBotSessionId() {
-  return isLinkedMode() ? botSessionId : freeBotSessionId;
+  return freeBotSessionId;
 }
 
 async function sendBotMessage() {
@@ -238,11 +182,7 @@ async function sendBotMessage() {
   const ws = getState('ws');
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-  const linked = isLinkedMode();
-
-  // Linked mode requires a project; free mode uses HOME as fallback
-  const cwd = linked ? getCurrentProject() : (getCurrentProject() || process.env?.HOME || '/tmp');
-  if (linked && !cwd) return;
+  const cwd = getCurrentProject() || '/tmp';
 
   // Ensure we have the system prompt
   if (cachedSystemPrompt === null) {
@@ -269,18 +209,10 @@ async function sendBotMessage() {
     systemPrompt: cachedSystemPrompt || undefined,
   };
 
-  if (linked) {
-    payload.cwd = cwd;
-    payload.sessionId = activeSid;
-    payload.projectName = 'Assistant Bot';
-    payload.permissionMode = getPermissionMode();
-  } else {
-    // Free mode: use project cwd as fallback (required by server), no session resume, bypass permissions
-    payload.cwd = getCurrentProject() || '/tmp';
-    payload.sessionId = activeSid;
-    payload.projectName = 'Assistant Bot (Free)';
-    payload.permissionMode = 'bypass';
-  }
+  payload.cwd = cwd;
+  payload.sessionId = activeSid;
+  payload.projectName = 'Assistant Bot';
+  payload.permissionMode = 'bypass';
 
   if (model) payload.model = model;
 
@@ -376,13 +308,8 @@ function handleBotWsMessage(msg) {
 
   switch (msg.type) {
     case 'session':
-      if (isLinkedMode()) {
-        botSessionId = msg.sessionId;
-        setBotSession(getCurrentProject(), botSessionId);
-      } else {
-        freeBotSessionId = msg.sessionId;
-        setBotSession('__free__', freeBotSessionId);
-      }
+      freeBotSessionId = msg.sessionId;
+      setBotSession('__free__', freeBotSessionId);
       showBotThinking('Thinking...');
       break;
 
@@ -481,17 +408,8 @@ function newBotSession() {
   }
 
   const sessions = getBotSessions();
-
-  if (isLinkedMode()) {
-    const project = getCurrentProject();
-    if (!project) return;
-    botSessionId = null;
-    delete sessions[project];
-  } else {
-    freeBotSessionId = null;
-    delete sessions['__free__'];
-  }
-
+  freeBotSessionId = null;
+  delete sessions['__free__'];
   localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
   messagesDiv.innerHTML = '';
   currentAssistantEl = null;
