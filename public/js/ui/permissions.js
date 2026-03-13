@@ -4,7 +4,7 @@ import { getState } from '../core/store.js';
 import { on as onEvent } from '../core/events.js';
 import { sendNotification } from './notifications.js';
 
-const STORAGE_KEY = 'shawkat-perm-mode';
+const STORAGE_KEY = 'codedeck-perm-mode';
 
 // Per-session always-allow set (cleared on refresh or /new)
 const alwaysAllowTools = new Set();

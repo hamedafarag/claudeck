@@ -1,4 +1,4 @@
-# shawkat-ai
+# CodeDeck
 
 A terminal-style web UI for Claude Code. Chat with Claude, run workflows, manage projects, track costs — all from a local browser interface.
 
@@ -36,27 +36,35 @@ Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth lo
 ```
 browser ──────── WebSocket ──────── server.js ──────── Claude Code SDK
    |                                    |
-   ├── js/main.js (entry point)       ├── server/routes/ (13 route modules)
-   │   ├── store.js (reactive state)  ├── server/ws-handler.js
-   │   ├── ws.js (WebSocket client)   ├── server/agent-loop.js
-   │   ├── api.js (fetch calls)       ├── db.js (SQLite)
-   │   ├── chat.js, messages.js ...   ├── folders.json (projects)
-   │   └── 33+ more modules           ├── repos.json (repositories)
-   │                                   ├── prompts.json (16 templates)
-   │                                   ├── bot-prompt.json (assistant bot prompt)
-   │                                   ├── agents.json (4 autonomous agents)
-   │                                   └── workflows.json (3 workflows)
-   ├── css/ (29 focused stylesheets)
+   ├── js/main.js (entry point)       ├── server/routes/ (15 route modules)
+   │   ├── core/                      ├── server/ws-handler.js
+   │   │   ├── store.js (reactive)    ├── server/agent-loop.js
+   │   │   ├── ws.js (WebSocket)      ├── server/telegram-sender.js
+   │   │   ├── api.js (fetch calls)   ├── db.js (SQLite)
+   │   │   ├── events.js (event bus)  ├── folders.json (projects)
+   │   │   ├── dom.js (DOM refs)      ├── repos.json (repositories)
+   │   │   ├── constants.js           ├── prompts.json (16 templates)
+   │   │   ├── utils.js               ├── bot-prompt.json (assistant bot prompt)
+   │   │   └── plugin-loader.js       ├── agents.json (4 autonomous agents)
+   │   ├── ui/   (shared UI modules)  ├── workflows.json (4 workflows)
+   │   ├── features/ (chat, sessions) └── telegram-config.json
+   │   ├── panels/  (bot, tips, docs)
+   │   └── plugins/ (tab-sdk plugins)
+   ├── css/
+   │   ├── core/       (variables, reset)
+   │   ├── ui/         (messages, sessions, layout)
+   │   └── panels/     (bot, tips, docs)
    └── index.html
 ```
 
 - **WebSocket** streams assistant text, tool calls, and results in real time
 - **Reconnect with backoff** — exponential backoff (2s → 4s → 8s → ... → 30s cap, 0-25% jitter), distinct `ws:reconnected` event triggers state sync
 - **State sync on reconnect** — reconciles background sessions, resets streaming panes, reloads messages from DB, refreshes session list
-- **Modular frontend** — 35+ ES modules (`<script type="module">`) with no bundler
+- **Modular frontend** — 40+ ES modules organized into `core/`, `ui/`, `features/`, `panels/`, `plugins/` with no bundler
+- **Plugin system** — auto-discovery of tab-sdk plugins from `public/js/plugins/` via `GET /api/plugins`; enable/disable/reorder in marketplace UI
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
-- **Modular backend** — 15 Express Router modules + shared WS handler + agent loop
+- **Modular backend** — 15 Express Router modules + shared WS handler + agent loop + Telegram sender
 - **SQLite + WAL** persists sessions, messages, costs, and Claude session mappings
 - **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
 - **Prepared statements** for all DB queries (no SQL injection risk)
@@ -265,6 +273,18 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | GET    | /api/account         | Cached account info (email, plan)        |
 | POST   | /api/exec            | Execute shell command (30s timeout)      |
 
+### Plugins
+| Method | Path                 | Description                              |
+| ------ | -------------------- | ---------------------------------------- |
+| GET    | /api/plugins         | Auto-discover tab-sdk plugins from public/js/plugins/ |
+
+### Telegram
+| Method | Path                    | Description                              |
+| ------ | ----------------------- | ---------------------------------------- |
+| GET    | /api/telegram/config    | Get Telegram notification config         |
+| PUT    | /api/telegram/config    | Update Telegram config (botToken, chatId, enabled) |
+| POST   | /api/telegram/test      | Send a test Telegram notification        |
+
 ### WebSocket (`/ws`)
 
 **Outgoing** (client to server):
@@ -291,7 +311,16 @@ All streamed messages include `sessionId` so the client can route background ses
 
 ## Features
 
-### 1. Real-Time Chat
+### 1. Home Page
+The default landing view before selecting a project:
+- **AI Activity Grid** — GitHub-style contribution heatmap showing daily AI usage over the past year (green intensity based on query count)
+- **Month labels** and day-of-week labels for orientation
+- **Legend** — Less/More scale with 5 intensity levels
+- **Stat cards** — total sessions, total cost, queries today, active projects
+- **Inline Analytics** — embedded analytics dashboard with project filter, daily cost chart, and key metrics
+- Selecting a project or session transitions to the chat view; home button returns to this view
+
+### 2. Real-Time Chat
 - Bidirectional WebSocket streaming with exponential backoff reconnection
 - Single-mode and parallel-mode (2x2 grid) conversations
 - Session persistence with message history
@@ -331,10 +360,11 @@ All streamed messages include `sessionId` so the client can route background ses
 - Saved messages load without spinners (already complete)
 
 ### 5. AI Workflows
-Three pre-built multi-step workflows:
+Four pre-built multi-step workflows:
 - **Review PR** — analyze changes, identify issues, suggest improvements
 - **Onboard Repo** — map structure, explain architecture, dev guide
 - **Migration Plan** — audit deps, assess impact, create plan
+- **Code Health** — analyze codebase health, identify tech debt, suggest improvements
 
 Each workflow chains prompts sequentially with context passing and step progress indicators.
 
@@ -488,11 +518,11 @@ Behavior:
 ### 20. PWA / Install as App
 - Installable from Chrome's address bar (⊕ icon) on localhost
 - Runs in a standalone window (no browser chrome)
-- Web App Manifest with app name, theme color, and icons (192x192 + 512x512)
-- Custom Arabic-style bot logo (SVG source at `icons/logo.svg`, auto-generated PNGs)
+- Web App Manifest with app name, theme color, and Whaly icons (192x192 + 512x512)
+- **Favicon** — 32x32 Whaly on transparent background (`favicon.png`)
 - Service worker with offline fallback — pre-caches offline page and icons; navigation requests fall back to a styled offline page (`offline.html`) when network is unavailable
 - Cache-first strategy for static icon assets; network-only for everything else
-- Offline page features Arabic geometric star pattern, bilingual messaging (English + Arabic), and retry button
+- Offline page features geometric star pattern and retry button
 - Apple touch icon and `apple-mobile-web-app-capable` meta for iOS/Safari
 
 ### 21. Background Sessions
@@ -539,7 +569,9 @@ The right side of the UI hosts a resizable tabbed panel with built-in and plugin
 - **Lifecycle hooks** — `onActivate`, `onDeactivate`, `onDestroy`
 - **Lazy initialization** — `lazy: true` defers `init()` until the tab is first opened
 - **Positional insert** — `position` option to control tab order
-- See `event-stream-tab.js` for a complete working example
+- **Auto-discovery** — drop `.js` + `.css` files in `public/js/plugins/`, server exposes them via `GET /api/plugins`
+- **Plugin marketplace** — enable/disable/reorder plugins from the "+" button; state persisted to `localStorage`
+- **Built-in plugins**: Tasks (Linear + Todo), Repos, Events, Sudoku, Tic-Tac-Toe
 
 Panel state (open/closed), active tab, and width are persisted to `localStorage`. Resizable by dragging the left edge. Toggle via header button or `Cmd+B`.
 
@@ -635,7 +667,7 @@ Browser notifications for events that happen while the tab is unfocused, **inclu
 - Client-side notifications play sound directly via `sendNotification()`
 - Push notifications trigger sound via service worker `postMessage` to the client page
 - OS notification sound suppressed (`silent: true`) to avoid double-chime
-- Sound preference stored in `localStorage` (`shawkat-notifications-sound`)
+- Sound preference stored in `localStorage` (`codedeck-notifications-sound`)
 
 **Setup & testing:**
 1. Enable notifications via `/notifications` command or **Tools > Notifications** toggle
@@ -709,7 +741,7 @@ After a query completes, Claude Haiku automatically generates a 1-sentence summa
 
 ### 38. Floating Assistant Bot
 A floating chat bubble widget (bottom-left corner) that provides a personal AI assistant with its own independent conversation thread:
-- **Chat bubble** — 48px green circle with robot emoji, click to expand the bot panel
+- **Chat bubble** — 48px circle featuring the Whaly mascot (pixel-art whale), click to expand the bot panel
 - **Independent session** — separate from the main chat, per-project session stored in `localStorage`
 - **Linked / Free toggle** — switch between "Linked" mode (uses project context, session, and permission mode) and "Free" mode (no project context, bypass permissions, just answers questions)
 - **Custom system prompt** — editable via gear icon in the bot header; stored server-side in `bot-prompt.json`; default is an expert prompt engineering assistant
@@ -781,6 +813,43 @@ An in-app documentation modal for developers extending the application, accessib
 - **Responsive** — sidebar collapses to icon-only on narrow viewports
 - Opens directly to Tab SDK section from the "+" button in the right panel
 
+### 44. Telegram Notifications
+Push notifications to Telegram as an alternative to browser push:
+- **Bot integration** — configure a Telegram bot token and chat ID via **Tools > Telegram** settings modal
+- **Event triggers** — notifications sent on chat completion, workflow completion, and agent completion
+- **Enable/disable toggle** — per-instance setting stored in `telegram-config.json`
+- **Test button** — send a test notification to verify configuration
+- **Server-side sender** — `server/telegram-sender.js` uses the Telegram Bot API directly (no dependencies)
+- **Graceful degradation** — if not configured, Telegram notifications are silently skipped
+
+### 45. Plugin Marketplace
+A built-in marketplace UI for managing tab-sdk plugins:
+- **Auto-discovery** — server scans `public/js/plugins/` and exposes `GET /api/plugins` with JS/CSS file paths
+- **Marketplace panel** — accessible from the "+" button in the right panel tab bar or the plugin icon
+- **Enable/disable** — toggle plugins on/off; state persisted to `localStorage`
+- **Reorder tabs** — drag handle to reorder plugin tabs; order persisted to `localStorage`
+- **Built-in plugins**: Tasks (Linear + Todo), Repos, Events, Sudoku, Tic-Tac-Toe
+- **Hot reload** — enable a plugin and it loads immediately without page refresh; disable removes the tab
+
+### 46. Whaly Mascot & Empty States
+The CodeDeck mascot "Whaly" (a pixel-art whale) appears as a friendly placeholder:
+- **Chat empty state** — Whaly with floating animation + "start chatting with claude" text when no messages are loaded
+- **Assistant bot empty state** — smaller Whaly in the bot panel when no conversation exists
+- **Parallel pane empty state** — compact Whaly in each empty pane
+- Auto-removed when the first message is added
+
+### 47. Input Bar Meta Labels
+Redesigned input bar with contextual meta information:
+- **Meta labels row** — displays active model, permission mode, and max turns above the input textarea
+- **Compact layout** — labels shown as small pills for at-a-glance context without opening dropdowns
+- **Streaming token counter** — moved to the status bar for a cleaner input area
+
+### 48. Session Controls Visibility
+Session management controls (search, new session, parallel toggle) are hidden until a project is selected:
+- Controls appear automatically when a project is chosen
+- Controls hide when project selection is cleared
+- Reduces visual noise on the home/empty state
+
 ---
 
 ## Slash Commands
@@ -818,6 +887,7 @@ An in-app documentation modal for developers extending the application, accessib
 | /review-pr       | Run PR review workflow          |
 | /onboard-repo    | Run repo onboarding workflow    |
 | /migration-plan  | Run migration planning workflow |
+| /code-health     | Run code health analysis workflow |
 
 ### Agents
 | Command              | Description                     |
@@ -931,6 +1001,16 @@ Supports `{{variable}}` placeholders that show a fill-in form.
 ]
 ```
 
+### telegram-config.json — Telegram Notifications
+```json
+{
+  "botToken": "",
+  "chatId": "",
+  "enabled": false
+}
+```
+Configure via **Tools > Telegram** in the header or edit directly. Requires a Telegram bot token (from @BotFather) and a chat ID.
+
 ---
 
 ## UI Design
@@ -950,8 +1030,8 @@ Supports `{{variable}}` placeholders that show a fill-in form.
 All colors are CSS custom properties on `:root` (defined in `css/variables.css`). The light theme overrides them via `html[data-theme="light"]`. No page reload required.
 
 ### Layout
-- **Header** (36px): background session indicator, **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, analytics, notifications, dev docs), panel toggle — all right-aligned. Active project name centered. Token counter at far right
-- **Sidebar** (272px): project selector (with add project button), session search, session list (with right-click context menu), parallel toggle
+- **Header** (36px): background session indicator, **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, notifications, Telegram, dev docs), panel toggle — all right-aligned. Active project name centered. Token counter at far right
+- **Sidebar** (272px): project selector (with add project button), session controls (search, new session, parallel toggle — hidden until project selected), session list (with right-click context menu)
 - **Main area**: messages (820px max-width), input bar (with tooltipped action buttons), toolbox/workflow/agent panels
 - **Right panel** (300px, resizable): tabbed container with Tasks (Linear + Todo), Files (explorer + preview), Git (status + commit + log), Repos (repository management), Events (SDK plugin), "+" button (dev docs)
 - **Status bar** (24px): connection dot, git branch, project name, activity, background sessions, model (tooltip), permission mode (tooltip), max turns (tooltip), cost — all reactive via MutationObservers and event bus
@@ -961,7 +1041,7 @@ All colors are CSS custom properties on `:root` (defined in `css/variables.css`)
 ## File Structure
 
 ```
-shawkat-ai/
+CodeDeck/
 ├── server.js              Express entry point (~70 lines)
 ├── db.js                  SQLite layer with indexes + prepared statements
 ├── .env.example           Environment variable template
@@ -969,29 +1049,34 @@ shawkat-ai/
 │   ├── ws-handler.js      WebSocket handler with stale session retry + stderr capture
 │   ├── agent-loop.js      Autonomous agent execution (single high-maxTurns query)
 │   ├── summarizer.js      AI session summary generation via Claude Haiku
+│   ├── push-sender.js     Web Push notification sender
+│   ├── telegram-sender.js Telegram Bot API notification sender
 │   └── routes/
 │       ├── projects.js    Project CRUD + system prompts + commands
 │       ├── sessions.js    Session CRUD + pin/unpin
 │       ├── messages.js    Message queries (all, by chat, single-mode)
 │       ├── prompts.js     Prompt template CRUD
-│       ├── stats.js       Cost stats + dashboard + account info
+│       ├── stats.js       Cost stats + dashboard + analytics + account info
 │       ├── files.js       File listing + content + tree + search
 │       ├── workflows.js   Workflow listing
 │       ├── exec.js        Shell command execution
 │       ├── linear.js      Linear API proxy (issues, teams, states)
 │       ├── mcp.js         MCP server CRUD (~/.claude/settings.json)
 │       ├── repos.js       Repos CRUD (groups + repos from repos.json)
+│       ├── notifications.js Push subscription management + VAPID key
 │       ├── tips.js        Tips feed API + RSS proxy (15-min cache)
 │       ├── bot.js         Assistant bot system prompt API (GET/PUT)
 │       ├── agents.js      Agents listing API
-│       └── todos.js       Todo + brag CRUD (priority, counts, archive)
+│       ├── todos.js       Todo + brag CRUD (priority, counts, archive)
+│       └── telegram.js    Telegram notification config + test
 ├── package.json           5 runtime dependencies
 ├── folders.json           Project configurations
 ├── repos.json             Repository groups + repos
 ├── prompts.json           16 prompt templates
-├── workflows.json         3 multi-step workflows
+├── workflows.json         4 multi-step workflows
 ├── agents.json            4 autonomous agent definitions
 ├── bot-prompt.json        Assistant bot system prompt
+├── telegram-config.json   Telegram notification settings
 ├── data.db                SQLite database (auto-created)
 ├── public/data/
 │   └── tips.json          20 curated tips + RSS feed definitions
@@ -1001,83 +1086,101 @@ shawkat-ai/
     ├── sw.js              Service worker (offline fallback + push + caching)
     ├── offline.html       Offline fallback page (Arabic geometric design)
     ├── icons/
-    │   ├── logo.svg       Source SVG logo (Arabic-style bot)
-    │   ├── icon-192.png   App icon 192x192 (generated from logo.svg)
-    │   └── icon-512.png   App icon 512x512 (generated from logo.svg)
+    │   ├── whaly.png      Whaly mascot (pixel-art whale, source asset)
+    │   ├── favicon.png    Browser favicon 32x32 (Whaly, transparent bg)
+    │   ├── icon-192.png   PWA icon 192x192 (Whaly on dark bg)
+    │   └── icon-512.png   PWA icon 512x512 (Whaly on dark bg)
     ├── style.css          CSS entry point (@import hub)
     ├── css/
-    │   ├── variables.css      CSS custom properties + light theme
-    │   ├── reset.css          Box-sizing reset + body
-    │   ├── layout.css         Header bar + main layout
-    │   ├── sessions.css       Sidebar, session list, session context menu
-    │   ├── messages.css       Chat area, messages, tools, input bar, code blocks
-    │   ├── parallel.css       2x2 chat grid + pane overrides
-    │   ├── modals.css         Modal overlay + form styles
-    │   ├── toolbox.css        Toolbox panel + prompt variables form
-    │   ├── commands.css       Slash autocomplete, CLI output, workflows, diff view
-    │   ├── file-picker.css    File picker modal + attach badge
-    │   ├── cost-dashboard.css Cost dashboard cards, table, chart
-    │   ├── background-sessions.css Confirm dialog, toast notifications, bg indicator
-    │   ├── permissions.css    Header control labels + permission modal styles
-    │   ├── right-panel.css    Tabbed right panel + resize handle + add-tab button
-    │   ├── file-explorer.css  File tree, search, preview, context menu, refresh
-    │   ├── repos-panel.css    Repos tree, groups, context menu, manual form
-    │   ├── git-panel.css      Git status, staging, commit, log, branches
-    │   ├── mcp-manager.css    MCP server modal, cards, form
-    │   ├── image-attachments.css Image preview strip, chat thumbnails, overlay
-    │   ├── tips-feed.css      Tips feed panel, cards, tabs, resize handle
-    │   ├── linear-panel.css   Linear tasks panel + create issue modal
-    │   ├── context-gauge.css  Context window usage gauge
-    │   ├── event-stream.css   Event stream panel styles
-    │   ├── assistant-bot.css  Floating assistant bot panel styles
-    │   ├── agents.css         Autonomous agent panel + status cards
-    │   ├── status-bar.css     VS Code-style footer status bar + tooltips
-    │   ├── dev-docs.css      Developer documentation modal + nav + typography
-    │   ├── theme.css          Scanline overlay, animations, scrollbar
-    │   └── print.css          Print-friendly styles
+    │   ├── core/
+    │   │   ├── variables.css      CSS custom properties + light theme
+    │   │   └── reset.css          Box-sizing reset + body
+    │   ├── ui/
+    │   │   ├── layout.css         Header bar + main layout
+    │   │   ├── sessions.css       Sidebar, session list, session context menu
+    │   │   ├── messages.css       Chat area, messages, Whaly placeholder, input bar
+    │   │   ├── parallel.css       2x2 chat grid + pane overrides
+    │   │   ├── modals.css         Modal overlay + form styles
+    │   │   ├── toolbox.css        Toolbox panel + prompt variables form
+    │   │   ├── commands.css       Slash autocomplete, CLI output, workflows, diff view
+    │   │   ├── file-picker.css    File picker modal + attach badge
+    │   │   ├── cost-dashboard.css Cost dashboard cards, table, chart
+    │   │   ├── background-sessions.css Confirm dialog, toast notifications
+    │   │   ├── permissions.css    Permission modal styles
+    │   │   ├── right-panel.css    Tabbed right panel + resize handle
+    │   │   ├── file-explorer.css  File tree, search, preview, context menu
+    │   │   ├── git-panel.css      Git status, staging, commit, log
+    │   │   ├── mcp-manager.css    MCP server modal, cards, form
+    │   │   ├── image-attachments.css Image preview strip, thumbnails, overlay
+    │   │   ├── context-gauge.css  Context window usage gauge
+    │   │   ├── agents.css         Autonomous agent panel + status cards
+    │   │   ├── status-bar.css     VS Code-style footer status bar
+    │   │   ├── home.css           Home page activity grid + cards
+    │   │   ├── theme.css          Scanline overlay, animations, scrollbar
+    │   │   └── print.css          Print-friendly styles
+    │   └── panels/
+    │       ├── assistant-bot.css  Floating bot panel + Whaly bubble
+    │       ├── tips-feed.css      Tips feed panel, cards, tabs
+    │       ├── dev-docs.css       Developer docs modal + nav
+    │       └── telegram.css       Telegram settings modal
     └── js/
-        ├── main.js            Entry point — imports all modules, boot sequence
-        ├── store.js           Centralized reactive state (pub/sub)
-        ├── dom.js             DOM element references
-        ├── constants.js       Shared constants (CHAT_IDS, limits)
-        ├── events.js          Event bus for cross-module communication
-        ├── utils.js           Pure utilities (escapeHtml, slugify, etc.)
-        ├── formatting.js      Markdown rendering, syntax highlighting, mermaid
-        ├── diff.js            LCS-based diff algorithm + diff view renderer
-        ├── export.js          Export as Markdown / HTML
-        ├── theme.js           Dark/light theme toggle + persistence
-        ├── api.js             All fetch() calls as named async functions
-        ├── ws.js              WebSocket connection + exponential backoff reconnection
-        ├── commands.js        Slash command registry + autocomplete
-        ├── messages.js        Message rendering (user, assistant, tool, status)
-        ├── parallel.js        Parallel mode (2x2 pane grid)
-        ├── sessions.js        Session list, search, load, delete, rename, context menu
-        ├── projects.js        Project selection, system prompts, commands
-        ├── attachments.js     File picker + attachment management
-        ├── prompts.js         Prompt toolbox + variable templates
-        ├── workflows.js       Workflow panel + execution
-        ├── cost-dashboard.js  Cost dashboard (cards, table, bar chart)
-        ├── notifications.js       Browser notification API + toggle + sound + persistence
-        ├── background-sessions.js Guard switch, bg tracking, toasts, indicator
-        ├── permissions.js     Permission modes, approval queue, modal logic
-        ├── model-selector.js  Model selection dropdown (auto/sonnet/opus/haiku)
-        ├── max-turns.js       Max turns selector (10/30/50/100/unlimited)
-        ├── tab-sdk.js         Tab SDK — plugin API for registering custom right panel tabs
-        ├── right-panel.js     Tabbed right panel (Tasks/Files/Git) + resize + Tab SDK init
-        ├── file-explorer.js   File tree, lazy loading, search, context menu, drag
-        ├── repos-panel.js     Repos tree, groups, add/remove, context menus, search
-        ├── git-panel.js       Git status, staging, commit, branch, log
-        ├── mcp-manager.js     MCP server CRUD modal
-        ├── tips-feed.js       Tips feed panel + RSS rendering + resize
-        ├── linear-panel.js    Linear tasks panel + create issue modal
-        ├── shortcuts.js       Global keyboard shortcuts
-        ├── context-gauge.js   Session token usage progress bar
-        ├── event-stream-tab.js Event stream tab (Tab SDK plugin, structured activity log)
-        ├── dev-docs.js        Developer documentation modal (extensible sections)
-        ├── assistant-bot.js   Floating assistant bot (chat bubble + panel)
-        ├── agents.js          Autonomous agent panel + execution + slash commands
-        ├── status-bar.js      VS Code-style footer status bar (reactive via MutationObservers, tooltips)
-        └── chat.js            Send/stop logic, WS message handler, boot
+        ├── main.js               Entry point — imports all modules
+        ├── core/
+        │   ├── store.js           Centralized reactive state (pub/sub)
+        │   ├── dom.js             DOM element references
+        │   ├── constants.js       Shared constants (CHAT_IDS, limits)
+        │   ├── events.js          Event bus for cross-module communication
+        │   ├── utils.js           Pure utilities (escapeHtml, slugify, etc.)
+        │   ├── api.js             All fetch() calls as named async functions
+        │   ├── ws.js              WebSocket connection + backoff reconnection
+        │   └── plugin-loader.js   Auto-discovery plugin loader + marketplace
+        ├── ui/
+        │   ├── messages.js        Message rendering + Whaly placeholder
+        │   ├── formatting.js      Markdown, syntax highlighting, mermaid
+        │   ├── diff.js            LCS-based diff algorithm + diff view
+        │   ├── export.js          Export as Markdown / HTML
+        │   ├── theme.js           Dark/light theme toggle
+        │   ├── commands.js        Slash command registry + autocomplete
+        │   ├── parallel.js        Parallel mode (2x2 pane grid)
+        │   ├── right-panel.js     Tabbed right panel + resize
+        │   ├── tab-sdk.js         Tab SDK — plugin API + marketplace UI
+        │   ├── notifications.js   Browser notifications + sound
+        │   ├── permissions.js     Permission modes, approval queue
+        │   ├── model-selector.js  Model selection (auto/sonnet/opus/haiku)
+        │   ├── max-turns.js       Max turns selector
+        │   ├── context-gauge.js   Session token usage bar
+        │   ├── status-bar.js      VS Code-style footer status bar
+        │   ├── input-meta.js      Input bar meta labels (model, mode, turns)
+        │   └── shortcuts.js       Global keyboard shortcuts
+        ├── features/
+        │   ├── chat.js            Send/stop logic, WS handler, boot
+        │   ├── sessions.js        Session list, search, load, rename
+        │   ├── projects.js        Project selection, system prompts
+        │   ├── home.js            Home page activity grid + analytics
+        │   ├── attachments.js     File picker + attachment management
+        │   ├── prompts.js         Prompt toolbox + variable templates
+        │   ├── workflows.js       Workflow panel + execution
+        │   ├── agents.js          Agent panel + execution + slash commands
+        │   ├── cost-dashboard.js  Cost dashboard (cards, table, chart)
+        │   └── background-sessions.js Guard switch, bg tracking, toasts
+        ├── panels/
+        │   ├── assistant-bot.js   Floating bot (Whaly bubble + chat panel)
+        │   ├── tips-feed.js       Tips feed panel + RSS rendering
+        │   ├── dev-docs.js        Developer documentation modal
+        │   ├── file-explorer.js   File tree, lazy loading, search
+        │   ├── git-panel.js       Git status, staging, commit, log
+        │   └── mcp-manager.js     MCP server CRUD modal
+        └── plugins/               Auto-discovered tab-sdk plugins
+            ├── tasks-tab.js       Tasks tab (Linear + Todo)
+            ├── tasks-tab.css
+            ├── repos-tab.js       Repos tab (repository management)
+            ├── repos-tab.css
+            ├── event-stream-tab.js Event stream (activity log)
+            ├── event-stream-tab.css
+            ├── sudoku.js          Sudoku game plugin
+            ├── sudoku.css
+            ├── tic-tac-toe.js     Tic-Tac-Toe game plugin
+            └── tic-tac-toe.css
 ```
 
 ---
@@ -1128,24 +1231,24 @@ The following data flows through the app at runtime but is **not** saved to the 
 ### Client-Side Only (localStorage)
 | Key | Data |
 | --- | ---- |
-| `shawkat-ai-theme` | Dark/light theme preference |
-| `shawkat-perm-mode` | Permission mode (bypass / confirmDangerous / confirmAll) |
-| `shawkat-model` | Selected model (auto/sonnet/opus/haiku) |
-| `shawkat-max-turns` | Max turns per query (10/30/50/100/0) |
-| `shawkat-right-panel` | Right panel open/closed state |
-| `shawkat-right-panel-tab` | Active right panel tab (tasks/files/git/repos/events + plugin tabs) |
-| `shawkat-right-panel-width` | Right panel width in pixels |
-| `shawkat-ai-session-id` | Active session ID (restored on page load with auto-message loading) |
-| `shawkat-ai-bg-sessions` | Background sessions map (serialized, survives disconnects and page refreshes) |
-| `shawkat-ai-cwd` | Last selected project path |
-| `shawkat-repos-expanded` | Expanded group IDs in repos panel |
-| `shawkat-notifications` | Browser notifications enabled (1/0) |
-| `shawkat-notifications-sound` | Notification sound enabled (default on, set to 0 to disable) |
-| `shawkat-tips-feed` | Tips feed panel open/closed state (1/0) |
-| `shawkat-tips-category` | Active tips category filter (all/prompting/mcp/workflows/commands/claude-md) |
-| `shawkat-tips-width` | Tips feed panel width in pixels |
-| `shawkat-bot-sessions` | Bot session IDs per project (JSON map: path → UUID, `__free__` for free mode) |
-| `shawkat-bot-mode` | Bot context mode (`linked` or `free`) |
+| `codedeck-theme` | Dark/light theme preference |
+| `codedeck-perm-mode` | Permission mode (bypass / confirmDangerous / confirmAll) |
+| `codedeck-model` | Selected model (auto/sonnet/opus/haiku) |
+| `codedeck-max-turns` | Max turns per query (10/30/50/100/0) |
+| `codedeck-right-panel` | Right panel open/closed state |
+| `codedeck-right-panel-tab` | Active right panel tab (tasks/files/git/repos/events + plugin tabs) |
+| `codedeck-right-panel-width` | Right panel width in pixels |
+| `codedeck-session-id` | Active session ID (restored on page load with auto-message loading) |
+| `codedeck-bg-sessions` | Background sessions map (serialized, survives disconnects and page refreshes) |
+| `codedeck-cwd` | Last selected project path |
+| `codedeck-notifications` | Browser notifications enabled (1/0) |
+| `codedeck-notifications-sound` | Notification sound enabled (default on, set to 0 to disable) |
+| `codedeck-tips-feed` | Tips feed panel open/closed state (1/0) |
+| `codedeck-tips-category` | Active tips category filter (all/prompting/mcp/workflows/commands/claude-md) |
+| `codedeck-tips-width` | Tips feed panel width in pixels |
+| `codedeck-bot-sessions` | Bot session IDs per project (JSON map: path → UUID, `__free__` for free mode) |
+| `codedeck-enabled-plugins` | Enabled plugin names (JSON array) |
+| `codedeck-plugin-order` | Plugin tab order (JSON array) |
 
 There is no server-side user preferences table — all client preferences are lost if localStorage is cleared or a different browser is used.
 

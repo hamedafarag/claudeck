@@ -7,7 +7,7 @@ import * as api from '../core/api.js';
 import { getSelectedModel } from '../ui/model-selector.js';
 import { $ } from '../core/dom.js';
 
-const SESSIONS_KEY = 'shawkat-bot-sessions';
+const SESSIONS_KEY = 'codedeck-bot-sessions';
 let panel, messagesDiv, inputEl, sendBtn, stopBtn, settingsOverlay, promptTextarea;
 let freeBotSessionId = null;
 let isStreaming = false;
@@ -39,7 +39,7 @@ function createBotDOM() {
   // Bubble
   const bubble = document.createElement('button');
   bubble.className = 'bot-bubble';
-  bubble.innerHTML = '&#x1F916;';
+  bubble.innerHTML = '<img src="/icons/whaly.png" alt="Whaly" width="32" height="32">';
   bubble.title = 'Assistant Bot';
   bubble.addEventListener('click', togglePanel);
 
@@ -240,7 +240,23 @@ function renderBotMarkdown(text) {
   return mergeAdjacentLists(renderMarkdown(text));
 }
 
+function showBotWhaly() {
+  if (!messagesDiv) return;
+  removeBotWhaly();
+  const el = document.createElement('div');
+  el.className = 'whaly-placeholder';
+  el.innerHTML = `<img src="/icons/whaly.png" alt="Whaly" draggable="false"><div class="whaly-text">~ ask the assistant anything ~</div>`;
+  messagesDiv.appendChild(el);
+}
+
+function removeBotWhaly() {
+  if (!messagesDiv) return;
+  const el = messagesDiv.querySelector('.whaly-placeholder');
+  if (el) el.remove();
+}
+
 function appendMessage(role, content) {
+  removeBotWhaly();
   const div = document.createElement('div');
   div.className = `bot-msg ${role}`;
 
@@ -371,6 +387,7 @@ async function loadBotHistory() {
   const sid = getActiveBotSessionId();
   if (!sid) {
     messagesDiv.innerHTML = '';
+    showBotWhaly();
     return;
   }
 
@@ -413,6 +430,7 @@ function newBotSession() {
   localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
   messagesDiv.innerHTML = '';
   currentAssistantEl = null;
+  showBotWhaly();
 }
 
 // ── Init ────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import { getState, setState } from '../core/store.js';
 import { CHAT_IDS, BOT_CHAT_ID } from '../core/constants.js';
 import { on } from '../core/events.js';
 import { commandRegistry, dismissAutocomplete, handleAutocompleteKeydown, handleSlashAutocomplete, registerCommand } from '../ui/commands.js';
-import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus } from '../ui/messages.js';
+import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder } from '../ui/messages.js';
 import { getPane, panes, _setChatFns } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats, loadAccountInfo } from './cost-dashboard.js';
@@ -552,6 +552,7 @@ if (typeof mermaid !== "undefined") {
 }
 
 // ── Boot sequence ──
+showWhalyPlaceholder();
 loadProjects(); // loadSessions() is called inside loadProjects() after dropdown is populated
 loadAccountInfo();
 loadStats();

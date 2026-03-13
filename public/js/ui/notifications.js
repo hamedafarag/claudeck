@@ -2,8 +2,8 @@
 import { getState, setState } from '../core/store.js';
 import { registerCommand } from './commands.js';
 
-const STORAGE_KEY = 'shawkat-notifications';
-const SOUND_KEY = 'shawkat-notifications-sound';
+const STORAGE_KEY = 'codedeck-notifications';
+const SOUND_KEY = 'codedeck-notifications-sound';
 
 // ── Audio ──
 let audioCtx = null;

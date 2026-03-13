@@ -1,7 +1,7 @@
 # Competitive Analysis — Claude Code Web UIs
 
 **Date**: March 6, 2026
-**Purpose**: Map the landscape of web-based interfaces for Claude Code and identify feature gaps in shawkat-ai.
+**Purpose**: Map the landscape of web-based interfaces for Claude Code and identify feature gaps in CodeDeck.
 
 ---
 
@@ -210,7 +210,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 
 ## Feature Comparison Matrix
 
-| Feature | shawkat-ai | Opcode | CloudCLI | CodePilot | Pilot Shell | CUI |
+| Feature | CodeDeck | Opcode | CloudCLI | CodePilot | Pilot Shell | CUI |
 |---------|:----------:|:------:|:--------:|:---------:|:-----------:|:---:|
 | **Chat & Streaming** |
 | Real-time WebSocket streaming | Yes | Yes | Yes | Yes | -- | Yes |
@@ -274,7 +274,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 
 ---
 
-## Feature Gap Analysis for shawkat-ai
+## Feature Gap Analysis for CodeDeck
 
 ### Completed Since Last Analysis
 
@@ -352,7 +352,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 ### Tier 3 — Nice to Have
 
 #### 9. NPX One-Command Launch
-**What to build**: Publish to npm, support `npx shawkat-ai`.
+**What to build**: Publish to npm, support `npx CodeDeck`.
 **Effort**: Low.
 
 #### 10. Auto-Update Notifications
@@ -377,7 +377,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 
 ---
 
-## Unique Advantages of shawkat-ai
+## Unique Advantages of CodeDeck
 
 These features are **not found in any competitor** (or found in very few):
 
@@ -463,13 +463,13 @@ Based on competitive gaps and market trends:
 
 ## Competitive Positioning
 
-### Where shawkat-ai leads:
+### Where CodeDeck leads:
 - **Deepest AI features**: Workflows, prompt templates, project commands/skills, parallel mode — no competitor matches this depth
-- **Best cost analytics**: Only Opcode comes close, but shawkat-ai has daily charts + session-level tracking + streaming counter
+- **Best cost analytics**: Only Opcode comes close, but CodeDeck has daily charts + session-level tracking + streaming counter
 - **Most unique features**: 15 features not found in any competitor (see table above)
 - **Lightest footprint**: 4 npm deps vs 20-50+ for competitors
 
-### Where shawkat-ai trails:
+### Where CodeDeck trails:
 - **No auth/security**: Blocks remote and team usage
 - **No mobile support**: CloudCLI, Codeman, sugyan all have responsive layouts
 - ~~No image support~~: Now supports multimodal (PNG/JPEG/GIF/WebP via paste, drop, or picker)
@@ -491,7 +491,7 @@ Based on competitive gaps and market trends:
 
 ## Summary
 
-shawkat-ai remains the most feature-rich Claude Code web UI in AI-powered features (workflows, parallel mode, prompt templates, project commands, diff viewer). Phase 3 power features (file explorer, git integration, MCP management) are now complete, closing the biggest feature gaps versus CloudCLI and CodePilot. The repos management feature opens a new category. PWA support now includes offline fallback with Arabic-styled branding, notification audio chimes, and a custom bot logo — giving shawkat-ai a distinctive identity among competitors. The new tips feed panel adds an AI learning layer unique in the market — curated tips across 5 categories plus 8 live RSS feeds from DEV.to, Substack, and Simon Willison's blog, helping users sharpen their AI skills while working.
+CodeDeck remains the most feature-rich Claude Code web UI in AI-powered features (workflows, parallel mode, prompt templates, project commands, diff viewer). Phase 3 power features (file explorer, git integration, MCP management) are now complete, closing the biggest feature gaps versus CloudCLI and CodePilot. The repos management feature opens a new category. PWA support now includes offline fallback with Arabic-styled branding, notification audio chimes, and a custom bot logo — giving CodeDeck a distinctive identity among competitors. The new tips feed panel adds an AI learning layer unique in the market — curated tips across 5 categories plus 8 live RSS feeds from DEV.to, Substack, and Simon Willison's blog, helping users sharpen their AI skills while working.
 
 **Immediate priorities**: Authentication (#4) to enable remote usage, mobile responsive (#6) to compete with CloudCLI and Anthropic Remote Control.
 

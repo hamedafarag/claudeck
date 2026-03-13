@@ -58,7 +58,7 @@ router.put("/config", async (req, res) => {
 router.post("/test", async (req, res) => {
   try {
     await sendTelegramNotification(
-      "Shawkat AI",
+      "CodeDeck",
       "Telegram notifications are working!",
       "test"
     );

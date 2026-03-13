@@ -58,12 +58,20 @@
 }
 
 .chat-pane .messages:empty::after {
-  content: "Send a message...";
-  color: var(--text-dim);
-  font-size: 13px;
-  text-align: center;
-  margin: auto;
-  opacity: 0.6;
+  content: "";
+  display: none;
+}
+
+.chat-pane .whaly-placeholder img {
+  width: 64px;
+}
+
+.chat-pane .whaly-placeholder .whaly-text {
+  font-size: 11px;
+}
+
+.chat-pane .whaly-placeholder {
+  gap: 8px;
 }
 
 .chat-pane .msg {

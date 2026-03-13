@@ -7,12 +7,13 @@ import { commandRegistry, registerCommand } from '../ui/commands.js';
 import { panes } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats } from './cost-dashboard.js';
+import { showWhalyPlaceholder } from '../ui/messages.js';
 
 export async function loadProjects() {
   try {
     const projects = await api.fetchProjects();
     setState("projectsData", projects);
-    const saved = localStorage.getItem("shawkat-ai-cwd") || "";
+    const saved = localStorage.getItem("codedeck-cwd") || "";
 
     for (const p of projects) {
       const opt = document.createElement("option");
@@ -26,6 +27,7 @@ export async function loadProjects() {
     }
     updateSystemPromptIndicator();
     updateHeaderProjectName();
+    updateSessionControls();
     loadProjectCommands();
     // Load sessions after project dropdown is populated so they filter correctly
     loadSessions();
@@ -39,6 +41,16 @@ export async function loadProjects() {
     }
   } catch (err) {
     console.error("Failed to load projects:", err);
+  }
+}
+
+const sessionControls = document.getElementById("session-controls");
+
+function updateSessionControls() {
+  if ($.projectSelect.value) {
+    sessionControls.classList.remove("hidden");
+  } else {
+    sessionControls.classList.add("hidden");
   }
 }
 
@@ -239,9 +251,10 @@ async function confirmAddProject() {
     const projects = getState("projectsData");
     projects.push({ name: project.name, path: project.path });
 
-    localStorage.setItem("shawkat-ai-cwd", project.path);
+    localStorage.setItem("codedeck-cwd", project.path);
     updateSystemPromptIndicator();
     updateHeaderProjectName();
+    updateSessionControls();
     loadProjectCommands();
     loadSessions();
     loadStats();
@@ -299,21 +312,26 @@ $.spModal.addEventListener("click", (e) => {
 $.projectSelect.addEventListener("change", async () => {
   const { guardSwitch } = await import('./background-sessions.js');
   guardSwitch(() => {
-    localStorage.setItem("shawkat-ai-cwd", $.projectSelect.value);
+    localStorage.setItem("codedeck-cwd", $.projectSelect.value);
     setState("sessionId", null);
     if ($.projectSelect.value) {
       setState("view", "chat");
     }
     updateSystemPromptIndicator();
     updateHeaderProjectName();
+    updateSessionControls();
     loadProjectCommands();
     if (getState("parallelMode")) {
       for (const chatId of CHAT_IDS) {
         const pane = panes.get(chatId);
-        if (pane) pane.messagesDiv.innerHTML = "";
+        if (pane) {
+          pane.messagesDiv.innerHTML = "";
+          showWhalyPlaceholder(pane);
+        }
       }
     } else {
       $.messagesDiv.innerHTML = "";
+      showWhalyPlaceholder();
     }
     loadSessions();
     loadStats();
@@ -332,10 +350,12 @@ $.newSessionBtn.addEventListener("click", async () => {
         if (pane) {
           pane.messagesDiv.innerHTML = "";
           pane.currentAssistantMsg = null;
+          showWhalyPlaceholder(pane);
         }
       }
     } else {
       $.messagesDiv.innerHTML = "";
+      showWhalyPlaceholder();
     }
     loadSessions();
     if (!getState("parallelMode")) $.messageInput.focus();

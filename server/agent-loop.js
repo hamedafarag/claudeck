@@ -290,7 +290,7 @@ export async function runAgent({
     clearTimeout(timeoutHandle);
     if (activeQueries) activeQueries.delete(queryKey);
     agentSend({ type: "done" });
-    sendPushNotification("Shawkat AI", `Agent "${agentDef.title}" completed`, `agent-${resolvedSid}`);
+    sendPushNotification("CodeDeck", `Agent "${agentDef.title}" completed`, `agent-${resolvedSid}`);
     sendTelegramNotification("Agent Completed", agentDef.title, `agent-${resolvedSid}`);
   }
 

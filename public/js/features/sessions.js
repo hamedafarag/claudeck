@@ -5,10 +5,10 @@ import { CHAT_IDS } from '../core/constants.js';
 import { escapeHtml } from '../core/utils.js';
 import * as api from '../core/api.js';
 import { panes, enterParallelMode, exitParallelMode } from '../ui/parallel.js';
-import { renderMessagesIntoPane } from '../ui/messages.js';
+import { renderMessagesIntoPane, showWhalyPlaceholder } from '../ui/messages.js';
 import { loadContextGauge } from '../ui/context-gauge.js';
 
-const SESSION_STORAGE_KEY = "shawkat-ai-session-id";
+const SESSION_STORAGE_KEY = "codedeck-session-id";
 
 // Persist sessionId to localStorage whenever it changes
 onState("sessionId", (val) => {
@@ -131,7 +131,7 @@ function renderSessions(sessions) {
         setState("sessionId", s.id);
         if (s.project_path) {
           $.projectSelect.value = s.project_path;
-          localStorage.setItem("shawkat-ai-cwd", s.project_path);
+          localStorage.setItem("codedeck-cwd", s.project_path);
         }
 
         const parallelMode = getState("parallelMode");
@@ -205,10 +205,14 @@ export async function deleteSession(id) {
       if (getState("parallelMode")) {
         for (const chatId of CHAT_IDS) {
           const pane = panes.get(chatId);
-          if (pane) pane.messagesDiv.innerHTML = "";
+          if (pane) {
+            pane.messagesDiv.innerHTML = "";
+            showWhalyPlaceholder(pane);
+          }
         }
       } else {
         $.messagesDiv.innerHTML = "";
+        showWhalyPlaceholder();
       }
     }
     await loadSessions();

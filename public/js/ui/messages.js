@@ -6,8 +6,24 @@ import { getState, setState } from '../core/store.js';
 import { $ } from '../core/dom.js';
 import { getPane } from './parallel.js';
 
+export function showWhalyPlaceholder(pane) {
+  pane = pane || getPane(null);
+  removeWhalyPlaceholder(pane);
+  const el = document.createElement("div");
+  el.className = "whaly-placeholder";
+  el.innerHTML = `<img src="/icons/whaly.png" alt="Whaly" draggable="false"><div class="whaly-text">~ start chatting with claude ~</div><div class="whaly-hint">Type a message or select a prompt template</div>`;
+  pane.messagesDiv.appendChild(el);
+}
+
+export function removeWhalyPlaceholder(pane) {
+  pane = pane || getPane(null);
+  const existing = pane.messagesDiv.querySelector(".whaly-placeholder");
+  if (existing) existing.remove();
+}
+
 export function addUserMessage(text, pane, images = [], filePaths = []) {
   pane = pane || getPane(null);
+  removeWhalyPlaceholder(pane);
   pane.currentAssistantMsg = null;
   const div = document.createElement("div");
   div.className = "msg msg-user";
@@ -314,6 +330,10 @@ export function renderMessagesIntoPane(messages, pane) {
   pane.currentAssistantMsg = null;
   // Reset streaming counter — we're loading saved messages, not streaming
   setState("streamingCharCount", 0);
+  if (!messages || messages.length === 0) {
+    showWhalyPlaceholder(pane);
+    return;
+  }
   for (const msg of messages) {
     const data = JSON.parse(msg.content);
     switch (msg.role) {

@@ -3,7 +3,7 @@ import { $ } from '../core/dom.js';
 
 export function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("shawkat-ai-theme", theme);
+  localStorage.setItem("codedeck-theme", theme);
 
   // Update icon visibility
   if (theme === "light") {
@@ -29,7 +29,7 @@ export function applyTheme(theme) {
 }
 
 // Initialize theme from localStorage
-const savedTheme = localStorage.getItem("shawkat-ai-theme") || "dark";
+const savedTheme = localStorage.getItem("codedeck-theme") || "dark";
 applyTheme(savedTheme);
 
 $.themeToggleBtn.addEventListener("click", () => {

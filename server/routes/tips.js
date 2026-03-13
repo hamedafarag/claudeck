@@ -109,7 +109,7 @@ router.get("/rss", async (req, res) => {
     const timeout = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: { "User-Agent": "shawkat-ai/1.0" },
+      headers: { "User-Agent": "codedeck/1.0" },
     });
     clearTimeout(timeout);
 

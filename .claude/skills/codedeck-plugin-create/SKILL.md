@@ -1,5 +1,5 @@
 ---
-name: shawkat-plugin:create
+name: codedeck-plugin:create
 description: Scaffold a new tab-sdk plugin with JS and CSS boilerplate. Just drop files in plugins/ — auto-discovered at runtime.
 argument-hint: <plugin-name> <short description of what the plugin does>
 ---

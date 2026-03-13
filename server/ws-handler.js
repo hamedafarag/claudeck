@@ -405,7 +405,7 @@ export function setupWebSocket(wss, sessionIds) {
 
         wfSend({ type: "workflow_completed" });
         wfSend({ type: "done" });
-        sendPushNotification("Shawkat AI", `Workflow "${workflow.title}" completed`, `wf-${resolvedSid}`);
+        sendPushNotification("CodeDeck", `Workflow "${workflow.title}" completed`, `wf-${resolvedSid}`);
         sendTelegramNotification("Workflow Completed", workflow.title, `wf-${resolvedSid}`);
         return;
       }
@@ -663,7 +663,7 @@ export function setupWebSocket(wss, sessionIds) {
         // Send push notification when query completes
         const session = resolvedSid ? getSession(resolvedSid) : null;
         const pushTitle = session?.title || "Session complete";
-        sendPushNotification("Shawkat AI", pushTitle, `chat-${resolvedSid}`);
+        sendPushNotification("CodeDeck", pushTitle, `chat-${resolvedSid}`);
         sendTelegramNotification("Session Complete", pushTitle, `chat-${resolvedSid}`);
         // Fire-and-forget summary generation
         if (resolvedSid) {

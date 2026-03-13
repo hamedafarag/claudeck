@@ -1,6 +1,6 @@
 # Orchestrator-Agent Analysis
 
-Analysis of the [anthropics/anthropic-cookbook/patterns/agents/orchestrator-agent](https://github.com/anthropics/anthropic-cookbook) project and transferable ideas for shawkat-ai.
+Analysis of the [anthropics/anthropic-cookbook/patterns/agents/orchestrator-agent](https://github.com/anthropics/anthropic-cookbook) project and transferable ideas for CodeDeck.
 
 ---
 

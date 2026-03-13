@@ -54,7 +54,7 @@ app.use(express.json());
     console.log("Generated and saved VAPID keys to .env");
   }
 
-  webpush.setVapidDetails("mailto:push@shawkat-ai.local", vapidPublic, vapidPrivate);
+  webpush.setVapidDetails("mailto:push@codedeck.local", vapidPublic, vapidPrivate);
   setVapidPublicKey(vapidPublic);
   initPushSender(webpush);
 }
@@ -127,5 +127,5 @@ setupWebSocket(wss, sessionIds);
 
 const PORT = process.env.PORT || 9009;
 server.listen(PORT, () => {
-  console.log(`shawkat-ai running at http://localhost:${PORT}`);
+  console.log(`CodeDeck running at http://localhost:${PORT}`);
 });

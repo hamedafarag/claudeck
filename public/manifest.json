@@ -1,6 +1,6 @@
 {
-  "name": "shawkat-ai",
-  "short_name": "shawkat-ai",
+  "name": "CodeDeck",
+  "short_name": "CodeDeck",
   "description": "Local Web UI for Claude Code",
   "start_url": "/",
   "display": "standalone",

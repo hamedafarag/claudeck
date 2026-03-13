@@ -9,8 +9,8 @@
 //   my-plugin.js   — must call registerTab() from tab-sdk.js
 //   my-plugin.css  — optional, auto-injected if present
 
-const STORAGE_KEY = 'shawkat-enabled-plugins';
-const ORDER_KEY = 'shawkat-plugin-order';
+const STORAGE_KEY = 'codedeck-enabled-plugins';
+const ORDER_KEY = 'codedeck-plugin-order';
 let availablePlugins = [];
 const loadedPlugins = new Set();
 

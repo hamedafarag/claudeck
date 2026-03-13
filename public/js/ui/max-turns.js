@@ -1,7 +1,7 @@
 // Max turns selector — localStorage persistence + getter
 import { $ } from '../core/dom.js';
 
-const STORAGE_KEY = 'shawkat-max-turns';
+const STORAGE_KEY = 'codedeck-max-turns';
 
 export function getMaxTurns() {
   const val = parseInt($.maxTurnsSelect?.value, 10);
