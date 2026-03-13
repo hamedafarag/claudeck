@@ -51,7 +51,7 @@ browser ──────── WebSocket ──────── server.js �
    │   ├── panels/  (bot, tips, docs)
    │   └── plugins/ (tab-sdk plugins)
    ├── css/
-   │   ├── core/       (variables, reset)
+   │   ├── core/       (variables, reset, responsive)
    │   ├── ui/         (messages, sessions, layout)
    │   └── panels/     (bot, tips, docs)
    └── index.html
@@ -210,6 +210,7 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | GET    | /api/workflows     | List workflows                           |
 | GET    | /api/files         | Recursive file listing (depth 3, max 500)|
 | GET    | /api/files/content | Read file content (50KB limit)           |
+| PUT    | /api/files/content | Write file content (allowlisted paths only) |
 | GET    | /api/files/tree    | Lazy tree listing (immediate children)   |
 | GET    | /api/files/search  | Recursive name search (LIKE %query%, max 50) |
 
@@ -571,7 +572,7 @@ The right side of the UI hosts a resizable tabbed panel with built-in and plugin
 - **Positional insert** — `position` option to control tab order
 - **Auto-discovery** — drop `.js` + `.css` files in `public/js/plugins/`, server exposes them via `GET /api/plugins`
 - **Plugin marketplace** — enable/disable/reorder plugins from the "+" button; state persisted to `localStorage`
-- **Built-in plugins**: Tasks (Linear + Todo), Repos, Events, Sudoku, Tic-Tac-Toe
+- **Built-in plugins**: Tasks (Linear + Todo), Repos, Events, CLAUDE.md Editor, Sudoku, Tic-Tac-Toe
 
 Panel state (open/closed), active tab, and width are persisted to `localStorage`. Resizable by dragging the left edge. Toggle via header button or `Cmd+B`.
 
@@ -750,7 +751,7 @@ A floating chat bubble widget (bottom-left corner) that provides a personal AI a
 - **Markdown rendering** — full markdown support with merged ordered lists, syntax highlighting, copy buttons
 - **Session management** — "New chat" button clears the thread; conversation history loads on panel open
 - **Theme compatible** — follows dark/light theme via CSS custom properties
-- **Responsive** — full-screen on mobile (`<480px`)
+- **Responsive** — desktop: offset by sidebar width; tablet: snaps to left edge; mobile: full-screen panel, bubble hidden when chat is active
 
 ### 39. Per-Message Token Breakdown
 Result summaries on each message now show input and output tokens separately (`Xk in / Yk out`) instead of a single total, giving better visibility into token distribution per query.
@@ -828,7 +829,7 @@ A built-in marketplace UI for managing tab-sdk plugins:
 - **Marketplace panel** — accessible from the "+" button in the right panel tab bar or the plugin icon
 - **Enable/disable** — toggle plugins on/off; state persisted to `localStorage`
 - **Reorder tabs** — drag handle to reorder plugin tabs; order persisted to `localStorage`
-- **Built-in plugins**: Tasks (Linear + Todo), Repos, Events, Sudoku, Tic-Tac-Toe
+- **Built-in plugins**: Tasks (Linear + Todo), Repos, Events, CLAUDE.md Editor, Sudoku, Tic-Tac-Toe
 - **Hot reload** — enable a plugin and it loads immediately without page refresh; disable removes the tab
 
 ### 46. Whaly Mascot & Empty States
@@ -849,6 +850,50 @@ Session management controls (search, new session, parallel toggle) are hidden un
 - Controls appear automatically when a project is chosen
 - Controls hide when project selection is cleared
 - Reduces visual noise on the home/empty state
+
+### 49. Mobile Responsive Layout
+Full mobile and tablet responsiveness with two breakpoints (CSS-first approach):
+
+**Tablet (≤1024px):**
+- Sidebar converts to a fixed overlay that slides in from the left via hamburger menu button
+- Semi-transparent backdrop overlay behind sidebar (click to dismiss)
+- Auto-close sidebar when selecting a session
+- Hide secondary header info (user, plan, project name labels)
+- Reduced home page padding
+
+**Mobile (≤640px):**
+- Sidebar capped at 85vw width (max 320px)
+- Right panel becomes a full-screen overlay
+- Compact input bar — toolbox toggle hidden, 16px textarea font (prevents iOS zoom)
+- Bottom-sheet style modals and header dropdown menus (slide up from bottom)
+- Simplified status bar — hides branch, project, and center section
+- Home cards switch to 2-column grid with smaller activity cells
+- Touch targets minimum 44px on all interactive elements (Apple HIG)
+- Session list items taller with always-visible action buttons
+- Tips feed and right panel become full-screen overlays
+- Bot bubble hidden when chat is active
+- Analytics tables horizontally scrollable
+- iOS safe area padding on status bar
+
+**Files:** `css/core/responsive.css` (all media queries), `js/ui/sidebar-toggle.js` (hamburger toggle logic)
+
+### 50. CLAUDE.md Editor Plugin
+A Tab SDK plugin for editing CLAUDE.md project files directly in the right panel:
+- **In-app editor** — textarea with monospace font for editing the project's `CLAUDE.md` file
+- **Save with Cmd+S** — keyboard shortcut and save button with dirty state indicator
+- **Reload from disk** — refresh button to re-read the file from the filesystem
+- **Project-aware** — automatically reloads when switching projects
+- **File dropdown** — selector for supported files (CLAUDE.md, .claude/settings.json)
+- **Status feedback** — loading, success, error, and warning indicators
+- **Backend security** — allowlisted file paths only; path traversal protection on the write endpoint (`PUT /api/files/content`)
+- **Auto-discovered** — plugin loaded automatically from `public/js/plugins/claude-editor-tab.js`
+
+### 51. Enhanced Visual Design
+Distinctive typography and visual depth refinements:
+- Refined font stacks and type scale for headings, body text, and code
+- Visual depth through subtle shadows, border treatments, and layered backgrounds
+- Smooth micro-animations on interactive elements
+- Cleaned up unused CSS for leaner stylesheets
 
 ---
 
@@ -1035,6 +1080,7 @@ All colors are CSS custom properties on `:root` (defined in `css/variables.css`)
 - **Main area**: messages (820px max-width), input bar (with tooltipped action buttons), toolbox/workflow/agent panels
 - **Right panel** (300px, resizable): tabbed container with Tasks (Linear + Todo), Files (explorer + preview), Git (status + commit + log), Repos (repository management), Events (SDK plugin), "+" button (dev docs)
 - **Status bar** (24px): connection dot, git branch, project name, activity, background sessions, model (tooltip), permission mode (tooltip), max turns (tooltip), cost — all reactive via MutationObservers and event bus
+- **Responsive**: tablet (≤1024px) — sidebar becomes slide-in overlay with hamburger toggle; mobile (≤640px) — right panel and modals become full-screen overlays, bottom-sheet dropdowns, compact input bar, 44px touch targets
 
 ---
 
@@ -1094,7 +1140,8 @@ CodeDeck/
     ├── css/
     │   ├── core/
     │   │   ├── variables.css      CSS custom properties + light theme
-    │   │   └── reset.css          Box-sizing reset + body
+    │   │   ├── reset.css          Box-sizing reset + body
+    │   │   └── responsive.css     Mobile/tablet responsive media queries
     │   ├── ui/
     │   │   ├── layout.css         Header bar + main layout
     │   │   ├── sessions.css       Sidebar, session list, session context menu
@@ -1151,7 +1198,8 @@ CodeDeck/
         │   ├── context-gauge.js   Session token usage bar
         │   ├── status-bar.js      VS Code-style footer status bar
         │   ├── input-meta.js      Input bar meta labels (model, mode, turns)
-        │   └── shortcuts.js       Global keyboard shortcuts
+        │   ├── shortcuts.js       Global keyboard shortcuts
+        │   └── sidebar-toggle.js  Sidebar hamburger toggle for mobile/tablet
         ├── features/
         │   ├── chat.js            Send/stop logic, WS handler, boot
         │   ├── sessions.js        Session list, search, load, rename
@@ -1180,7 +1228,9 @@ CodeDeck/
             ├── sudoku.js          Sudoku game plugin
             ├── sudoku.css
             ├── tic-tac-toe.js     Tic-Tac-Toe game plugin
-            └── tic-tac-toe.css
+            ├── tic-tac-toe.css
+            ├── claude-editor-tab.js  CLAUDE.md editor plugin
+            └── claude-editor-tab.css
 ```
 
 ---
