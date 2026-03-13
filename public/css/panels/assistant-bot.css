@@ -73,53 +73,6 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
-/* ── Context toggle (Linked / Free) ────────────────────── */
-.bot-context-toggle {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  user-select: none;
-}
-.bot-context-checkbox {
-  display: none;
-}
-.bot-context-slider {
-  position: relative;
-  width: 28px;
-  height: 14px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  transition: background 0.2s;
-}
-.bot-context-slider::after {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 10px;
-  height: 10px;
-  background: var(--text-secondary);
-  border-radius: 50%;
-  transition: transform 0.2s, background 0.2s;
-}
-.bot-context-checkbox:checked + .bot-context-slider {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-}
-.bot-context-checkbox:checked + .bot-context-slider::after {
-  transform: translateX(14px);
-  background: var(--accent);
-}
-.bot-context-label {
-  font-size: 10px;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  min-width: 34px;
-}
-
 .bot-header-btn {
   background: none;
   border: none;

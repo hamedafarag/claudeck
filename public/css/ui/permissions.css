@@ -1,47 +1,5 @@
 /* ── Permission / Tool Approval ────────────────────────── */
 
-/* Header controls — shared wrapper for label + select pairs */
-.header-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.header-control-label {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  user-select: none;
-}
-
-.header-control select {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 1px 6px;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s, color 0.15s;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.header-control select:hover {
-  border-color: var(--text-dim);
-  color: var(--text);
-}
-
-.header-control select:focus {
-  border-color: var(--accent);
-  color: var(--text);
-}
-
 /* Permission modal */
 .perm-modal {
   width: 520px;

@@ -13,6 +13,19 @@
   flex-shrink: 0;
   user-select: none;
   z-index: 50;
+  position: relative;
+}
+
+/* Gradient line at top of status bar */
+.status-bar::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+  opacity: 0.3;
 }
 
 .status-bar-left,
@@ -36,7 +49,8 @@
   height: 24px;
   white-space: nowrap;
   cursor: default;
-  transition: color 0.15s, background 0.15s;
+  transition: all 0.15s;
+  border-radius: 2px;
 }
 
 .sb-item:hover {
@@ -63,7 +77,7 @@
   border-radius: 50%;
   background: var(--error);
   flex-shrink: 0;
-  transition: background 0.3s, box-shadow 0.3s;
+  transition: all 0.3s;
 }
 
 .sb-dot.connected {
@@ -77,12 +91,12 @@
 }
 
 /* Branch */
-.sb-branch svg { color: var(--text-dim); }
+.sb-branch svg { color: var(--text-dim); transition: color 0.15s; }
 .sb-branch:hover svg { color: var(--accent); }
 #sb-branch-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
 
 /* Project */
-.sb-project svg { color: var(--text-dim); }
+.sb-project svg { color: var(--text-dim); transition: color 0.15s; }
 .sb-project:hover svg { color: var(--accent); }
 #sb-project-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 
@@ -92,6 +106,7 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.2px;
+  font-family: var(--font-display);
 }
 
 .sb-activity:empty {
@@ -122,47 +137,10 @@
 .sb-cost-pipe { color: var(--border); margin: 0 2px; }
 .sb-cost:hover #sb-total-cost { color: var(--success); }
 
-/* Blink animation (reuse from layout.css if not already global) */
+/* Blink animation */
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
-}
-
-/* Tooltips */
-.sb-has-tooltip {
-  position: relative;
-}
-
-.sb-tooltip {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 5px 10px;
-  font-size: 11px;
-  color: var(--text);
-  white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  pointer-events: none;
-  z-index: 60;
-}
-
-.sb-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: var(--border);
-}
-
-.sb-has-tooltip:hover .sb-tooltip {
-  display: block;
 }
 
 /* Light theme */

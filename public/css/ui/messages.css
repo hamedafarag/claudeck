@@ -19,10 +19,10 @@
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 24px 16px;
+  padding: 28px 24px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .messages:empty::after {
@@ -40,33 +40,34 @@
   gap: 16px;
   opacity: 0.7;
   user-select: none;
-  animation: whaly-float 3s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
 }
 
 .whaly-placeholder img {
   width: 120px;
   height: auto;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+  filter: drop-shadow(0 8px 24px rgba(51, 209, 122, 0.08));
+  transition: filter 0.3s;
+}
+
+.whaly-placeholder:hover img {
+  filter: drop-shadow(0 8px 32px rgba(51, 209, 122, 0.15));
 }
 
 .whaly-placeholder .whaly-text {
   color: var(--text-dim);
-  font-size: 13px;
-  font-family: var(--font-mono);
+  font-size: 14px;
+  font-family: var(--font-display);
   text-align: center;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
+  font-weight: 500;
 }
 
 .whaly-placeholder .whaly-hint {
   color: var(--text-dim);
   font-size: 11px;
-  font-family: var(--font-mono);
-  opacity: 0.6;
-}
-
-@keyframes whaly-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  font-family: var(--font-sans);
+  opacity: 0.5;
 }
 
 /* ── Messages ─────────────────────────────────────────── */
@@ -74,31 +75,38 @@
   max-width: var(--chat-max-w);
   width: 100%;
   margin: 0 auto;
-  animation: fadeIn 0.15s ease;
+  animation: fadeInUp 0.25s var(--ease-out-expo);
+  animation-fill-mode: both;
 }
 
 .msg-user {
   background: var(--user-dim);
   border: 1px solid var(--border);
   border-left: 3px solid var(--user);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   padding: 0;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.msg-user:hover {
+  border-color: rgba(123,155,245,0.2);
 }
 
 .msg-user-label {
   display: block;
-  padding: 4px 14px;
+  padding: 5px 14px;
   font-size: 10px;
   font-weight: 700;
-  font-family: var(--font-mono);
-  letter-spacing: 1.2px;
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
   color: var(--user);
   background: var(--user-dim);
   border-bottom: 1px solid var(--border-subtle);
   user-select: none;
+  text-transform: uppercase;
 }
 
 .msg-user-files {
@@ -125,6 +133,12 @@
   white-space: nowrap;
   direction: rtl;
   text-align: left;
+  transition: all 0.15s;
+}
+
+.msg-user-file-tag:hover {
+  border-color: var(--purple);
+  background: var(--purple-dim);
 }
 
 .msg-user-file-tag::before {
@@ -138,6 +152,7 @@
   padding: 10px 14px;
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-family: var(--font-sans);
 }
 
 html[data-theme="light"] .msg-user {
@@ -154,6 +169,7 @@ html[data-theme="light"] .msg-user {
 .msg-assistant .text-content {
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-family: var(--font-sans);
 }
 
 /* ── Typography — Headings ───────────────────────────── */
@@ -161,35 +177,39 @@ html[data-theme="light"] .msg-user {
 .msg-assistant .text-content .md-h2,
 .msg-assistant .text-content .md-h3,
 .msg-assistant .text-content .md-h4 {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   color: var(--text);
-  letter-spacing: -0.01em;
-  margin-top: 12px;
-  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+  margin-top: 16px;
+  margin-bottom: 8px;
   line-height: 1.3;
 }
 
 .msg-assistant .text-content .md-h1 {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  padding-bottom: 6px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, var(--text), var(--text-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .msg-assistant .text-content .md-h2 {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .msg-assistant .text-content .md-h3 {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 600;
 }
 
 .msg-assistant .text-content .md-h4 {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -241,31 +261,33 @@ html[data-theme="light"] .msg-user {
   color: var(--accent);
   text-decoration: none;
   border-bottom: 1px solid transparent;
-  transition: border-color 0.15s;
+  transition: all 0.2s;
 }
 
 .msg-assistant .text-content .md-link:hover {
   border-bottom-color: var(--accent);
+  text-shadow: 0 0 8px var(--accent-glow);
 }
 
 /* ── Typography — Horizontal Rule ────────────────────── */
 .msg-assistant .text-content .md-hr {
   border: none;
   border-top: 1px solid var(--border);
-  margin: 16px 0;
+  margin: 20px 0;
+  position: relative;
 }
 
 /* ── Typography — Blockquotes ────────────────────────── */
 .msg-assistant .text-content .md-blockquote {
-  margin: 10px 0;
-  padding: 8px 16px;
+  margin: 12px 0;
+  padding: 10px 18px;
   border-left: 3px solid var(--accent);
   background: var(--accent-dim);
-  border-radius: 0 var(--radius) var(--radius) 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   color: var(--text-secondary);
   font-style: italic;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 /* ── Typography — Lists ──────────────────────────────── */
@@ -296,13 +318,14 @@ html[data-theme="light"] .msg-user {
   color: var(--accent);
   font-weight: 600;
   font-size: 12px;
+  font-family: var(--font-mono);
 }
 
 /* ── Typography — Tables ─────────────────────────────── */
 .msg-assistant .text-content .md-table-wrap {
-  margin: 10px 0;
+  margin: 12px 0;
   overflow-x: auto;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
 }
 
@@ -317,22 +340,27 @@ html[data-theme="light"] .msg-user {
   background: var(--bg-tertiary);
   color: var(--text);
   font-weight: 600;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 2px solid var(--border);
   text-align: left;
-  font-size: 11.5px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.04em;
+  font-family: var(--font-display);
 }
 
 .msg-assistant .text-content .md-table td {
-  padding: 7px 12px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text);
 }
 
 .msg-assistant .text-content .md-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.msg-assistant .text-content .md-table tbody tr {
+  transition: background 0.15s;
 }
 
 .msg-assistant .text-content .md-table tbody tr:hover {
@@ -342,30 +370,35 @@ html[data-theme="light"] .msg-user {
 /* ── Code Blocks ─────────────────────────────────────── */
 .code-block-wrapper {
   position: relative;
-  margin: 10px 0;
+  margin: 12px 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--bg-deep);
+  transition: border-color 0.2s;
+}
+
+.code-block-wrapper:hover {
+  border-color: rgba(255,255,255,0.06);
 }
 
 .code-block-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
+  padding: 8px 14px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border);
-  min-height: 28px;
+  min-height: 32px;
 }
 
 .code-lang-label {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   user-select: none;
 }
 
@@ -373,19 +406,19 @@ html[data-theme="light"] .msg-user {
   background: var(--bg-deep);
   border: none;
   border-radius: 0;
-  padding: 14px 16px;
+  padding: 16px 18px;
   overflow-x: auto;
   margin: 0;
   font-size: 12.5px;
-  line-height: 1.6;
+  line-height: 1.65;
   tab-size: 2;
 }
 
 /* Pre blocks that aren't inside a wrapper (direct pre) */
 .msg-assistant .text-content > pre {
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  margin: 10px 0;
+  border-radius: var(--radius-md);
+  margin: 12px 0;
 }
 
 .msg-assistant .text-content pre code {
@@ -395,7 +428,7 @@ html[data-theme="light"] .msg-user {
   color: var(--text);
   font-family: var(--font-mono);
   font-size: 12.5px;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 /* ── Code Copy Button ──────────────────────────────────── */
@@ -403,38 +436,38 @@ html[data-theme="light"] .msg-user {
 .code-block-header .code-copy-btn {
   position: static;
   opacity: 0;
-  padding: 2px 8px;
+  padding: 3px 10px;
   font-size: 10px;
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   color: var(--text-dim);
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  transition: all 0.2s var(--ease-smooth);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   margin-left: auto;
 }
 
 /* When no header exists, position absolutely */
 .code-block-wrapper > .code-copy-btn {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 2px 8px;
+  top: 8px;
+  right: 8px;
+  padding: 3px 10px;
   font-size: 10px;
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   color: var(--text-dim);
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  transition: all 0.2s var(--ease-smooth);
   z-index: 2;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 }
 
 .code-block-wrapper:hover .code-copy-btn {
@@ -442,7 +475,7 @@ html[data-theme="light"] .msg-user {
 }
 
 .code-copy-btn:hover {
-  color: var(--text);
+  color: var(--accent);
   background: var(--bg-secondary);
   border-color: var(--accent);
 }
@@ -459,22 +492,24 @@ html[data-theme="light"] .msg-user {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 7px 12px;
+  padding: 8px 14px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-left: 2px solid var(--accent);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text-secondary);
   margin: 4px 0;
   cursor: pointer;
-  transition: border-color 0.15s, border-left-color 0.3s;
+  transition: all 0.2s var(--ease-smooth);
+  animation: fadeInUp 0.2s var(--ease-out-expo);
+  animation-fill-mode: both;
 }
 
-.tool-indicator:hover         { border-color: var(--accent); }
-.tool-indicator .tool-name    { font-weight: 600; color: var(--accent); }
-.tool-indicator .tool-detail  { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tool-indicator:hover         { border-color: var(--accent); background: rgba(51,209,122,0.03); }
+.tool-indicator .tool-name    { font-weight: 600; color: var(--accent); font-family: var(--font-display); letter-spacing: 0.02em; }
+.tool-indicator .tool-detail  { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-sans); }
 
 /* Spinner for running tools */
 .tool-spinner {
@@ -500,7 +535,8 @@ html[data-theme="light"] .msg-user {
 /* Running state — pulsing left border */
 .tool-indicator.tool-running {
   border-left-color: var(--accent);
-  animation: toolRunPulse 1.5s ease-in-out infinite;
+  animation: fadeInUp 0.2s var(--ease-out-expo), toolRunPulse 1.5s ease-in-out infinite;
+  animation-fill-mode: both;
 }
 
 @keyframes toolRunPulse {
@@ -511,6 +547,7 @@ html[data-theme="light"] .msg-user {
 /* Done state */
 .tool-indicator.tool-done {
   border-left-color: var(--success);
+  opacity: 0.85;
 }
 
 /* Error state */
@@ -527,8 +564,9 @@ html[data-theme="light"] .msg-user {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 2px;
-  padding-top: 3px;
+  padding-top: 4px;
   border-top: 1px solid var(--border-subtle);
+  font-family: var(--font-sans);
 }
 
 .tool-result-preview.error {
@@ -553,7 +591,7 @@ html[data-theme="light"] .msg-user {
 /* ── Status & Thinking ────────────────────────────────── */
 .status {
   font-size: 12px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   color: var(--text-dim);
   text-align: center;
   padding: 6px;
@@ -567,18 +605,18 @@ html[data-theme="light"] .msg-user {
 .thinking-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
+  gap: 12px;
+  padding: 10px 16px;
   max-width: var(--chat-max-w);
   width: 100%;
   margin: 0 auto;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-left: 2px solid var(--accent);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   font-size: 12px;
   color: var(--text-secondary);
-  animation: fadeIn 0.2s ease;
+  animation: fadeInUp 0.25s var(--ease-out-expo);
 }
 
 .thinking-dot-container {
@@ -600,8 +638,10 @@ html[data-theme="light"] .msg-user {
 
 .thinking-label {
   color: var(--accent);
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* ── Input Bar ────────────────────────────────────────── */
@@ -614,10 +654,11 @@ html[data-theme="light"] .msg-user {
   max-width: calc(var(--chat-max-w) + 48px);
   width: 100%;
   margin: 0 auto;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-sans);
+  font-size: 12px;
   color: var(--accent);
-  animation: inputWaitingFadeIn 0.3s ease;
+  font-weight: 500;
+  animation: fadeInUp 0.3s var(--ease-out-expo);
 }
 
 .input-waiting.hidden {
@@ -642,26 +683,21 @@ html[data-theme="light"] .msg-user {
   50% { opacity: 0.3; box-shadow: none; }
 }
 
-@keyframes inputWaitingFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 /* Input bar glow when waiting for response */
 .input-bar.waiting-for-input textarea {
   border-color: var(--accent);
-  box-shadow: 0 0 8px rgba(51, 209, 122, 0.2);
+  box-shadow: 0 0 8px var(--accent-glow);
   animation: inputBarPulse 2s ease-in-out infinite;
 }
 
 @keyframes inputBarPulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(51, 209, 122, 0.15); }
-  50% { box-shadow: 0 0 14px rgba(51, 209, 122, 0.3); }
+  0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+  50% { box-shadow: 0 0 20px var(--accent-glow); }
 }
 
 .input-bar {
   position: relative;
-  padding: 12px 24px 8px;
+  padding: 14px 24px 10px;
   border-top: 1px solid var(--border);
   display: flex;
   gap: 8px;
@@ -669,6 +705,18 @@ html[data-theme="light"] .msg-user {
   max-width: calc(var(--chat-max-w) + 48px);
   width: 100%;
   margin: 0 auto;
+}
+
+/* Gradient fade above input */
+.input-bar::before {
+  content: "";
+  position: absolute;
+  top: -32px;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: linear-gradient(to top, var(--bg), transparent);
+  pointer-events: none;
 }
 
 .input-textarea-wrap {
@@ -682,8 +730,8 @@ html[data-theme="light"] .msg-user {
   width: 100%;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
   color: var(--accent);
   font-size: 13px;
   font-family: var(--font-mono);
@@ -691,29 +739,33 @@ html[data-theme="light"] .msg-user {
   outline: none;
   max-height: 200px;
   line-height: 1.5;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: all 0.2s var(--ease-smooth);
   caret-color: var(--accent);
   box-sizing: border-box;
 }
 
-.input-textarea-wrap textarea:focus { border-color: var(--accent); box-shadow: var(--glow); }
+.input-textarea-wrap textarea:focus {
+  border-color: var(--accent);
+  box-shadow: var(--glow), 0 0 0 1px var(--accent-dim);
+}
 
 .input-textarea-wrap textarea::placeholder {
   color: var(--text-dim);
   font-style: normal;
+  font-family: var(--font-sans);
 }
 
 .input-bar button {
   width: 38px;
   height: 38px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition: all 0.2s var(--ease-smooth);
   margin-bottom: 23px;
 }
 
@@ -722,17 +774,19 @@ html[data-theme="light"] .msg-user {
 }
 
 #send-btn             { background: var(--accent-solid); color: #000; }
-#send-btn:hover       { background: var(--accent); box-shadow: var(--glow-strong); }
-#send-btn:disabled    { opacity: 0.25; cursor: not-allowed; }
+#send-btn:hover       { background: var(--accent); box-shadow: var(--glow-strong); transform: scale(1.02); }
+#send-btn:active      { transform: scale(0.97); }
+#send-btn:disabled    { opacity: 0.25; cursor: not-allowed; transform: none; }
 #stop-btn             { background: var(--error); color: #fff; }
-#stop-btn:hover       { opacity: 0.85; }
+#stop-btn:hover       { opacity: 0.85; transform: scale(1.02); }
+#stop-btn:active      { transform: scale(0.97); }
 
 /* ── Input Meta Labels ────────────────────────────────── */
 .input-meta {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 2px 0;
+  padding: 4px 2px 0;
   user-select: none;
 }
 
@@ -764,26 +818,27 @@ html[data-theme="light"] .msg-user {
   opacity: 0.4;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 0 4px;
+  border-radius: 4px;
+  padding: 1px 5px;
   line-height: 16px;
   cursor: pointer;
-  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+  transition: all 0.2s var(--ease-smooth);
 }
 
 .input-meta-kbd:hover {
-  opacity: 0.85;
+  opacity: 0.9;
   color: var(--accent);
   border-color: var(--accent);
+  background: var(--accent-dim);
 }
 
 /* ── Mermaid Diagrams ───────────────────────────────── */
 .mermaid-container {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin: 8px 0;
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin: 10px 0;
   overflow-x: auto;
   text-align: center;
 }
@@ -796,7 +851,7 @@ html[data-theme="light"] .msg-user {
 /* ── Keyboard Shortcut Badges ────────────────────────── */
 .kbd {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 2px 7px;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
@@ -814,9 +869,10 @@ html[data-theme="light"] .msg-user {
 }
 
 .shortcuts-table td {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
   font-size: 13px;
+  font-family: var(--font-sans);
 }
 
 .shortcuts-table tr:last-child td {

@@ -17,24 +17,31 @@
 .cost-card {
   background: var(--bg);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  padding: 12px;
+  border-radius: var(--radius-md);
+  padding: 14px;
   text-align: center;
+  transition: all 0.2s var(--ease-smooth);
+}
+
+.cost-card:hover {
+  border-color: var(--border);
+  transform: translateY(-1px);
 }
 
 .cost-card-label {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   color: var(--text-dim);
   margin-bottom: 4px;
+  font-family: var(--font-display);
 }
 
 .cost-card-value {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   color: var(--success);
 }
 
@@ -55,6 +62,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  font-family: var(--font-sans);
 }
 
 .cost-table th {
@@ -62,15 +70,17 @@
   top: 0;
   background: var(--bg-secondary);
   text-align: left;
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.06em;
   color: var(--text-dim);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   user-select: none;
+  font-family: var(--font-display);
+  transition: color 0.15s;
 }
 
 .cost-table th:hover {
@@ -78,13 +88,21 @@
 }
 
 .cost-table td {
-  padding: 7px 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-secondary);
 }
 
+.cost-table tr {
+  transition: background 0.15s;
+}
+
 .cost-table tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.cost-table tr:hover td {
+  background: var(--accent-dim);
 }
 
 .cost-table td:last-child {
@@ -96,9 +114,10 @@
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   color: var(--text-dim);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  font-family: var(--font-display);
 }
 
 .cost-chart {
@@ -126,18 +145,18 @@
 
 .cost-chart-bar-bg {
   flex: 1;
-  height: 16px;
+  height: 18px;
   background: var(--bg);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .cost-chart-bar {
   height: 100%;
   background: var(--accent-solid);
-  border-radius: 2px;
+  border-radius: 3px;
   min-width: 1px;
-  transition: width 0.3s ease;
+  transition: width 0.4s var(--ease-out-expo);
   box-shadow: var(--glow);
 }
 
