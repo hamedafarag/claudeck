@@ -137,6 +137,19 @@ export async function fetchFileContent(base, filePath) {
   return res.json();
 }
 
+export async function writeFileContent(base, filePath, content) {
+  const res = await fetch("/api/files/content", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ base, path: filePath, content }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error);
+  }
+  return res.json();
+}
+
 export async function fetchFileTree(base, dir = "") {
   let url = `/api/files/tree?base=${encodeURIComponent(base)}`;
   if (dir) url += `&dir=${encodeURIComponent(dir)}`;

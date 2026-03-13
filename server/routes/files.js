@@ -188,4 +188,30 @@ router.get("/search", async (req, res) => {
   }
 });
 
+// Write file content (for CLAUDE.md editor etc.)
+router.put("/content", async (req, res) => {
+  const { base, path: filePath, content } = req.body;
+  if (!base || !filePath) return res.status(400).json({ error: "base and path required" });
+  if (typeof content !== "string") return res.status(400).json({ error: "content must be a string" });
+
+  const resolved = join(base, filePath);
+  if (!resolved.startsWith(base)) return res.status(403).json({ error: "path traversal detected" });
+
+  // Only allow writing specific config files for safety
+  const ALLOWED_FILES = new Set(["CLAUDE.md", ".claude/settings.json"]);
+  if (!ALLOWED_FILES.has(filePath)) {
+    return res.status(403).json({ error: "writing this file is not allowed" });
+  }
+
+  try {
+    const { writeFile, mkdir } = await import("fs/promises");
+    const { dirname } = await import("path");
+    await mkdir(dirname(resolved), { recursive: true });
+    await writeFile(resolved, content, "utf-8");
+    res.json({ ok: true, path: filePath });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

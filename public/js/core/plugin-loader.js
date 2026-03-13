@@ -22,6 +22,7 @@ const pluginMeta = {
   'event-stream-tab': { description: 'Real-time WebSocket event viewer with filtering and search', icon: '⚡', order: 10 },
   'repos-tab':        { description: 'Git repository and group management with tree view',        icon: '📁', order: 20 },
   'tasks-tab':        { description: 'Linear issues and todo list with priority levels',           icon: '✅', order: 30 },
+  'claude-editor-tab':{ description: 'Edit CLAUDE.md project instructions directly in the UI',    icon: '📝', order: 5 },
 };
 const defaultMeta = { description: 'A tab-sdk plugin', icon: '🧩', order: 100 };
 
