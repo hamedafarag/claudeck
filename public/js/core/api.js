@@ -88,6 +88,43 @@ export async function fetchWorkflows() {
   return res.json();
 }
 
+export async function createWorkflow(workflow) {
+  const res = await fetch("/api/workflows", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(workflow),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to create workflow");
+  }
+  return res.json();
+}
+
+export async function updateWorkflow(id, workflow) {
+  const res = await fetch(`/api/workflows/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(workflow),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to update workflow");
+  }
+  return res.json();
+}
+
+export async function deleteWorkflowApi(id) {
+  const res = await fetch(`/api/workflows/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to delete workflow");
+  }
+  return res.json();
+}
+
 export async function fetchAgents() {
   const res = await fetch("/api/agents");
   return res.json();

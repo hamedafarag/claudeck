@@ -277,6 +277,9 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | Method | Path               | Description                              |
 | ------ | ------------------ | ---------------------------------------- |
 | GET    | /api/workflows     | List workflows                           |
+| POST   | /api/workflows     | Create a new workflow                    |
+| PUT    | /api/workflows/:id | Update an existing workflow              |
+| DELETE | /api/workflows/:id | Delete a workflow                        |
 | GET    | /api/files         | Recursive file listing (depth 3, max 500)|
 | GET    | /api/files/content | Read file content (50KB limit)           |
 | PUT    | /api/files/content | Write file content (allowlisted paths only) |

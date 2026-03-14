@@ -200,6 +200,8 @@
 
 .agent-form-modal {
   width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 /* Form sections */
@@ -328,6 +330,131 @@ html[data-theme="light"] .agent-sidebar-title {
 
 html[data-theme="light"] .af-section-label {
   color: #2a8a9a;
+}
+
+/* ── Workflow Step Editor ─────────────────────────────── */
+
+.wf-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.wf-step-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+
+.wf-step-number {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(86, 212, 221, 0.1);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid rgba(86, 212, 221, 0.2);
+  margin-top: 4px;
+}
+
+.wf-step-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wf-step-fields input,
+.wf-step-fields textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.2s;
+  caret-color: var(--cyan);
+}
+
+.wf-step-fields textarea {
+  resize: vertical;
+  min-height: 56px;
+  line-height: 1.5;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.wf-step-fields input:focus,
+.wf-step-fields textarea:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 8px rgba(86, 212, 221, 0.12);
+}
+
+.wf-step-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+
+.wf-step-remove:hover {
+  background: rgba(255, 80, 80, 0.1);
+  color: var(--error, #e55);
+}
+
+.wf-step-add {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  width: 100%;
+}
+
+.wf-step-add:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+/* Workflow card accent in sidebar */
+.agent-sidebar-body .wf-card {
+  border-left: 2px solid var(--cyan);
+}
+
+html[data-theme="light"] .wf-step-number {
+  background: rgba(42, 138, 154, 0.08);
+  color: #2a8a9a;
+  border-color: rgba(42, 138, 154, 0.15);
 }
 
 /* ── Orchestrate Modal ────────────────────────────────── */

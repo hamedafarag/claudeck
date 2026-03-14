@@ -355,12 +355,18 @@ export function setupWebSocket(wss, sessionIds) {
 
         let resumeId = clientSid ? sessionIds.get(clientSid) : undefined;
         let resolvedSid = clientSid;
+        const wfQueryKey = `wf-${workflow.id}-${Date.now()}`;
+        let wfAborted = false;
 
         for (let i = 0; i < workflow.steps.length; i++) {
+          if (wfAborted || ws.readyState !== 1) break;
+
           const step = workflow.steps[i];
           wfSend({ type: "workflow_step", stepIndex: i, status: "running" });
 
           const abortController = new AbortController();
+          activeQueries.set(wfQueryKey, { abort: () => abortController.abort() });
+
           const effectivePermMode = wfPermMode || "bypass";
           const useBypass = effectivePermMode === "bypass";
           const usePlan = effectivePermMode === "plan";
@@ -399,6 +405,11 @@ export function setupWebSocket(wss, sessionIds) {
               wfSend({ type: "session", sessionId: result.resolvedSid });
             }
           } catch (err) {
+            if (err.name === "AbortError" || abortController.signal.aborted) {
+              wfAborted = true;
+              wfSend({ type: "workflow_step", stepIndex: i, status: "aborted" });
+              break;
+            }
             wfSend({ type: "error", error: `Workflow step "${step.label}" failed: ${err.message}` });
             break;
           }
@@ -406,10 +417,17 @@ export function setupWebSocket(wss, sessionIds) {
           wfSend({ type: "workflow_step", stepIndex: i, status: "completed" });
         }
 
-        wfSend({ type: "workflow_completed" });
-        wfSend({ type: "done" });
-        sendPushNotification("CodeDeck", `Workflow "${workflow.title}" completed`, `wf-${resolvedSid}`);
-        sendTelegramNotification("Workflow Completed", workflow.title, `wf-${resolvedSid}`);
+        activeQueries.delete(wfQueryKey);
+
+        if (wfAborted) {
+          wfSend({ type: "workflow_completed", aborted: true });
+          wfSend({ type: "done" });
+        } else {
+          wfSend({ type: "workflow_completed" });
+          wfSend({ type: "done" });
+          sendPushNotification("CodeDeck", `Workflow "${workflow.title}" completed`, `wf-${resolvedSid}`);
+          sendTelegramNotification("Workflow Completed", workflow.title, `wf-${resolvedSid}`);
+        }
         return;
       }
 

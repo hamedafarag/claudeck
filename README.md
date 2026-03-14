@@ -21,7 +21,7 @@ On first run, CodeDeck creates `~/.codedeck/` with your config, database, and pl
 | Feature | Description |
 |---------|-------------|
 | **Real-Time Chat** | WebSocket streaming with session persistence, parallel mode (2x2 grid), background sessions |
-| **Workflows** | 4 pre-built multi-step workflows (PR Review, Onboard Repo, Migration Plan, Code Health) |
+| **Workflows** | Multi-step workflows with full CRUD — create, edit, delete from the UI. 4 pre-built (PR Review, Onboard Repo, Migration Plan, Code Health) |
 | **Autonomous Agents** | 4 agents (PR Reviewer, Bug Hunter, Test Writer, Refactoring) with live progress tracking |
 | **Agent Chains** | Sequential multi-agent pipelines with context passing between steps |
 | **Agent DAGs** | Visual dependency graph editor — run agents in parallel or sequentially based on connections |

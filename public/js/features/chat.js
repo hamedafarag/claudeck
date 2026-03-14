@@ -359,7 +359,7 @@ function handleServerMessage(msg) {
 
     case "workflow_completed":
       removeThinking(pane);
-      addStatus("Workflow completed", false, pane);
+      addStatus(msg.aborted ? "Workflow aborted" : "Workflow completed", !!msg.aborted, pane);
       break;
 
     case "agent_started":

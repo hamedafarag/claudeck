@@ -214,8 +214,8 @@ $.promptModal.addEventListener("click", (e) => {
 // Toolbox toggle
 $.toolboxBtn.addEventListener("click", () => {
   const isOpen = !$.toolboxPanel.classList.contains("hidden");
-  $.workflowPanel.classList.add("hidden");
-  $.workflowBtn.classList.remove("active");
+  if ($.workflowPanel) $.workflowPanel.classList.add("hidden");
+  if ($.workflowBtn) $.workflowBtn.classList.remove("active");
   if ($.agentSidebar) { $.agentSidebar.classList.add("hidden"); }
   if ($.agentBtn) { $.agentBtn.classList.remove("active"); }
   if (isOpen) {

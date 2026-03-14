@@ -179,6 +179,11 @@
   box-shadow: 0 0 4px var(--success);
 }
 
+.workflow-step-dot.aborted {
+  background: var(--error, #e55);
+  box-shadow: 0 0 4px var(--error, #e55);
+}
+
 .workflow-step-label {
   font-size: 11px;
   color: var(--text-secondary);

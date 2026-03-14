@@ -266,7 +266,7 @@
         <div class="agent-sidebar-header">
           <div class="agent-sidebar-title-row">
             <svg class="agent-sidebar-logo" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-            <span class="agent-sidebar-title">Agents</span>
+            <span class="agent-sidebar-title">Agents & Workflows</span>
           </div>
           <button id="agent-sidebar-close" class="agent-sidebar-close" title="Close">&times;</button>
         </div>
@@ -283,14 +283,9 @@
           <span class="input-waiting-text">Claude is waiting for your response</span>
         </div>
         <div class="input-bar">
-          <button id="agent-btn" data-tooltip="Agents" class="toolbox-toggle">
+          <button id="agent-btn" data-tooltip="Agents & Workflows" class="toolbox-toggle">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-            </svg>
-          </button>
-          <button id="workflow-btn" data-tooltip="Workflows" class="toolbox-toggle">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="9" cy="16" r="1"/><circle cx="15" cy="16" r="1"/><path d="M12 2v4"/><path d="M8 7h8a2 2 0 0 1 2 2v2H6V9a2 2 0 0 1 2-2z"/><path d="M5 11h1"/><path d="M18 11h1"/>
             </svg>
           </button>
           <button id="attach-btn" data-tooltip="Attach Files" class="toolbox-toggle" style="position:relative;">
@@ -621,6 +616,39 @@
         <div class="modal-actions">
           <button type="button" id="agent-modal-cancel" class="modal-btn-cancel">Cancel</button>
           <button type="submit" class="modal-btn-save">Save Agent</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Workflow CRUD Modal -->
+  <div id="wf-modal" class="modal-overlay hidden">
+    <div class="modal agent-form-modal">
+      <div class="modal-header">
+        <h3 id="wf-modal-title">New Workflow</h3>
+        <button id="wf-modal-close" class="modal-close">&times;</button>
+      </div>
+      <form id="wf-form">
+        <div class="af-section">
+          <div class="af-section-label">Identity</div>
+          <div class="af-field">
+            <label for="wf-form-title">Title</label>
+            <input id="wf-form-title" type="text" placeholder="e.g. Review PR" required>
+          </div>
+          <div class="af-field">
+            <label for="wf-form-desc">Description</label>
+            <input id="wf-form-desc" type="text" placeholder="Short description of this workflow">
+          </div>
+        </div>
+        <div class="af-section">
+          <div class="af-section-label">Steps</div>
+          <div id="wf-steps-list" class="wf-steps-list"></div>
+          <button type="button" id="wf-add-step-btn" class="wf-step-add">+ Add Step</button>
+        </div>
+        <input id="wf-form-edit-id" type="hidden">
+        <div class="modal-actions">
+          <button type="button" id="wf-modal-cancel" class="modal-btn-cancel">Cancel</button>
+          <button type="submit" class="modal-btn-save">Save Workflow</button>
         </div>
       </form>
     </div>

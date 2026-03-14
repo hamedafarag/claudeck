@@ -12,7 +12,7 @@ CodeDeck separates **package defaults** (read-only, ships with npm) from **user 
 │   ├── folders.json                  Projects list + system prompts
 │   ├── repos.json                    Repository groups + repos
 │   ├── prompts.json                  Prompt templates (16 defaults)
-│   ├── workflows.json                Multi-step workflows (4 defaults)
+│   ├── workflows.json                Multi-step workflows (4 defaults, CRUD via UI)
 │   ├── agents.json                   Autonomous agent definitions (4 defaults)
 │   ├── agent-chains.json             Agent chains — sequential pipelines (2 defaults)
 │   ├── agent-dags.json               Agent DAGs — dependency graphs (1 default)
@@ -287,7 +287,7 @@ Managed via the UI project picker. System prompts injected into every query for 
   }
 ]
 ```
-Steps execute sequentially with context passing. Auto-registered as `/review-pr` slash command.
+Steps execute sequentially with context passing. Auto-registered as `/review-pr` slash command. Workflows support full CRUD — create, edit, and delete from the Agents & Workflows sidebar. Running workflows can be stopped via the Stop button.
 
 ### agents.json — Autonomous Agents
 ```json

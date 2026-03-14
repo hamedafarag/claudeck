@@ -10,6 +10,7 @@ import { getPermissionMode } from '../ui/permissions.js';
 import { getSelectedModel } from '../ui/model-selector.js';
 import { openDagModal, closeDagModal } from './dag-editor.js';
 import { openAgentMonitor } from './agent-monitor.js';
+import { renderWorkflowSidebar } from './workflows.js';
 
 // ══════════════════════════════════════════════════════════
 // Helpers
@@ -244,6 +245,9 @@ function renderAgentPanel() {
   addCard.innerHTML = `+ Add Agent`;
   addCard.addEventListener("click", () => openAgentModal());
   $.agentPanel.appendChild(addCard);
+
+  // Render workflow cards in the sidebar
+  renderWorkflowSidebar();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1152,8 +1156,8 @@ function toggleAgentSidebar(forceOpen) {
 $.agentBtn.addEventListener("click", () => {
   $.toolboxPanel.classList.add("hidden");
   $.toolboxBtn.classList.remove("active");
-  $.workflowPanel.classList.add("hidden");
-  $.workflowBtn.classList.remove("active");
+  if ($.workflowPanel) $.workflowPanel.classList.add("hidden");
+  if ($.workflowBtn) $.workflowBtn.classList.remove("active");
   toggleAgentSidebar();
 });
 
