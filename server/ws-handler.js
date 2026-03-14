@@ -598,7 +598,7 @@ export function setupWebSocket(wss, sessionIds) {
       // Chat handler
       if (msg.type !== "chat") return;
 
-      const { message, cwd, sessionId: clientSid, projectName, chatId, permissionMode: clientPermMode, model: chatModel, maxTurns: clientMaxTurns, images, systemPrompt } = msg;
+      const { message, cwd, sessionId: clientSid, projectName, chatId, permissionMode: clientPermMode, model: chatModel, maxTurns: clientMaxTurns, images, systemPrompt, disabledTools } = msg;
       const queryKey = chatId || "__default__";
 
       const sessionKey = chatId ? `${clientSid}::${chatId}` : clientSid;
@@ -628,6 +628,9 @@ export function setupWebSocket(wss, sessionIds) {
         opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, chatId);
       }
       if (chatModel) opts.model = resolveModel(chatModel);
+      if (Array.isArray(disabledTools) && disabledTools.length > 0) {
+        opts.disallowedTools = disabledTools;
+      }
 
       const projectPrompt = getProjectSystemPrompt(cwd);
       if (projectPrompt) opts.appendSystemPrompt = projectPrompt;

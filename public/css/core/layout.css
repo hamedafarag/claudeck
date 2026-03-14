@@ -241,6 +241,37 @@
   content: "\2713\0020";
 }
 
+/* Checkbox-style submenu items for disabled tools */
+.header-submenu-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.header-submenu-check:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.header-submenu-check input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+
+.header-submenu--tools {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
 .header-hidden-select {
   display: none !important;
 }

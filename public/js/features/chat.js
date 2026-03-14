@@ -22,6 +22,7 @@ import { isBackgroundSession, removeBackgroundSession, showCompletionToast, show
 import { enqueuePermissionRequest, getPermissionMode, clearSessionPermissions } from '../ui/permissions.js';
 import { getSelectedModel } from '../ui/model-selector.js';
 import { getMaxTurns } from '../ui/max-turns.js';
+import { getDisabledTools } from '../ui/disabled-tools.js';
 import { updateContextGauge, resetContextGauge, loadContextGauge } from '../ui/context-gauge.js';
 
 // ── "Waiting for input" indicator ──
@@ -171,6 +172,8 @@ export function sendMessage(pane) {
   if (model) payload.model = model;
   const maxTurns = getMaxTurns();
   if (maxTurns) payload.maxTurns = maxTurns;
+  const disabledTools = getDisabledTools();
+  if (disabledTools.length > 0) payload.disabledTools = disabledTools;
 
   if (parallelMode && pane.chatId) {
     payload.chatId = pane.chatId;
