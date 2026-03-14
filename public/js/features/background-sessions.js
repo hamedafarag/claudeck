@@ -7,7 +7,7 @@ import { CHAT_IDS } from '../core/constants.js';
 import { removeThinking } from '../ui/messages.js';
 import { sendNotification } from '../ui/notifications.js';
 
-const BG_STORAGE_KEY = "codedeck-bg-sessions";
+const BG_STORAGE_KEY = "claudeck-bg-sessions";
 
 // ── localStorage helpers ──
 
@@ -200,7 +200,7 @@ async function switchToSession(sessionId, projectPath) {
   // Restore the project dropdown if the session belongs to a different project
   if (projectPath && $.projectSelect.value !== projectPath) {
     $.projectSelect.value = projectPath;
-    localStorage.setItem("codedeck-cwd", projectPath);
+    localStorage.setItem("claudeck-cwd", projectPath);
     updateSystemPromptIndicator();
     updateHeaderProjectName();
     loadProjectCommands();
@@ -237,7 +237,7 @@ export function guardSwitch(onProceed) {
   // selected, so read the previous project path from localStorage which
   // hasn't been updated yet (that happens inside onProceed).
   const sessionId = getState("sessionId");
-  const prevPath = localStorage.getItem("codedeck-cwd") || "";
+  const prevPath = localStorage.getItem("claudeck-cwd") || "";
   const prevOpt = [...$.projectSelect.options].find(o => o.value === prevPath);
   pendingSessionInfo = {
     sessionId,

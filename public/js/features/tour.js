@@ -1,5 +1,5 @@
-// Guided tour — uses Driver.js to walk users through CodeDeck features
-const TOUR_KEY = 'codedeck-tour-completed';
+// Guided tour — uses Driver.js to walk users through Claudeck features
+const TOUR_KEY = 'claudeck-tour-completed';
 
 function buildSteps() {
   const hasSpeechApi = !document.body.classList.contains('no-speech-api');
@@ -92,7 +92,7 @@ function buildSteps() {
     element: '#tips-feed-toggle-btn',
     popover: {
       title: 'Tips Feed',
-      description: 'Contextual tips and learning resources to help you get more out of CodeDeck. <kbd>Cmd+Shift+T</kbd>',
+      description: 'Contextual tips and learning resources to help you get more out of Claudeck. <kbd>Cmd+Shift+T</kbd>',
       side: 'bottom',
       align: 'center',
     },
@@ -194,7 +194,7 @@ export function startTour() {
     stagePadding: 6,
     stageRadius: 8,
     smoothScroll: true,
-    popoverClass: 'codedeck-tour',
+    popoverClass: 'claudeck-tour',
     allowClose: true,
     doneBtnText: 'Finish',
     nextBtnText: 'Next →',

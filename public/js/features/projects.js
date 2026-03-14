@@ -13,7 +13,7 @@ export async function loadProjects() {
   try {
     const projects = await api.fetchProjects();
     setState("projectsData", projects);
-    const saved = localStorage.getItem("codedeck-cwd") || "";
+    const saved = localStorage.getItem("claudeck-cwd") || "";
 
     for (const p of projects) {
       const opt = document.createElement("option");
@@ -251,7 +251,7 @@ async function confirmAddProject() {
     const projects = getState("projectsData");
     projects.push({ name: project.name, path: project.path });
 
-    localStorage.setItem("codedeck-cwd", project.path);
+    localStorage.setItem("claudeck-cwd", project.path);
     updateSystemPromptIndicator();
     updateHeaderProjectName();
     updateSessionControls();
@@ -312,7 +312,7 @@ $.spModal.addEventListener("click", (e) => {
 $.projectSelect.addEventListener("change", async () => {
   const { guardSwitch } = await import('./background-sessions.js');
   guardSwitch(() => {
-    localStorage.setItem("codedeck-cwd", $.projectSelect.value);
+    localStorage.setItem("claudeck-cwd", $.projectSelect.value);
     setState("sessionId", null);
     if ($.projectSelect.value) {
       setState("view", "chat");

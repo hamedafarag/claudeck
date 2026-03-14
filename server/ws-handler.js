@@ -458,7 +458,7 @@ export function setupWebSocket(wss, sessionIds) {
         } else {
           wfSend({ type: "workflow_completed" });
           wfSend({ type: "done" });
-          sendPushNotification("CodeDeck", `Workflow "${workflow.title}" completed`, `wf-${resolvedSid}`);
+          sendPushNotification("Claudeck", `Workflow "${workflow.title}" completed`, `wf-${resolvedSid}`);
           const stepNames = workflow.steps.map((s, i) => `  ${i + 1}. ${s.label}`).join("\n");
           sendTelegramNotification("workflow", "Workflow Completed", `${workflow.title}\n\nSteps:\n${stepNames}`, {
             steps: workflow.steps.length,
@@ -577,7 +577,7 @@ export function setupWebSocket(wss, sessionIds) {
         }
 
         chainSend({ type: "agent_chain_completed", chainId: chain.id, runId });
-        sendPushNotification("CodeDeck", `Chain "${chain.title}" completed`, `chain-${resolvedSid}`);
+        sendPushNotification("Claudeck", `Chain "${chain.title}" completed`, `chain-${resolvedSid}`);
         const agentNames = agentDefs.map((a, i) => `  ${i + 1}. ${a.title}`).join("\n");
         sendTelegramNotification("chain", "Chain Completed", `${chain.title}\n\nAgents:\n${agentNames}`, {
           steps: agentDefs.length,
@@ -879,7 +879,7 @@ export function setupWebSocket(wss, sessionIds) {
         // Send push notification when query completes
         const session = resolvedSid ? getSession(resolvedSid) : null;
         const pushTitle = session?.title || "Session complete";
-        sendPushNotification("CodeDeck", pushTitle, `chat-${resolvedSid}`);
+        sendPushNotification("Claudeck", pushTitle, `chat-${resolvedSid}`);
 
         // Rich Telegram notification — meaningful for AFK developer
         const userQuery = (message || "").slice(0, 150).split("\n")[0];

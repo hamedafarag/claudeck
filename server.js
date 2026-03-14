@@ -52,10 +52,10 @@ app.use(express.json());
     vapidPrivate = generated.privateKey;
     // Persist to .env so keys survive restarts
     appendFileSync(join(userDir, ".env"), `\nVAPID_PUBLIC_KEY="${vapidPublic}"\nVAPID_PRIVATE_KEY="${vapidPrivate}"\n`);
-    console.log("Generated and saved VAPID keys to ~/.codedeck/.env");
+    console.log("Generated and saved VAPID keys to ~/.claudeck/.env");
   }
 
-  webpush.setVapidDetails("mailto:push@codedeck.local", vapidPublic, vapidPrivate);
+  webpush.setVapidDetails("mailto:push@claudeck.local", vapidPublic, vapidPrivate);
   setVapidPublicKey(vapidPublic);
   initPushSender(webpush);
 }
@@ -109,7 +109,7 @@ app.use("/api/telegram", telegramRouter);
 const fullStackPluginsDir = join(__dirname, "plugins");
 app.use("/plugins", express.static(fullStackPluginsDir));
 
-// Serve user plugins from ~/.codedeck/plugins/
+// Serve user plugins from ~/.claudeck/plugins/
 app.use("/user-plugins", express.static(userPluginsDir));
 
 // Plugin discovery — merge built-in + user plugins
@@ -134,14 +134,14 @@ app.get("/api/plugins", (req, res) => {
     }
   }
 
-  // 2. User plugins from ~/.codedeck/plugins/
+  // 2. User plugins from ~/.claudeck/plugins/
   if (existsSync(userPluginsDir)) {
     for (const entry of readdirSync(userPluginsDir)) {
       const dir = join(userPluginsDir, entry);
       if (!existsSync(dir) || !statSync(dir).isDirectory() || !existsSync(join(dir, "client.js"))) continue;
       if (plugins.some(p => p.name === entry)) continue;
       const hasCss = existsSync(join(dir, "client.css"));
-      const allowUserServer = process.env.CODEDECK_USER_SERVER_PLUGINS === "true";
+      const allowUserServer = process.env.CLAUDECK_USER_SERVER_PLUGINS === "true";
       const hasServer = allowUserServer && existsSync(join(dir, "server.js"));
       plugins.push({
         name: entry,
@@ -164,7 +164,7 @@ const PORT = process.env.PORT || 9009;
 // Mount full-stack plugin routes, then start server
 mountPluginRoutes(app, fullStackPluginsDir).then(() => {
   server.listen(PORT, () => {
-    console.log(`CodeDeck running at http://localhost:${PORT}`);
+    console.log(`Claudeck running at http://localhost:${PORT}`);
   });
 });
 

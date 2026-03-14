@@ -3,10 +3,10 @@ import { $ } from "../core/dom.js";
 import { emit, on } from "../core/events.js";
 import { initTabSDK } from "./tab-sdk.js";
 
-const STORAGE_KEY = "codedeck-right-panel";
-const TAB_KEY = "codedeck-right-panel-tab";
-const WIDTH_KEY = "codedeck-right-panel-width";
-const OLD_LINEAR_KEY = "codedeck-linear-panel";
+const STORAGE_KEY = "claudeck-right-panel";
+const TAB_KEY = "claudeck-right-panel-tab";
+const WIDTH_KEY = "claudeck-right-panel-width";
+const OLD_LINEAR_KEY = "claudeck-linear-panel";
 const MIN_WIDTH = 200;
 const MAX_WIDTH_RATIO = 0.6; // 60vw
 

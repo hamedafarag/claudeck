@@ -1,11 +1,11 @@
 {
-  "name": "codedeck",
+  "name": "claudeck",
   "version": "1.0.0",
   "type": "module",
   "description": "A browser-based UI for Claude Code — chat, run workflows, manage MCP servers, track costs, and orchestrate autonomous agents from a local web interface. Installable as a PWA.",
   "main": "server.js",
   "bin": {
-    "codedeck": "./cli.js"
+    "claudeck": "./cli.js"
   },
   "files": [
     "cli.js",
@@ -31,10 +31,10 @@
     "pwa",
     "developer-tools"
   ],
-  "homepage": "https://github.com/anthropics/codedeck",
+  "homepage": "https://github.com/hamedafarag/claudeck",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropics/codedeck"
+    "url": "https://github.com/hamedafarag/claudeck"
   },
   "license": "MIT",
   "author": "Hamed Farag",

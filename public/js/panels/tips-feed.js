@@ -4,9 +4,9 @@ import { getState, on } from '../core/store.js';
 import { registerCommand } from '../ui/commands.js';
 import { fetchTips, fetchRssFeed } from '../core/api.js';
 
-const LS_OPEN = 'codedeck-tips-feed';
-const LS_CATEGORY = 'codedeck-tips-category';
-const LS_WIDTH = 'codedeck-tips-width';
+const LS_OPEN = 'claudeck-tips-feed';
+const LS_CATEGORY = 'claudeck-tips-category';
+const LS_WIDTH = 'claudeck-tips-width';
 
 let tipsData = null;
 let rssItems = {};    // feedId -> items[]

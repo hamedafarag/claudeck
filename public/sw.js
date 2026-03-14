@@ -1,6 +1,6 @@
 // Service worker for PWA — offline fallback + push notifications
 
-const CACHE_NAME = 'codedeck-v1';
+const CACHE_NAME = 'claudeck-v1';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to pre-cache for offline support
@@ -65,7 +65,7 @@ self.addEventListener('push', (event) => {
       // Tell any open (unfocused) client to play a sound
       windowClients.forEach((c) => c.postMessage({ type: 'play-notification-sound' }));
 
-      return self.registration.showNotification(data.title || 'CodeDeck', {
+      return self.registration.showNotification(data.title || 'Claudeck', {
         body: data.body || '',
         tag: data.tag || 'default',
         icon: '/icons/icon-192.png',

@@ -17,8 +17,8 @@ export async function mountPluginRoutes(app, pluginsDir) {
     }
   }
 
-  // User full-stack plugins (~/.codedeck/plugins/<dir>/)
-  const allowUserServer = process.env.CODEDECK_USER_SERVER_PLUGINS === "true";
+  // User full-stack plugins (~/.claudeck/plugins/<dir>/)
+  const allowUserServer = process.env.CLAUDECK_USER_SERVER_PLUGINS === "true";
   if (existsSync(userPluginsDir)) {
     for (const name of readdirSync(userPluginsDir)) {
       const dir = join(userPluginsDir, name);
@@ -41,7 +41,7 @@ export async function mountPluginRoutes(app, pluginsDir) {
     const serverFile = join(dir, "server.js");
     if (existsSync(serverFile)) {
       if (source === "user" && !allowUserServer) {
-        console.log(`Skipping server routes for user plugin: ${name} (set CODEDECK_USER_SERVER_PLUGINS=true to enable)`);
+        console.log(`Skipping server routes for user plugin: ${name} (set CLAUDECK_USER_SERVER_PLUGINS=true to enable)`);
         continue;
       }
       try {

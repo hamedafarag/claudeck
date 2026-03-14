@@ -1,6 +1,6 @@
 {
-  "name": "CodeDeck",
-  "short_name": "CodeDeck",
+  "name": "Claudeck",
+  "short_name": "Claudeck",
   "description": "Local Web UI for Claude Code",
   "start_url": "/",
   "display": "standalone",

@@ -1,5 +1,5 @@
 ---
-name: codedeck-plugin:create
+name: claudeck-plugin:create
 description: Scaffold a new tab-sdk plugin with JS and CSS boilerplate. Just drop files in plugins/ — auto-discovered at runtime.
 argument-hint: <plugin-name> <short description of what the plugin does>
 ---
@@ -106,7 +106,7 @@ const cfgFile = configPath("<name>-config.json");
 
 ## Config JSON file template (optional)
 
-Create `plugins/<name>/config.json` with default values. It will be auto-copied to `~/.codedeck/config/` on first run:
+Create `plugins/<name>/config.json` with default values. It will be auto-copied to `~/.claudeck/config/` on first run:
 
 ```json
 {

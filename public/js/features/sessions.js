@@ -8,7 +8,7 @@ import { panes, enterParallelMode, exitParallelMode } from '../ui/parallel.js';
 import { renderMessagesIntoPane, showWhalyPlaceholder } from '../ui/messages.js';
 import { loadContextGauge } from '../ui/context-gauge.js';
 
-const SESSION_STORAGE_KEY = "codedeck-session-id";
+const SESSION_STORAGE_KEY = "claudeck-session-id";
 
 // Persist sessionId to localStorage whenever it changes
 onState("sessionId", (val) => {
@@ -131,7 +131,7 @@ function renderSessions(sessions) {
         setState("sessionId", s.id);
         if (s.project_path) {
           $.projectSelect.value = s.project_path;
-          localStorage.setItem("codedeck-cwd", s.project_path);
+          localStorage.setItem("claudeck-cwd", s.project_path);
         }
 
         const parallelMode = getState("parallelMode");

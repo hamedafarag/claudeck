@@ -1,4 +1,4 @@
-# CodeDeck
+# Claudeck
 
 A browser-based UI for Claude Code — chat, run workflows, manage MCP servers, track costs, and orchestrate autonomous agents from a local web interface. Installable as a PWA. Cross-platform (macOS, Linux, Windows).
 
@@ -16,7 +16,7 @@ npm start
 
 Requires Node.js 18+ and a valid Claude Code CLI authentication (`claude auth login`). Installable as a PWA from Chrome's address bar.
 
-On first run, CodeDeck creates `~/.codedeck/` with your config files, database, and plugins directory. This keeps user data separate from the package — safe for NPX installs and upgrades.
+On first run, Claudeck creates `~/.claudeck/` with your config files, database, and plugins directory. This keeps user data separate from the package — safe for NPX installs and upgrades.
 
 ---
 
@@ -46,7 +46,7 @@ browser ──────── WebSocket ──────── server.js �
    │   │   │                          ├── server/telegram-sender.js (two-way)
    │   │   ├── events.js (event bus)  ├── server/telegram-poller.js (callback listener)
    │   │   ├── dom.js (DOM refs)      ├── db.js (SQLite)
-   │   │   ├── constants.js           ├── config/ (default configs, copied to ~/.codedeck/)
+   │   │   ├── constants.js           ├── config/ (default configs, copied to ~/.claudeck/)
    │   │   ├── utils.js               ├── plugins/ (full-stack plugins)
    │   │   └── plugin-loader.js       │   ├── linear/ (client.js, server.js, config.json)
    │   ├── ui/   (shared UI modules)  │   ├── repos/ (client.js, server.js)
@@ -61,7 +61,7 @@ browser ──────── WebSocket ──────── server.js �
    │   └── panels/     (bot, tips, docs)
    └── index.html
 
-~/.codedeck/                          User data directory (persists across updates)
+~/.claudeck/                          User data directory (persists across updates)
    ├── config/                        JSON config files (copied from defaults on first run)
    ├── plugins/                       User-installed plugins
    ├── data.db                        SQLite database
@@ -72,7 +72,7 @@ browser ──────── WebSocket ──────── server.js �
 - **Reconnect with backoff** — exponential backoff (2s → 4s → 8s → ... → 30s cap, 0-25% jitter), distinct `ws:reconnected` event triggers state sync
 - **State sync on reconnect** — reconciles background sessions, resets streaming panes, reloads messages from DB, refreshes session list
 - **Modular frontend** — 40+ ES modules organized into `core/`, `ui/`, `features/`, `panels/`, `plugins/` with no bundler
-- **Plugin system** — full-stack plugin architecture: `plugins/<name>/` directories with `client.js`, optional `server.js` (auto-mounted at `/api/plugins/<name>/`), `client.css`, and `config.json`. Also supports user plugins from `~/.codedeck/plugins/`. All discovered via `GET /api/plugins`
+- **Plugin system** — full-stack plugin architecture: `plugins/<name>/` directories with `client.js`, optional `server.js` (auto-mounted at `/api/plugins/<name>/`), `client.css`, and `config.json`. Also supports user plugins from `~/.claudeck/plugins/`. All discovered via `GET /api/plugins`
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
 - **Modular backend** — 15 Express Router modules + shared WS handler + agent loop + Telegram sender
@@ -659,7 +659,7 @@ The right side of the UI hosts a resizable tabbed panel with built-in and plugin
 - **Lifecycle hooks** — `onActivate`, `onDeactivate`, `onDestroy`
 - **Lazy initialization** — `lazy: true` defers `init()` until the tab is first opened
 - **Positional insert** — `position` option to control tab order
-- **Auto-discovery** — full-stack plugins live in `plugins/<name>/` (with `client.js`, optional `server.js`, `client.css`, `config.json`). User plugins go in `~/.codedeck/plugins/`. All discovered via `GET /api/plugins`
+- **Auto-discovery** — full-stack plugins live in `plugins/<name>/` (with `client.js`, optional `server.js`, `client.css`, `config.json`). User plugins go in `~/.claudeck/plugins/`. All discovered via `GET /api/plugins`
 - **Plugin marketplace** — enable/disable/reorder plugins from the "+" button; state persisted to `localStorage`
 - **Built-in plugins**: Linear (issues + settings), Tasks (todo + brags), Repos, Events, CLAUDE.md Editor, Sudoku, Tic-Tac-Toe
 
@@ -734,7 +734,7 @@ Browser notifications for events that happen while the tab is unfocused, **inclu
 
 **Web Push notifications** (works even with the tab/browser closed):
 - Server sends push via `web-push` library when a chat query or workflow completes
-- Uses VAPID keys (auto-generated on first run, saved to `~/.codedeck/.env`)
+- Uses VAPID keys (auto-generated on first run, saved to `~/.claudeck/.env`)
 - Push subscriptions stored in SQLite (`push_subscriptions` table)
 - Service worker `push` event handler checks `clients.matchAll()` — only shows notification when no app window is focused (avoids duplicates with local notifications)
 - Stale/expired subscriptions (404/410) auto-cleaned from DB
@@ -745,7 +745,7 @@ Browser notifications for events that happen while the tab is unfocused, **inclu
 - Client-side notifications play sound directly via `sendNotification()`
 - Push notifications trigger sound via service worker `postMessage` to the client page
 - OS notification sound suppressed (`silent: true`) to avoid double-chime
-- Sound preference stored in `localStorage` (`codedeck-notifications-sound`)
+- Sound preference stored in `localStorage` (`claudeck-notifications-sound`)
 
 ### 33. Telegram Integration (Two-Way)
 Full two-way Telegram bot integration for AFK developers — rich notifications outbound, tool approval inbound:
@@ -768,7 +768,7 @@ Full two-way Telegram bot integration for AFK developers — rich notifications 
 - **Bot setup** — configure bot token and chat ID via **Tools > Telegram** settings modal
 - **AFK timeout** — configurable approval timeout (default 15 minutes, vs 5 minutes for web-only)
 - **Per-event toggles** — 9 notification categories: session, workflow, chain, agent, orchestrator, DAG, errors, permission requests, task start
-- **Config stored** in `~/.codedeck/config/telegram-config.json`
+- **Config stored** in `~/.claudeck/config/telegram-config.json`
 - **Test button** — sends a sample rich notification with metrics to verify configuration
 - **Graceful degradation** — if not configured, all Telegram features are silently skipped
 
@@ -823,7 +823,7 @@ A floating chat bubble widget (bottom-left corner) that provides a personal AI a
 - **Chat bubble** — 48px circle featuring the Whaly mascot (pixel-art whale), click to expand the bot panel
 - **Independent session** — separate from the main chat, per-project session stored in `localStorage`
 - **Linked / Free toggle** — switch between "Linked" mode (uses project context, session, and permission mode) and "Free" mode (no project context, bypass permissions, just answers questions)
-- **Custom system prompt** — editable via gear icon in the bot header; stored server-side in `~/.codedeck/config/bot-prompt.json`; default is an expert prompt engineering assistant
+- **Custom system prompt** — editable via gear icon in the bot header; stored server-side in `~/.claudeck/config/bot-prompt.json`; default is an expert prompt engineering assistant
 - **Streaming responses** — uses the same WebSocket infrastructure with `chatId: 'assistant-bot'`; main chat ignores bot messages via early return filter
 - **Markdown rendering** — full markdown support with merged ordered lists, syntax highlighting, copy buttons
 - **Session management** — "New chat" button clears the thread; conversation history loads on panel open
@@ -838,7 +838,7 @@ Four pre-built autonomous agents that run as single high-maxTurns SDK queries (u
 - **Refactoring Agent** — identify and apply refactoring opportunities
 
 Agent behavior:
-- Defined in `~/.codedeck/config/agents.json` with goal prompt, constraints (maxTurns, timeoutMs)
+- Defined in `~/.claudeck/config/agents.json` with goal prompt, constraints (maxTurns, timeoutMs)
 - Single `query()` call with high maxTurns allows Claude to autonomously decide tool usage
 - Agent panel in the toolbox area with agent cards (icon, title, description)
 - Agent header card shows live stats: elapsed time, turn count, status (running/completed/error)
@@ -853,7 +853,7 @@ Sequential multi-agent pipelines that pass context between steps:
 - **Context passing modes** — `summary` (recommended), `full` (entire output), or `none`
 - **Shared context** — each agent's output is stored in the `agent_context` SQLite table, keyed by `runId`
 - **Live progress** — pipeline visualization shows numbered steps with running/completed/error status
-- **Config** — defined in `~/.codedeck/config/agent-chains.json`
+- **Config** — defined in `~/.claudeck/config/agent-chains.json`
 - **2 defaults** — "Bug Hunt + Review" (Bug Hunter → PR Reviewer), "Test + Refactor" (Test Writer → Refactoring Agent)
 - **Slash commands** — auto-registered as `/chain-{id}`
 - **WebSocket messages** — `agent_chain_started`, `agent_chain_step`, `agent_chain_completed`
@@ -865,7 +865,7 @@ Visual dependency graph editor for running agents in parallel or sequentially:
 - **Click-to-delete edges** — hover turns edges red, click to remove; wide invisible hit area for easy targeting
 - **Auto Layout** — button to automatically arrange nodes in a clean left-to-right layout
 - **Explainer section** — "What is a DAG?" with numbered steps explaining the visual editor
-- **Config** — defined in `~/.codedeck/config/agent-dags.json` with node positions and edge definitions
+- **Config** — defined in `~/.claudeck/config/agent-dags.json` with node positions and edge definitions
 - **1 default** — "Full Review Pipeline" (Bug Hunter + Test Writer in parallel → PR Reviewer)
 - **Slash commands** — auto-registered as `/dag-{id}`
 - **WebSocket messages** — `dag_started`, `dag_level`, `dag_node`, `dag_completed`, `dag_error`
@@ -927,7 +927,7 @@ A 24px footer bar at the bottom of the page showing key information at a glance:
 
 ### 47. Plugin Marketplace
 A built-in marketplace UI for managing tab-sdk plugins:
-- **Auto-discovery** — server scans built-in plugins (`plugins/`) and user plugins (`~/.codedeck/plugins/`), merges results with `source: "builtin"` or `source: "user"` field
+- **Auto-discovery** — server scans built-in plugins (`plugins/`) and user plugins (`~/.claudeck/plugins/`), merges results with `source: "builtin"` or `source: "user"` field
 - **Marketplace panel** — accessible from the "+" button in the right panel tab bar
 - **Enable/disable** — toggle plugins on/off; state persisted to `localStorage`
 - **Reorder tabs** — drag handle to reorder plugin tabs; order persisted to `localStorage`
@@ -951,7 +951,7 @@ Full mobile and tablet responsiveness with two breakpoints (CSS-first approach):
 - iOS safe area padding on status bar
 
 ### 49. Welcome Screen & Guided Tour
-- **Welcome overlay** — shown once on first visit (persisted via `localStorage` key `codedeck-welcome-seen`)
+- **Welcome overlay** — shown once on first visit (persisted via `localStorage` key `claudeck-welcome-seen`)
 - Displays the Whaly mascot with a floating animation, platform introduction, and 3 feature highlight cards (AI Chat, Agents & Workflows, Dev Tools)
 - **Get Started** button dismisses the overlay; **Take a Tour** button dismisses and launches the guided tour
 - Keyboard shortcuts: `Enter` or `Esc` to skip
@@ -959,9 +959,9 @@ Full mobile and tablet responsiveness with two breakpoints (CSS-first approach):
 - 18 steps covering: sidebar navigation (home, projects, sessions, parallel mode, theme), header controls (session settings, tools dropdown, tips, right panel), chat area (agents, attachments, voice input, prompts, input, send), and status bar
 - Voice Input step is conditionally skipped on Edge or browsers without Speech API
 - Light overlay (35% opacity) keeps the UI visible while highlighting the active element with an accent-green glowing ring
-- Custom dark theme for Driver.js popovers matching CodeDeck's design tokens (fonts, colors, kbd styling)
-- Tour completion is persisted via `localStorage` key `codedeck-tour-completed`
-- To replay: `localStorage.removeItem('codedeck-welcome-seen'); location.reload()` then click "Take a Tour"
+- Custom dark theme for Driver.js popovers matching Claudeck's design tokens (fonts, colors, kbd styling)
+- Tour completion is persisted via `localStorage` key `claudeck-tour-completed`
+- To replay: `localStorage.removeItem('claudeck-welcome-seen'); location.reload()` then click "Take a Tour"
 
 ### 50. Easter Egg
 Click the Whaly mascot 5 times rapidly on the empty chat screen — Whaly wiggles and pops up a comic-book-style speech bubble with a sassy greeting. Try it!
@@ -1054,12 +1054,12 @@ Autocomplete triggers on `/` with keyboard navigation (arrow keys, Tab, Enter). 
 
 ## Configuration
 
-### User Data Directory (`~/.codedeck/`)
+### User Data Directory (`~/.claudeck/`)
 
-On first run, CodeDeck creates `~/.codedeck/` and copies default config files there. All user data lives in this directory:
+On first run, Claudeck creates `~/.claudeck/` and copies default config files there. All user data lives in this directory:
 
 ```
-~/.codedeck/
+~/.claudeck/
 ├── config/              JSON config files
 │   ├── folders.json     Projects
 │   ├── repos.json       Repository groups + repos
@@ -1075,7 +1075,7 @@ On first run, CodeDeck creates `~/.codedeck/` and copies default config files th
 └── .env                 Environment variables
 ```
 
-Override the location with `CODEDECK_HOME` environment variable.
+Override the location with `CLAUDECK_HOME` environment variable.
 
 ### .env — Environment Variables
 ```bash
@@ -1199,11 +1199,11 @@ All colors are CSS custom properties on `:root` (defined in `css/variables.css`)
 ## File Structure
 
 ```
-CodeDeck/
+Claudeck/
 ├── server.js              Express entry point
 ├── db.js                  SQLite layer with indexes + prepared statements
 ├── server/
-│   ├── paths.js           Centralized path resolution (~/.codedeck/ bootstrap)
+│   ├── paths.js           Centralized path resolution (~/.claudeck/ bootstrap)
 │   ├── ws-handler.js      WebSocket handler with stale session retry
 │   ├── agent-loop.js      Autonomous agent execution
 │   ├── summarizer.js      AI session summary generation via Claude Haiku
@@ -1228,7 +1228,7 @@ CodeDeck/
 │       ├── agents.js      Agents listing API
 │       ├── todos.js       Todo + brag CRUD
 │       └── telegram.js    Telegram notification config + test
-├── config/                Default JSON configs (copied to ~/.codedeck/ on first run)
+├── config/                Default JSON configs (copied to ~/.claudeck/ on first run)
 │   ├── folders.json       Project configurations
 │   ├── repos.json         Repository groups + repos
 │   ├── prompts.json       16 prompt templates

@@ -1,7 +1,7 @@
 // Model selector — localStorage persistence + getter
 import { $ } from '../core/dom.js';
 
-const STORAGE_KEY = 'codedeck-model';
+const STORAGE_KEY = 'claudeck-model';
 
 export function getSelectedModel() {
   return $.modelSelect?.value || '';

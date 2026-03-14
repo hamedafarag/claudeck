@@ -1,13 +1,13 @@
 # Configuration & User Data Directory
 
-CodeDeck separates **package defaults** (read-only, ships with npm) from **user data** (persists across updates). This document explains how the system works and how to extend it.
+Claudeck separates **package defaults** (read-only, ships with npm) from **user data** (persists across updates). This document explains how the system works and how to extend it.
 
 ---
 
 ## Directory Layout
 
 ```
-~/.codedeck/                          Created on first run
+~/.claudeck/                          Created on first run
 ├── config/                           JSON config files (editable)
 │   ├── folders.json                  Projects list + system prompts
 │   ├── repos.json                    Repository groups + repos
@@ -22,7 +22,7 @@ CodeDeck separates **package defaults** (read-only, ships with npm) from **user 
 │   └── my-plugin/                    Plugin directory
 │       ├── client.js                 Plugin JS module (required)
 │       ├── client.css                Plugin stylesheet (optional)
-│       └── server.js                 Server-side routes (optional, requires CODEDECK_USER_SERVER_PLUGINS=true)
+│       └── server.js                 Server-side routes (optional, requires CLAUDECK_USER_SERVER_PLUGINS=true)
 ├── data.db                           SQLite database (sessions, messages, costs, todos)
 └── .env                              Environment variables (VAPID keys, API keys)
 ```
@@ -46,21 +46,21 @@ CodeDeck separates **package defaults** (read-only, ships with npm) from **user 
 
 All path resolution is centralized in `server/paths.js`. On first import (synchronous, before any route or DB module loads):
 
-1. **Create directories** — `~/.codedeck/config/` and `~/.codedeck/plugins/` are created via `mkdirSync({ recursive: true })`
-2. **Copy defaults** — each `.json` file in `<package>/config/` is copied to `~/.codedeck/config/` **only if it doesn't already exist**. User edits are never overwritten.
-3. **Migrate database** — if `data.db` exists in the package root but not in `~/.codedeck/`, it's copied (including `-shm` and `-wal` WAL files). This handles users upgrading from a pre-NPX install.
+1. **Create directories** — `~/.claudeck/config/` and `~/.claudeck/plugins/` are created via `mkdirSync({ recursive: true })`
+2. **Copy defaults** — each `.json` file in `<package>/config/` is copied to `~/.claudeck/config/` **only if it doesn't already exist**. User edits are never overwritten.
+3. **Migrate database** — if `data.db` exists in the package root but not in `~/.claudeck/`, it's copied (including `-shm` and `-wal` WAL files). This handles users upgrading from a pre-NPX install.
 4. **Migrate `.env`** — same logic as the database migration.
 
 ```
 First run:
-  <package>/config/prompts.json  ──copy──>  ~/.codedeck/config/prompts.json
+  <package>/config/prompts.json  ──copy──>  ~/.claudeck/config/prompts.json
 
 Second run:
-  ~/.codedeck/config/prompts.json exists  ──skip──  (user edits preserved)
+  ~/.claudeck/config/prompts.json exists  ──skip──  (user edits preserved)
 
 NPX upgrade:
   New package installed with updated defaults
-  ~/.codedeck/ untouched  ──  user keeps their config, database, plugins
+  ~/.claudeck/ untouched  ──  user keeps their config, database, plugins
 ```
 
 ### Key Exports from `server/paths.js`
@@ -68,22 +68,22 @@ NPX upgrade:
 | Export | Value | Description |
 |--------|-------|-------------|
 | `packageRoot` | `<package-install-dir>` | Where the npm package lives |
-| `userDir` | `~/.codedeck` | User data root |
-| `userConfigDir` | `~/.codedeck/config` | User's JSON config files |
-| `userPluginsDir` | `~/.codedeck/plugins` | User-installed plugins |
-| `dbPath` | `~/.codedeck/data.db` | SQLite database path |
+| `userDir` | `~/.claudeck` | User data root |
+| `userConfigDir` | `~/.claudeck/config` | User's JSON config files |
+| `userPluginsDir` | `~/.claudeck/plugins` | User-installed plugins |
+| `dbPath` | `~/.claudeck/data.db` | SQLite database path |
 | `defaultConfigDir` | `<package>/config` | Built-in default configs |
-| `configPath(filename)` | `~/.codedeck/config/<filename>` | Helper to resolve a config file |
+| `configPath(filename)` | `~/.claudeck/config/<filename>` | Helper to resolve a config file |
 
 ---
 
 ## Overriding the User Directory
 
-Set the `CODEDECK_HOME` environment variable to change where user data is stored:
+Set the `CLAUDECK_HOME` environment variable to change where user data is stored:
 
 ```bash
 # Use a custom directory
-CODEDECK_HOME=/tmp/codedeck-test npm start
+CLAUDECK_HOME=/tmp/claudeck-test npm start
 
 # Useful for:
 # - Running multiple instances with separate data
@@ -109,7 +109,7 @@ Add your default config to `config/`:
 }
 ```
 
-The bootstrap will automatically copy it to `~/.codedeck/config/` on next startup (for users who don't have it yet).
+The bootstrap will automatically copy it to `~/.claudeck/config/` on next startup (for users who don't have it yet).
 
 ### 2. Use it in your route
 
@@ -142,8 +142,8 @@ Plugins can live in two directories:
 
 | Directory | Source | Writable |
 |-----------|--------|----------|
-| `<package>/plugins/` | Ships with CodeDeck (full-stack) | No (package-managed) |
-| `~/.codedeck/plugins/` | User-installed | Yes |
+| `<package>/plugins/` | Ships with Claudeck (full-stack) | No (package-managed) |
+| `~/.claudeck/plugins/` | User-installed | Yes |
 
 The `GET /api/plugins` endpoint merges both directories. Each plugin gets a `source` field (`"builtin"` or `"user"`) so the marketplace UI can distinguish them.
 
@@ -156,27 +156,27 @@ plugins/my-plugin/
 ├── client.js       # Tab-sdk module (required) — must call registerTab()
 ├── client.css      # Styles (optional, auto-injected if present)
 ├── server.js       # Express router (optional, auto-mounted at /api/plugins/my-plugin/)
-└── config.json     # Default config (optional, copied to ~/.codedeck/config/ on first run)
+└── config.json     # Default config (optional, copied to ~/.claudeck/config/ on first run)
 ```
 
 ### Installing a user plugin
 
-Create a directory in `~/.codedeck/plugins/` with a `client.js` file:
+Create a directory in `~/.claudeck/plugins/` with a `client.js` file:
 
 ```bash
-mkdir -p ~/.codedeck/plugins/my-plugin
-cp client.js ~/.codedeck/plugins/my-plugin/
-cp client.css ~/.codedeck/plugins/my-plugin/  # optional
+mkdir -p ~/.claudeck/plugins/my-plugin
+cp client.js ~/.claudeck/plugins/my-plugin/
+cp client.css ~/.claudeck/plugins/my-plugin/  # optional
 ```
 
 The plugin appears in the marketplace on next page load. No server restart needed.
 
-**Server-side user plugins**: To allow user plugins with `server.js`, set `CODEDECK_USER_SERVER_PLUGINS=true` in your `.env`. This is disabled by default for security.
+**Server-side user plugins**: To allow user plugins with `server.js`, set `CLAUDECK_USER_SERVER_PLUGINS=true` in your `.env`. This is disabled by default for security.
 
 ### Static serving
 
 User plugins are served from `/user-plugins/` URL path:
-- `~/.codedeck/plugins/my-plugin/client.js` → `http://localhost:9009/user-plugins/my-plugin/client.js`
+- `~/.claudeck/plugins/my-plugin/client.js` → `http://localhost:9009/user-plugins/my-plugin/client.js`
 
 Built-in plugins are served from `/plugins/` URL path:
 - `plugins/linear/client.js` → `http://localhost:9009/plugins/linear/client.js`
@@ -185,10 +185,10 @@ Built-in plugins are served from `/plugins/` URL path:
 
 ## Environment Variables (`.env`)
 
-The `.env` file lives at `~/.codedeck/.env`. On first run, if a `.env` exists in the package root (pre-NPX install), it's migrated automatically.
+The `.env` file lives at `~/.claudeck/.env`. On first run, if a `.env` exists in the package root (pre-NPX install), it's migrated automatically.
 
 ```bash
-# ~/.codedeck/.env
+# ~/.claudeck/.env
 PORT=9009                        # Server port (default 9009)
 VAPID_PUBLIC_KEY=                # Auto-generated on first run
 VAPID_PRIVATE_KEY=               # Auto-generated on first run
@@ -200,7 +200,7 @@ VAPID keys are generated automatically if missing — no manual setup needed for
 
 ## Database
 
-The SQLite database lives at `~/.codedeck/data.db`. It stores:
+The SQLite database lives at `~/.claudeck/data.db`. It stores:
 
 - Sessions (id, claude_session_id, title, project_path, timestamps)
 - Messages (role, content, chat_id for parallel mode)
@@ -215,17 +215,17 @@ The database is created automatically on first run with WAL mode enabled. Schema
 
 ```bash
 # The database is a single file (plus WAL files if active)
-cp ~/.codedeck/data.db ~/.codedeck/data.db.backup
+cp ~/.claudeck/data.db ~/.claudeck/data.db.backup
 ```
 
 ### Reset
 
 ```bash
 # Delete the database to start fresh (sessions, messages, costs all lost)
-rm ~/.codedeck/data.db
+rm ~/.claudeck/data.db
 
 # Or reset everything
-rm -rf ~/.codedeck
+rm -rf ~/.claudeck
 # Next startup will recreate with defaults
 ```
 
@@ -233,14 +233,14 @@ rm -rf ~/.codedeck
 
 ## MCP Server Configuration
 
-MCP servers are stored in Claude CLI's own settings files, not in `~/.codedeck/`:
+MCP servers are stored in Claude CLI's own settings files, not in `~/.claudeck/`:
 
 | Scope | File | Description |
 |-------|------|-------------|
 | Global | `~/.claude/settings.json` | Available to all projects |
 | Project | `<project>/.claude/settings.json` | Available only in that project |
 
-CodeDeck's MCP manager reads/writes both scopes. The API uses `?project=<path>` to select the scope:
+Claudeck's MCP manager reads/writes both scopes. The API uses `?project=<path>` to select the scope:
 
 ```
 GET  /api/mcp/servers                    → global servers

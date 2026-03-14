@@ -342,7 +342,7 @@ export async function runAgent({
     clearTimeout(timeoutHandle);
     if (activeQueries) activeQueries.delete(queryKey);
     agentSend({ type: "done" });
-    sendPushNotification("CodeDeck", `Agent "${agentDef.title}" completed`, `agent-${resolvedSid}`);
+    sendPushNotification("Claudeck", `Agent "${agentDef.title}" completed`, `agent-${resolvedSid}`);
 
     // Rich Telegram notification — meaningful for AFK developer
     const goalSnippet = agentDef.goal ? agentDef.goal.slice(0, 150).split("\n")[0] : "";

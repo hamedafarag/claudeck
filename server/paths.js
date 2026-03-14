@@ -1,5 +1,5 @@
-// Centralized path resolution for CodeDeck
-// All user data lives in ~/.codedeck/ (persists across NPX updates)
+// Centralized path resolution for Claudeck
+// All user data lives in ~/.claudeck/ (persists across NPX updates)
 import { homedir } from "os";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -11,8 +11,8 @@ const __dirname = dirname(__filename);
 // Package root (where defaults ship)
 export const packageRoot = join(__dirname, "..");
 
-// User data directory (override with CODEDECK_HOME for testing)
-export const userDir = process.env.CODEDECK_HOME || join(homedir(), ".codedeck");
+// User data directory (override with CLAUDECK_HOME for testing)
+export const userDir = process.env.CLAUDECK_HOME || join(homedir(), ".claudeck");
 export const userConfigDir = join(userDir, "config");
 export const userPluginsDir = join(userDir, "plugins");
 export const dbPath = join(userDir, "data.db");
@@ -25,7 +25,7 @@ export function configPath(filename) {
   return join(userConfigDir, filename);
 }
 
-// ── Bootstrap ~/.codedeck/ on first import (synchronous) ────
+// ── Bootstrap ~/.claudeck/ on first import (synchronous) ────
 
 mkdirSync(userConfigDir, { recursive: true });
 mkdirSync(userPluginsDir, { recursive: true });

@@ -498,7 +498,7 @@ export async function runOrchestrator({
   if (activeQueries) activeQueries.delete(queryKey);
 
   sendPushNotification(
-    "CodeDeck",
+    "Claudeck",
     `Orchestrator completed (${agentResults.length} agents)`,
     `orch-${resolvedSid}`,
   );

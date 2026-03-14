@@ -1,6 +1,6 @@
 # Cross-Platform Compatibility Audit
 
-Audit of CodeDeck for Windows and Linux compatibility before NPX publishing.
+Audit of Claudeck for Windows and Linux compatibility before NPX publishing.
 
 **Status: ALL ISSUES RESOLVED**
 

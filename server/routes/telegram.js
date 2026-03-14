@@ -58,7 +58,7 @@ router.post("/test", async (req, res) => {
   try {
     await sendTelegramNotification(
       "session",
-      "CodeDeck Test",
+      "Claudeck Test",
       "Telegram notifications are working!",
       { durationMs: 1234, costUsd: 0.0042, inputTokens: 1500, outputTokens: 800, model: "claude-sonnet-4-6", turns: 3 }
     );

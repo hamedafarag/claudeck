@@ -7,7 +7,7 @@ import * as api from '../core/api.js';
 import { getSelectedModel } from '../ui/model-selector.js';
 import { $ } from '../core/dom.js';
 
-const SESSIONS_KEY = 'codedeck-bot-sessions';
+const SESSIONS_KEY = 'claudeck-bot-sessions';
 let panel, messagesDiv, inputEl, sendBtn, stopBtn, settingsOverlay, promptTextarea;
 let freeBotSessionId = null;
 let isStreaming = false;

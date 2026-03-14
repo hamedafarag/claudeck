@@ -40,7 +40,7 @@ $.homeBtn.addEventListener('click', () => {
   setState('view', 'home');
   setState('sessionId', null);
   $.projectSelect.value = '';
-  localStorage.removeItem('codedeck-cwd');
+  localStorage.removeItem('claudeck-cwd');
   $.sessionList.innerHTML = '';
 });
 
@@ -262,7 +262,7 @@ function formatTokens(n) {
 
 // If a session was already restored from localStorage before this module loaded,
 // or a project was previously selected, switch to chat view; otherwise load home.
-const savedProject = localStorage.getItem('codedeck-cwd');
+const savedProject = localStorage.getItem('claudeck-cwd');
 if (getState('sessionId') || savedProject) {
   setState('view', 'chat');
 } else if (getState('view') === 'home') {

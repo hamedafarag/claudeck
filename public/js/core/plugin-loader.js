@@ -7,10 +7,10 @@
 //
 // Plugin sources (checked in order, first match wins):
 //   1. Built-in plugins in plugins/<name>/ (client.js, client.css, server.js, config.json)
-//   2. User plugins in ~/.codedeck/plugins/<name>/ (same directory structure)
+//   2. User plugins in ~/.claudeck/plugins/<name>/ (same directory structure)
 
-const STORAGE_KEY = 'codedeck-enabled-plugins';
-const ORDER_KEY = 'codedeck-plugin-order';
+const STORAGE_KEY = 'claudeck-enabled-plugins';
+const ORDER_KEY = 'claudeck-plugin-order';
 let availablePlugins = [];
 const loadedPlugins = new Set();
 

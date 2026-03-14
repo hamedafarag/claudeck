@@ -295,7 +295,7 @@ function mountTab(tab) {
       p.classList.toggle('active', p.dataset.tab === tab.id);
     });
 
-    localStorage.setItem('codedeck-right-panel-tab', tab.id);
+    localStorage.setItem('claudeck-right-panel-tab', tab.id);
     emit('rightPanel:tabChanged', tab.id);
   });
 }

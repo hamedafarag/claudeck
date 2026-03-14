@@ -1,5 +1,5 @@
 // Disabled tools selector — localStorage persistence + getter
-const STORAGE_KEY = 'codedeck-disabled-tools';
+const STORAGE_KEY = 'claudeck-disabled-tools';
 const display = document.getElementById('disabled-tools-display');
 
 export function getDisabledTools() {

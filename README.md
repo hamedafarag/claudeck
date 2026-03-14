@@ -1,4 +1,4 @@
-# CodeDeck
+# Claudeck
 
 A browser-based UI for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — chat, run workflows, manage MCP servers, track costs, and orchestrate autonomous agents from a local web interface.
 
@@ -14,7 +14,7 @@ npm start
 
 Requires **Node.js 18+** and Claude Code CLI authentication (`claude auth login`).
 
-On first run, CodeDeck creates `~/.codedeck/` with your config, database, and plugins directory — safe for NPX upgrades.
+On first run, Claudeck creates `~/.claudeck/` with your config, database, and plugins directory — safe for NPX upgrades.
 
 ## Features
 
@@ -62,7 +62,7 @@ On first run, CodeDeck creates `~/.codedeck/` with your config, database, and pl
 ```
 browser ──── WebSocket ──── server.js ──── Claude Code SDK
                                │
-                          server/paths.js ──── ~/.codedeck/
+                          server/paths.js ──── ~/.claudeck/
                                │                  ├── config/     (JSON configs)
                           server/routes/           ├── plugins/    (user plugins)
                           plugins/                 ├── data.db     (SQLite)
@@ -92,10 +92,10 @@ Project commands from `.claude/commands/` and `.claude/skills/` are auto-registe
 
 ## Configuration
 
-All user data lives in `~/.codedeck/` (override with `CODEDECK_HOME`):
+All user data lives in `~/.claudeck/` (override with `CLAUDECK_HOME`):
 
 ```
-~/.codedeck/
+~/.claudeck/
 ├── config/              JSON config files (copied from defaults on first run)
 │   ├── folders.json     Projects
 │   ├── prompts.json     Prompt templates

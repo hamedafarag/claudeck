@@ -242,7 +242,7 @@ export async function runDag({
   });
 
   sendPushNotification(
-    "CodeDeck",
+    "Claudeck",
     `DAG "${dag.title}" completed`,
     `dag-${resolvedSid}`,
   );

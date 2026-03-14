@@ -1,7 +1,7 @@
 // Welcome overlay — shown once on first visit
 import { startTour } from './tour.js';
 
-const STORAGE_KEY = 'codedeck-welcome-seen';
+const STORAGE_KEY = 'claudeck-welcome-seen';
 
 function init() {
   if (localStorage.getItem(STORAGE_KEY)) return;

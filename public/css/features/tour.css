@@ -1,4 +1,4 @@
-/* ── Driver.js CodeDeck Theme ─────────────────────────── */
+/* ── Driver.js Claudeck Theme ─────────────────────────── */
 
 /* Overlay — light dim so the UI stays readable */
 .driver-overlay {
@@ -6,7 +6,7 @@
 }
 
 /* Popover container */
-.codedeck-tour.driver-popover {
+.claudeck-tour.driver-popover {
   background: var(--bg-elevated) !important;
   border: 1px solid var(--accent-mid) !important;
   border-radius: var(--radius-lg) !important;
@@ -18,28 +18,28 @@
 }
 
 /* Arrow */
-.codedeck-tour .driver-popover-arrow {
+.claudeck-tour .driver-popover-arrow {
   border: 5px solid transparent !important;
 }
 
-.codedeck-tour .driver-popover-arrow-side-left {
+.claudeck-tour .driver-popover-arrow-side-left {
   border-left-color: var(--bg-elevated) !important;
 }
 
-.codedeck-tour .driver-popover-arrow-side-right {
+.claudeck-tour .driver-popover-arrow-side-right {
   border-right-color: var(--bg-elevated) !important;
 }
 
-.codedeck-tour .driver-popover-arrow-side-top {
+.claudeck-tour .driver-popover-arrow-side-top {
   border-top-color: var(--bg-elevated) !important;
 }
 
-.codedeck-tour .driver-popover-arrow-side-bottom {
+.claudeck-tour .driver-popover-arrow-side-bottom {
   border-bottom-color: var(--bg-elevated) !important;
 }
 
 /* Title */
-.codedeck-tour .driver-popover-title {
+.claudeck-tour .driver-popover-title {
   font-family: var(--font-display) !important;
   font-size: 15px !important;
   font-weight: 700 !important;
@@ -48,14 +48,14 @@
 }
 
 /* Description */
-.codedeck-tour .driver-popover-description {
+.claudeck-tour .driver-popover-description {
   font-family: var(--font-sans) !important;
   font-size: 13px !important;
   line-height: 1.6 !important;
   color: var(--text-secondary) !important;
 }
 
-.codedeck-tour .driver-popover-description kbd {
+.claudeck-tour .driver-popover-description kbd {
   display: inline-block;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
@@ -68,18 +68,18 @@
 }
 
 /* Progress text */
-.codedeck-tour .driver-popover-progress-text {
+.claudeck-tour .driver-popover-progress-text {
   font-family: var(--font-mono) !important;
   font-size: 10px !important;
   color: var(--text-dim) !important;
 }
 
 /* Navigation buttons */
-.codedeck-tour .driver-popover-navigation-btns {
+.claudeck-tour .driver-popover-navigation-btns {
   gap: 6px !important;
 }
 
-.codedeck-tour .driver-popover-next-btn {
+.claudeck-tour .driver-popover-next-btn {
   background: var(--accent) !important;
   color: var(--bg) !important;
   border: none !important;
@@ -95,11 +95,11 @@
   box-shadow: 0 0 10px var(--accent-glow) !important;
 }
 
-.codedeck-tour .driver-popover-next-btn:hover {
+.claudeck-tour .driver-popover-next-btn:hover {
   box-shadow: 0 0 18px var(--accent-glow) !important;
 }
 
-.codedeck-tour .driver-popover-prev-btn {
+.claudeck-tour .driver-popover-prev-btn {
   background: var(--bg-secondary) !important;
   color: var(--text) !important;
   border: 1px solid var(--border) !important;
@@ -114,18 +114,18 @@
   text-shadow: none !important;
 }
 
-.codedeck-tour .driver-popover-prev-btn:hover {
+.claudeck-tour .driver-popover-prev-btn:hover {
   border-color: var(--text-dim) !important;
 }
 
 /* Close button */
-.codedeck-tour .driver-popover-close-btn {
+.claudeck-tour .driver-popover-close-btn {
   color: var(--text-dim) !important;
   font-size: 18px !important;
   transition: color 0.15s !important;
 }
 
-.codedeck-tour .driver-popover-close-btn:hover {
+.claudeck-tour .driver-popover-close-btn:hover {
   color: var(--text) !important;
 }
 
@@ -138,7 +138,7 @@
 }
 
 /* Light theme overrides */
-html[data-theme="light"] .codedeck-tour.driver-popover {
+html[data-theme="light"] .claudeck-tour.driver-popover {
   border-color: var(--accent) !important;
   box-shadow: var(--shadow-lg), 0 0 20px rgba(26, 138, 74, 0.12) !important;
 }

@@ -1,7 +1,7 @@
 # Competitive Analysis — Claude Code Web UIs
 
 **Date**: March 6, 2026
-**Purpose**: Map the landscape of web-based interfaces for Claude Code and identify feature gaps in CodeDeck.
+**Purpose**: Map the landscape of web-based interfaces for Claude Code and identify feature gaps in Claudeck.
 
 ---
 
@@ -210,7 +210,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 
 ## Feature Comparison Matrix
 
-| Feature | CodeDeck | Opcode | CloudCLI | CodePilot | Pilot Shell | CUI |
+| Feature | Claudeck | Opcode | CloudCLI | CodePilot | Pilot Shell | CUI |
 |---------|:----------:|:------:|:--------:|:---------:|:-----------:|:---:|
 | **Chat & Streaming** |
 | Real-time WebSocket streaming | Yes | Yes | Yes | Yes | -- | Yes |
@@ -232,7 +232,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | Image/vision support | **Yes** | No | No | **Yes** | No | No |
 | Tips feed (curated + RSS) | **Yes** | No | No | No | No | No |
 | Floating assistant bot (linked/free) | **Yes** | No | No | No | No | No |
-| Custom AI agents | No | **Yes** | No | No | No | No |
+| Custom AI agents | **Yes** | **Yes** | No | No | No | No |
 | Voice dictation | **Yes** | No | No | No | No | **Yes** |
 | **Code & Files** |
 | Code diff viewer (LCS-based) | **Yes** | No | No | No | No | No |
@@ -266,15 +266,15 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | **Infrastructure** |
 | MCP server management | **Yes** | **Yes** | **Yes** | **Yes** | No | No |
 | PWA / home screen | **Yes** | N/A | **Yes** | N/A | No | No |
-| NPX one-command launch | No | No | Yes | No | No | No |
+| NPX one-command launch | **Yes** | No | Yes | No | No | No |
 | **Tech** |
 | Framework | Vanilla JS | React+Tauri | TypeScript | Electron+Next | CLI+Web | TypeScript |
-| npm dependencies | 4 | ~50+ | ~40+ | ~50+ | ~20+ | ~30+ |
+| npm dependencies | 6 | ~50+ | ~40+ | ~50+ | ~20+ | ~30+ |
 | Platform | Web | Desktop | Web+Cloud | Desktop | CLI | Web |
 
 ---
 
-## Feature Gap Analysis for CodeDeck
+## Feature Gap Analysis for Claudeck
 
 ### Completed Since Last Analysis
 
@@ -304,8 +304,16 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | 22 | Plugin system + marketplace | Done | Tab SDK, auto-discovery from plugins/, enable/disable/reorder marketplace UI, drag-to-reorder |
 | 23 | Telegram integration (two-way) | Done | Rich notifications with metrics + AFK approve/deny via inline keyboard + per-event preferences + poller |
 | 24 | VS Code-style status bar | Done | Connection, branch, project, model, and cost info |
-| 25 | Whaly mascot + CodeDeck branding | Done | Pixel whale mascot, favicon, distinctive typography, visual depth, animations |
+| 25 | Whaly mascot + Claudeck branding | Done | Pixel whale mascot, favicon, distinctive typography, visual depth, animations |
 | 26 | Easter egg | Done | Click Whaly 5 times for comic-book speech bubble greeting |
+| 27 | Agent chains | Done | Sequential multi-agent pipelines with context passing between steps |
+| 28 | Agent DAGs | Done | Visual dependency graph editor with topological sort, up to 3 concurrent agents |
+| 29 | Meta-orchestrator | Done | Task decomposition and delegation to specialist agents via `server/orchestrator.js` |
+| 30 | Shared agent context | Done | `agent_context` table for inter-agent communication and shared memory |
+| 31 | Agent monitoring dashboard | Done | Real-time metrics, cost aggregation, success rates, comparative leaderboard |
+| 32 | NPX publishing | Done | `npx claudeck` or `npm install -g claudeck`, CLI entry via `cli.js` |
+| 33 | Linear plugin | Done | Full-stack plugin for Linear issue tracking with team management and GraphQL API |
+| 34 | Full-stack plugin system | Done | Plugins can have `server.js` with Express routes, auto-mounted at `/api/plugins/<name>/*` |
 
 ### Tier 1 — High Impact (address next)
 
@@ -338,30 +346,18 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 **Found in**: Agentrooms (multi-agent @mentions), CUI (parallel background agents), Codeman (20 concurrent sessions), CloudCLI (multi-CLI)
 **Context**: Anthropic shipped "Agent Teams" with Opus 4.6 (Feb 2026). Multiple Claude agents collaborating is becoming standard.
 
-**Current state in CodeDeck**: We have a lightweight autonomous agents system — 4 pre-configured agents (PR Reviewer, Bug Hunter, Test Writer, Refactoring Agent) defined in `agents.json`. Each runs as a single high-maxTurns `query()` call via `server/agent-loop.js`, with real-time progress (turn counter, tool activity log) streamed over WebSocket. Agents are triggered via UI panel cards or `/agent-*` slash commands. They reuse the existing permission system and create regular sessions in SQLite.
+**Current state in Claudeck**: We have a lightweight autonomous agents system — 4 pre-configured agents (PR Reviewer, Bug Hunter, Test Writer, Refactoring Agent) defined in `agents.json`. Each runs as a single high-maxTurns `query()` call via `server/agent-loop.js`, with real-time progress (turn counter, tool activity log) streamed over WebSocket. Agents are triggered via UI panel cards or `/agent-*` slash commands. They reuse the existing permission system and create regular sessions in SQLite.
 
-**What's missing for true multi-agent**:
+**All multi-agent gaps have been closed:**
 
-| Gap | Description |
-|-----|-------------|
-| **No agent composition** | Agents are standalone — no chaining (e.g., Bug Hunter → Code Review) |
-| **No custom agents** | 4 hardcoded agents only. No UI to create/edit agent definitions |
-| **No orchestration** | No meta-agent, no task decomposition, no automatic delegation |
-| **No inter-agent communication** | Agents are fully isolated — no shared memory or message passing |
-| **No agent dependencies** | No DAG-based execution (run B after A completes) |
-| **No team concept** | No grouping agents by role/project, no team-level cost tracking |
-| **No agent monitoring dashboard** | Basic turn counter only — no comparative metrics across agents |
-
-**What to build (incremental phases)**:
-1. **Custom agent CRUD** — UI to create/edit/delete agent definitions (Low effort)
-2. **Agent chaining** — Sequential execution with context passing between agents (Medium effort)
-3. **Shared context layer** — Agents can read each other's outputs via shared memory (Medium effort)
-4. **Meta-orchestrator** — An agent that decomposes tasks and delegates to specialist agents (High effort)
-5. **Agent dependency DAG** — Visual editor for defining agent execution order (High effort)
-6. **Multi-agent monitoring dashboard** — Real-time metrics, cost aggregation, comparative analysis (Medium effort)
-
-**Effort**: High overall (~40-60 hours), but Phase 1-2 are achievable incrementally.
-**Priority**: MEDIUM — competitive pressure from Agentrooms and CUI, but CodeDeck's workflow system partially covers this need.
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Agent composition (chaining)** | Done | Sequential execution with context passing between agents via `agent-chains.json` |
+| **Custom agents** | Done | UI to create/edit/delete agent definitions |
+| **Orchestration** | Done | Meta-orchestrator (`server/orchestrator.js`) decomposes tasks and delegates to specialist agents |
+| **Inter-agent communication** | Done | Shared context layer via `agent_context` table — agents read each other's outputs |
+| **Agent dependency DAG** | Done | Visual DAG editor (`server/dag-executor.js`) with topological sort, up to 3 concurrent agents |
+| **Agent monitoring dashboard** | Done | Real-time metrics, cost aggregation, success rates, comparative leaderboard |
 
 #### ~~6. Voice Input / Dictation~~ (DONE)
 **Found in**: CUI (Gemini 2.5 Flash), sunpix (Whisper)
@@ -380,9 +376,8 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 
 ### Tier 3 — Nice to Have
 
-#### 9. NPX One-Command Launch
-**What to build**: Publish to npm, support `npx CodeDeck`.
-**Effort**: Low.
+#### ~~9. NPX One-Command Launch~~ (DONE)
+**Implemented**: Published as `claudeck` on npm. `npx claudeck` or `npm install -g claudeck`. CLI entry via `cli.js` with `bin` field in package.json. `files` field limits published artifacts to essential files only.
 
 #### 10. Auto-Update Notifications
 **Found in**: CodePilot
@@ -405,7 +400,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 
 ---
 
-## Unique Advantages of CodeDeck
+## Unique Advantages of Claudeck
 
 These features are **not found in any competitor** (or found in very few):
 
@@ -427,12 +422,16 @@ These features are **not found in any competitor** (or found in very few):
 | **Custom Arabic-style branding** | Bot logo with Islamic geometric star patterns | No |
 | **Tips feed panel** | Inline AI tips + RSS aggregation (8 feeds) with category tabs, tip-of-the-day, source links | No |
 | **Floating assistant bot** | Independent chat bubble with custom system prompt, linked/free mode toggle | No |
-| **Zero-framework architecture** | Vanilla JS, 4 npm dependencies — lightest footprint | No |
+| **Zero-framework architecture** | Vanilla JS, 6 npm dependencies — lightest footprint | No |
 | **Error pattern analytics** | 9-category error classification, timeline, per-tool breakdown, recent errors | Sniffly has CLI-only analysis |
 | **Cost dashboard with daily chart** | Full analytics dashboard with bar chart + session table | Opcode has basic analytics |
 | **Plugin system with marketplace** | Auto-discovery, enable/disable/reorder, drag-to-reorder, Tab SDK | No |
 | **Home page activity grid** | GitHub-style AI usage heatmap over past year + inline analytics | No |
 | **Autonomous agents** | Pre-defined agent workflows with agent loop | No |
+| **Agent chains** | Sequential multi-agent pipelines with context passing | No |
+| **Agent DAGs** | Visual dependency graph editor with topological sort | No |
+| **Meta-orchestrator** | Task decomposition and delegation to specialist agents | No |
+| **Agent monitoring dashboard** | Real-time metrics, cost aggregation, comparative leaderboard | No |
 | **Telegram two-way integration** | Rich notifications with metrics + AFK tool approval via inline keyboard buttons — developers approve/deny from their phone | No |
 | **VS Code-style status bar** | Connection, branch, project, model, cost in persistent footer | No |
 | **Whaly mascot + easter egg** | Pixel whale mascot with hidden comic-book speech bubble | No |
@@ -443,7 +442,7 @@ These features are **not found in any competitor** (or found in very few):
 ## Implementation Progress
 
 **Last updated**: March 14, 2026
-**Completed**: 14 / 14 (Phase 1-3) + 17 / 17 (Phase 5-6)
+**Completed**: 14 / 14 (Phase 1-3) + 1 / 4 (Phase 4) + 17 / 17 (Phase 5-6)
 
 ### Phase 1 — Quick Wins (Low Effort, High Impact)
 - [x] 1. Model switching (dropdown in header)
@@ -462,7 +461,7 @@ These features are **not found in any competitor** (or found in very few):
 - [x] 10. **MCP server management** — Add/edit/remove MCP servers via UI
 
 ### Phase 4 — Distribution & Polish
-- [ ] 11. NPX publishing
+- [x] 11. **NPX publishing** — `npm install -g claudeck` or `npx claudeck`, CLI entry via `cli.js`, `bin` + `files` fields in package.json
 - [ ] 12. Auto-update notifications
 - [ ] 13. Rate limiting
 - [ ] 14. HTTPS support
@@ -484,7 +483,7 @@ These features are **not found in any competitor** (or found in very few):
 - [x] 24. **Plugin system + marketplace** — Tab SDK, auto-discovery, enable/disable/reorder, drag-to-reorder
 - [x] 25. **Telegram integration (two-way)** — Rich notifications with metrics, AFK approve/deny via inline keyboard, per-event preferences, long-poll callback listener
 - [x] 26. **VS Code-style status bar** — Connection, branch, project, model, cost
-- [x] 27. **Whaly mascot + CodeDeck branding** — Pixel whale, favicon, typography, animations
+- [x] 27. **Whaly mascot + Claudeck branding** — Pixel whale, favicon, typography, animations
 - [x] 28. **Easter egg** — Click Whaly 5 times for comic-book speech bubble
 
 ---
@@ -501,25 +500,25 @@ Based on competitive gaps and market trends:
 
 4. ~~**Push notifications** (#17)~~ — **DONE.** Browser Notification API for bg sessions + permission requests. Enhanced with audio chime and offline fallback page.
 
-5. **NPX publishing** (#11) — CloudCLI, sugyan, and vultuk all offer `npx` launch. Low effort, big distribution win. Cross-platform audit completed (see `docs/CROSS-PLATFORM-AUDIT.md`).
+5. ~~**NPX publishing** (#11)~~ — **DONE.** Published as `claudeck` on npm. `npx claudeck` or `npm install -g claudeck`.
 
 ---
 
 ## Competitive Positioning
 
-### Where CodeDeck leads:
+### Where Claudeck leads:
 - **Deepest AI features**: Workflows, prompt templates, project commands/skills, parallel mode — no competitor matches this depth
-- **Best cost analytics**: Only Opcode comes close, but CodeDeck has daily charts + session-level tracking + streaming counter
+- **Best cost analytics**: Only Opcode comes close, but Claudeck has daily charts + session-level tracking + streaming counter
 - **Most unique features**: 22+ features not found in any competitor (see table above)
-- **Lightest footprint**: 4 npm deps vs 20-50+ for competitors
+- **Lightest footprint**: 6 npm deps vs 20-50+ for competitors
 
-### Where CodeDeck trails:
+### Where Claudeck trails:
 - **No auth/security**: Blocks remote and team usage
 - ~~No mobile support~~: Now has responsive layout with sidebar toggle and touch targets
 - ~~No image support~~: Now supports multimodal (PNG/JPEG/GIF/WebP via paste, drop, or picker)
 - **No multi-CLI**: CloudCLI supports 4 CLIs (Claude, Cursor, Codex, Gemini)
 - **No desktop app**: Opcode (20K stars) and CodePilot (3.1K) show demand for native desktop
-- **No NPX publishing**: CloudCLI offers `npx` launch — CodeDeck still requires manual clone
+- ~~No NPX publishing~~: Now published as `claudeck` on npm with `npx claudeck` support
 
 ### Strategic threats:
 - **Anthropic Remote Control**: Official mobile/web access. Currently limited (Max-only, no IDE features) but will expand.
@@ -536,10 +535,10 @@ Based on competitive gaps and market trends:
 
 ## Summary
 
-CodeDeck is the most feature-rich Claude Code web UI, with 22+ unique features not found in any competitor. All core feature gaps have been closed: mobile responsive layout, voice input, CLAUDE.md editor, plugin system with marketplace, autonomous agents, home page with AI activity grid, two-way Telegram integration (rich notifications + AFK tool approval), and a VS Code-style status bar. The platform now has a distinctive identity with the Whaly pixel whale mascot, CodeDeck branding, and even an easter egg.
+Claudeck is the most feature-rich Claude Code web UI, with 22+ unique features not found in any competitor. All core feature gaps have been closed: mobile responsive layout, voice input, CLAUDE.md editor, plugin system with marketplace, autonomous agents, home page with AI activity grid, two-way Telegram integration (rich notifications + AFK tool approval), and a VS Code-style status bar. The platform now has a distinctive identity with the Whaly pixel whale mascot, Claudeck branding, and even an easter egg.
 
-**Remaining gaps**: Authentication (#4) for remote/team usage, and NPX publishing (#11) for frictionless installation. A cross-platform compatibility audit has been completed (`docs/CROSS-PLATFORM-AUDIT.md`) identifying 7 fixes needed for Windows/Linux before NPX publishing.
+**Remaining gaps**: Authentication (#4) for remote/team usage, auto-update notifications (#12), rate limiting (#13), and HTTPS support (#14).
 
-**Immediate priority**: NPX publishing — cross-platform fixes + npm package. This is the last major distribution blocker.
+The multi-agent system is now fully built out with agent chains, DAGs, orchestrator, shared context, and monitoring dashboard — closing all gaps identified in the previous analysis. NPX publishing is also complete.
 
-The biggest strategic question is whether to go deeper on unique AI features (workflows, analytics, agents) or broader on platform coverage (multi-CLI, desktop app). Given CodeDeck's strong moat in AI features and zero-framework architecture, **NPX publishing + authentication** will unlock the widest adoption with the least effort.
+The biggest strategic question is whether to go deeper on unique AI features (workflows, analytics, agents) or broader on platform coverage (multi-CLI, desktop app). Given Claudeck's strong moat in AI features and zero-framework architecture, **authentication** is the last major blocker for remote/team adoption.
