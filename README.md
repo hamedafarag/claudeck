@@ -41,6 +41,7 @@ On first run, CodeDeck creates `~/.codedeck/` with your config, database, and pl
 | **Telegram Alerts** | Notifications via Telegram Bot API on session/workflow/agent completion |
 | **Todo & Brags** | Local task list with priority, archive, and brag tracking |
 | **Repos Manager** | Organize repositories in nested groups with GitHub URL linking |
+| **Welcome & Guided Tour** | First-visit welcome screen with Whaly mascot, 18-step interactive tour powered by Driver.js |
 | **Dark/Light Theme** | Terminal aesthetic with CRT scanlines (dark) or warm off-white (light) |
 | **Mobile Responsive** | Full tablet/mobile layout with sidebar overlay, bottom-sheet modals, 44px touch targets |
 
@@ -54,6 +55,7 @@ On first run, CodeDeck creates `~/.codedeck/` with your config, database, and pl
 | Database | SQLite via better-sqlite3, WAL mode |
 | Frontend | Vanilla JS ES modules, CSS custom properties |
 | Rendering | highlight.js (syntax), Mermaid (diagrams) — CDN |
+| Onboarding | Driver.js 1.3.6 (guided tour) — CDN |
 
 ## Architecture
 
