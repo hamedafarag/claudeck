@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { readdir, readFile } from "fs/promises";
-import { join } from "path";
+import { join, posix, resolve, sep } from "path";
 
 const router = Router();
 
@@ -46,8 +46,8 @@ router.get("/content", async (req, res) => {
   const filePath = req.query.path;
   if (!base || !filePath) return res.status(400).json({ error: "base and path required" });
 
-  const resolved = join(base, filePath);
-  if (!resolved.startsWith(base)) return res.status(403).json({ error: "path traversal detected" });
+  const resolved = resolve(base, filePath);
+  if (!resolved.startsWith(resolve(base) + sep) && resolved !== resolve(base)) return res.status(403).json({ error: "path traversal detected" });
 
   try {
     const { stat } = await import("fs/promises");
@@ -70,10 +70,11 @@ router.get("/tree", async (req, res) => {
 
   const SKIP = new Set([".git", "node_modules", ".next", "dist", "build", ".cache", ".turbo", "__pycache__", ".venv", "venv", "coverage", ".nyc_output"]);
 
-  const target = dir ? join(base, dir) : base;
+  const target = dir ? resolve(base, dir) : resolve(base);
+  const resolvedBase = resolve(base);
 
   // Path traversal protection
-  if (!target.startsWith(base)) {
+  if (!target.startsWith(resolvedBase + sep) && target !== resolvedBase) {
     return res.status(403).json({ error: "path traversal detected" });
   }
 
@@ -83,7 +84,7 @@ router.get("/tree", async (req, res) => {
 
     for (const entry of entries) {
       if (SKIP.has(entry.name)) continue;
-      const relPath = dir ? `${dir}/${entry.name}` : entry.name;
+      const relPath = dir ? posix.join(dir, entry.name) : entry.name;
       results.push({
         name: entry.name,
         path: relPath,
@@ -121,8 +122,8 @@ router.get("/raw", async (req, res) => {
   const filePath = req.query.path;
   if (!base || !filePath) return res.status(400).json({ error: "base and path required" });
 
-  const resolved = join(base, filePath);
-  if (!resolved.startsWith(base)) return res.status(403).json({ error: "path traversal detected" });
+  const resolved = resolve(base, filePath);
+  if (!resolved.startsWith(resolve(base) + sep) && resolved !== resolve(base)) return res.status(403).json({ error: "path traversal detected" });
 
   const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
   const mime = IMAGE_MIME[ext];
@@ -160,7 +161,7 @@ router.get("/search", async (req, res) => {
         if (results.length >= MAX_RESULTS) break;
         if (SKIP.has(entry.name)) continue;
 
-        const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
+        const relPath = relDir ? posix.join(relDir, entry.name) : entry.name;
         const isDir = entry.isDirectory();
 
         // Match name (case-insensitive, like SQL LIKE %q%)
@@ -194,8 +195,8 @@ router.put("/content", async (req, res) => {
   if (!base || !filePath) return res.status(400).json({ error: "base and path required" });
   if (typeof content !== "string") return res.status(400).json({ error: "content must be a string" });
 
-  const resolved = join(base, filePath);
-  if (!resolved.startsWith(base)) return res.status(403).json({ error: "path traversal detected" });
+  const resolved = resolve(base, filePath);
+  if (!resolved.startsWith(resolve(base) + sep) && resolved !== resolve(base)) return res.status(403).json({ error: "path traversal detected" });
 
   // Only allow writing specific config files for safety
   const ALLOWED_FILES = new Set(["CLAUDE.md", ".claude/settings.json"]);

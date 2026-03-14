@@ -153,7 +153,7 @@ async function navigateToDir(dir) {
     renderBreadcrumb(data.current);
     renderFolderList(data);
     // Auto-fill name from last segment
-    const base = data.current.split("/").filter(Boolean).pop() || "";
+    const base = data.current.split(/[/\\]/).filter(Boolean).pop() || "";
     $.addProjectName.value = base;
   } catch (err) {
     $.folderList.innerHTML = `<div class="folder-list-empty">Error: ${err.message}</div>`;
@@ -162,7 +162,7 @@ async function navigateToDir(dir) {
 
 function renderBreadcrumb(pathStr) {
   $.folderBreadcrumb.innerHTML = "";
-  const parts = pathStr.split("/").filter(Boolean);
+  const parts = pathStr.split(/[/\\]/).filter(Boolean);
   // Root
   const rootSeg = document.createElement("span");
   rootSeg.className = "folder-breadcrumb-seg";

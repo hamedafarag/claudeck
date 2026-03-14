@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { userDir, builtinPluginsDir, userPluginsDir } from "./server/paths.js";
+import dotenv from "dotenv";
+dotenv.config({ path: join(userDir, ".env") });
 import express from "express";
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
@@ -50,8 +52,8 @@ app.use(express.json());
     vapidPublic = generated.publicKey;
     vapidPrivate = generated.privateKey;
     // Persist to .env so keys survive restarts
-    appendFileSync(join(__dirname, ".env"), `\nVAPID_PUBLIC_KEY="${vapidPublic}"\nVAPID_PRIVATE_KEY="${vapidPrivate}"\n`);
-    console.log("Generated and saved VAPID keys to .env");
+    appendFileSync(join(userDir, ".env"), `\nVAPID_PUBLIC_KEY="${vapidPublic}"\nVAPID_PRIVATE_KEY="${vapidPrivate}"\n`);
+    console.log("Generated and saved VAPID keys to ~/.codedeck/.env");
   }
 
   webpush.setVapidDetails("mailto:push@codedeck.local", vapidPublic, vapidPrivate);
@@ -107,18 +109,34 @@ app.use("/api/bot", botRouter);
 app.use("/api/todos", todosRouter);
 app.use("/api/telegram", telegramRouter);
 
-// Plugin discovery — auto-detect tab-sdk plugins in public/js/plugins/
+// Serve user plugins from ~/.codedeck/plugins/
+app.use("/user-plugins", express.static(userPluginsDir));
+
+// Plugin discovery — merge built-in + user plugins
 app.get("/api/plugins", (req, res) => {
-  const pluginsDir = join(__dirname, "public/js/plugins");
-  if (!existsSync(pluginsDir)) return res.json([]);
-  const files = readdirSync(pluginsDir);
-  const plugins = files
-    .filter(f => f.endsWith(".js"))
-    .map(f => {
+  const plugins = [];
+
+  // Built-in plugins from package
+  if (existsSync(builtinPluginsDir)) {
+    const files = readdirSync(builtinPluginsDir);
+    for (const f of files.filter(f => f.endsWith(".js"))) {
       const name = f.replace(/\.js$/, "");
       const hasCss = files.includes(name + ".css");
-      return { name, js: `js/plugins/${f}`, css: hasCss ? `js/plugins/${name}.css` : null };
-    });
+      plugins.push({ name, js: `js/plugins/${f}`, css: hasCss ? `js/plugins/${name}.css` : null, source: "builtin" });
+    }
+  }
+
+  // User plugins from ~/.codedeck/plugins/
+  if (existsSync(userPluginsDir)) {
+    const files = readdirSync(userPluginsDir);
+    for (const f of files.filter(f => f.endsWith(".js"))) {
+      const name = f.replace(/\.js$/, "");
+      if (plugins.some(p => p.name === name)) continue; // builtin wins on conflict
+      const hasCss = files.includes(name + ".css");
+      plugins.push({ name, js: `user-plugins/${f}`, css: hasCss ? `user-plugins/${name}.css` : null, source: "user" });
+    }
+  }
+
   res.json(plugins);
 });
 

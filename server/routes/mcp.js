@@ -1,15 +1,25 @@
 import { Router } from "express";
-import { readFile, writeFile } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir } from "fs/promises";
+import { join, dirname, isAbsolute } from "path";
 import { homedir } from "os";
 
 const router = Router();
 
-const SETTINGS_PATH = join(homedir(), ".claude", "settings.json");
+const GLOBAL_SETTINGS = join(homedir(), ".claude", "settings.json");
 
-async function readSettings() {
+function getSettingsPath(projectPath) {
+  if (projectPath) {
+    if (!isAbsolute(projectPath) || projectPath.includes("..")) {
+      throw new Error("Invalid project path");
+    }
+    return join(projectPath, ".claude", "settings.json");
+  }
+  return GLOBAL_SETTINGS;
+}
+
+async function readSettings(settingsPath) {
   try {
-    const content = await readFile(SETTINGS_PATH, "utf-8");
+    const content = await readFile(settingsPath, "utf-8");
     return JSON.parse(content);
   } catch (err) {
     if (err.code === "ENOENT") return {};
@@ -17,14 +27,16 @@ async function readSettings() {
   }
 }
 
-async function writeSettings(settings) {
-  await writeFile(SETTINGS_PATH, JSON.stringify(settings, null, 2), "utf-8");
+async function writeSettings(settingsPath, settings) {
+  await mkdir(dirname(settingsPath), { recursive: true });
+  await writeFile(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
 }
 
-// List all MCP servers
+// List MCP servers (optional ?project=<path> for project-scoped)
 router.get("/servers", async (req, res) => {
   try {
-    const settings = await readSettings();
+    const settingsPath = getSettingsPath(req.query.project);
+    const settings = await readSettings(settingsPath);
     res.json({ servers: settings.mcpServers || {} });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -40,10 +52,11 @@ router.put("/servers/:name", async (req, res) => {
       return res.status(400).json({ error: "Invalid config" });
     }
 
-    const settings = await readSettings();
+    const settingsPath = getSettingsPath(req.query.project);
+    const settings = await readSettings(settingsPath);
     if (!settings.mcpServers) settings.mcpServers = {};
     settings.mcpServers[name] = config;
-    await writeSettings(settings);
+    await writeSettings(settingsPath, settings);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -54,10 +67,11 @@ router.put("/servers/:name", async (req, res) => {
 router.delete("/servers/:name", async (req, res) => {
   try {
     const { name } = req.params;
-    const settings = await readSettings();
+    const settingsPath = getSettingsPath(req.query.project);
+    const settings = await readSettings(settingsPath);
     if (settings.mcpServers) {
       delete settings.mcpServers[name];
-      await writeSettings(settings);
+      await writeSettings(settingsPath, settings);
     }
     res.json({ success: true });
   } catch (err) {

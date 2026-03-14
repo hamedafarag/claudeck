@@ -2,8 +2,27 @@
   "name": "codedeck",
   "version": "1.0.0",
   "type": "module",
-  "description": "Local Web UI for Claude Code",
+  "description": "A browser-based UI for Claude Code — chat, run workflows, manage MCP servers, track costs, and orchestrate autonomous agents from a local web interface. Installable as a PWA.",
   "main": "server.js",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "ai",
+    "llm",
+    "web-ui",
+    "chat",
+    "mcp",
+    "agents",
+    "workflows",
+    "pwa",
+    "developer-tools"
+  ],
+  "homepage": "https://github.com/anthropics/codedeck",
+  "license": "MIT",
+  "author": "Hamed Farag",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node server.js"
   },

@@ -1,12 +1,9 @@
 import { Router } from "express";
 import { readFile, writeFile, stat, access } from "fs/promises";
-import { join, dirname, resolve } from "path";
-import { fileURLToPath } from "url";
+import { join, resolve } from "path";
+import { configPath } from "../paths.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const rootDir = join(__dirname, "../..");
-const dataFile = join(rootDir, "repos.json");
+const dataFile = configPath("repos.json");
 
 const router = Router();
 

@@ -163,13 +163,17 @@ export async function searchFiles(base, query) {
   return res.json();
 }
 
-export async function fetchMcpServers() {
-  const res = await fetch("/api/mcp/servers");
+export async function fetchMcpServers(projectPath) {
+  let url = "/api/mcp/servers";
+  if (projectPath) url += `?project=${encodeURIComponent(projectPath)}`;
+  const res = await fetch(url);
   return res.json();
 }
 
-export async function saveMcpServer(name, config) {
-  const res = await fetch(`/api/mcp/servers/${encodeURIComponent(name)}`, {
+export async function saveMcpServer(name, config, projectPath) {
+  let url = `/api/mcp/servers/${encodeURIComponent(name)}`;
+  if (projectPath) url += `?project=${encodeURIComponent(projectPath)}`;
+  const res = await fetch(url, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),
@@ -178,10 +182,10 @@ export async function saveMcpServer(name, config) {
   return res.json();
 }
 
-export async function deleteMcpServer(name) {
-  const res = await fetch(`/api/mcp/servers/${encodeURIComponent(name)}`, {
-    method: "DELETE",
-  });
+export async function deleteMcpServer(name, projectPath) {
+  let url = `/api/mcp/servers/${encodeURIComponent(name)}`;
+  if (projectPath) url += `?project=${encodeURIComponent(projectPath)}`;
+  const res = await fetch(url, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete MCP server");
   return res.json();
 }

@@ -1,9 +1,11 @@
 import { Router } from "express";
+import { readFile } from "fs/promises";
 import {
   getTelegramConfig,
   saveTelegramConfig,
   sendTelegramNotification,
 } from "../telegram-sender.js";
+import { configPath } from "../paths.js";
 
 const router = Router();
 
@@ -27,11 +29,7 @@ router.put("/config", async (req, res) => {
       botToken && !botToken.startsWith("****") ? botToken : req.body._keepToken ? "" : botToken;
 
     // Read the raw config to preserve the real token if masked
-    const { readFile } = await import("fs/promises");
-    const { join, dirname } = await import("path");
-    const { fileURLToPath } = await import("url");
-    const __filename = fileURLToPath(import.meta.url);
-    const configFile = join(dirname(__filename), "../../telegram-config.json");
+    const configFile = configPath("telegram-config.json");
 
     let existingToken = "";
     try {

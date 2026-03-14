@@ -1,11 +1,8 @@
 // Telegram notification sender — fire-and-forget, mirrors push-sender.js
 import { readFile, writeFile } from "fs/promises";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { configPath } from "./paths.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const configFile = join(__dirname, "..", "telegram-config.json");
+const configFile = configPath("telegram-config.json");
 
 let config = { enabled: false, botToken: "", chatId: "" };
 

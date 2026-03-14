@@ -1,12 +1,8 @@
 import { Router } from "express";
 import { readFile, readdir, stat, writeFile } from "fs/promises";
-import { join, dirname, resolve } from "path";
-import { fileURLToPath } from "url";
+import { join, resolve, isAbsolute, dirname } from "path";
 import { homedir } from "os";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const rootDir = join(__dirname, "../..");
+import { configPath } from "../paths.js";
 
 const router = Router();
 
@@ -14,7 +10,7 @@ const router = Router();
 let projectConfigs = [];
 export async function loadProjectConfigs() {
   try {
-    const data = await readFile(join(rootDir, "folders.json"), "utf-8");
+    const data = await readFile(configPath("folders.json"), "utf-8");
     projectConfigs = JSON.parse(data);
   } catch (err) {
     console.error("Failed to load project configs:", err.message);
@@ -31,7 +27,7 @@ export function getProjectSystemPrompt(cwd) {
 // Serve configured project folders
 router.get("/", async (req, res) => {
   try {
-    const data = await readFile(join(rootDir, "folders.json"), "utf-8");
+    const data = await readFile(configPath("folders.json"), "utf-8");
     res.json(JSON.parse(data));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,7 +39,7 @@ router.put("/system-prompt", async (req, res) => {
   try {
     const { path: projectPath, systemPrompt } = req.body;
     if (!projectPath) return res.status(400).json({ error: "path is required" });
-    const filePath = join(rootDir, "folders.json");
+    const filePath = configPath("folders.json");
     const data = JSON.parse(await readFile(filePath, "utf-8"));
     const project = data.find((p) => p.path === projectPath);
     if (!project) return res.status(404).json({ error: "Project not found" });
@@ -64,7 +60,7 @@ router.get("/browse", async (req, res) => {
     const current = resolve(requestedDir);
 
     // Security: ensure resolved path is valid
-    if (!current.startsWith("/")) {
+    if (!isAbsolute(current)) {
       return res.status(400).json({ error: "Invalid path" });
     }
 
@@ -102,7 +98,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Path is not a directory" });
     }
 
-    const filePath = join(rootDir, "folders.json");
+    const filePath = configPath("folders.json");
     const data = JSON.parse(await readFile(filePath, "utf-8"));
 
     // Check for duplicate path
@@ -127,7 +123,7 @@ router.delete("/", async (req, res) => {
       return res.status(400).json({ error: "path is required" });
     }
 
-    const filePath = join(rootDir, "folders.json");
+    const filePath = configPath("folders.json");
     const data = JSON.parse(await readFile(filePath, "utf-8"));
     const filtered = data.filter((p) => p.path !== projectPath);
 

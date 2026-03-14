@@ -179,6 +179,36 @@
   border-top: 1px solid var(--border);
 }
 
+/* ── Scope Headers ───────────────────────────────────── */
+.mcp-scope-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.mcp-scope-count {
+  font-size: 9px;
+  background: var(--border);
+  color: var(--text-dim);
+  padding: 0 6px;
+  border-radius: 8px;
+  font-weight: 600;
+  min-width: 14px;
+  text-align: center;
+}
+
+.mcp-empty-compact {
+  padding: 12px 16px;
+}
+
 /* ── Footer ───────────────────────────────────────────── */
 .mcp-modal-footer {
   padding: 12px 16px;

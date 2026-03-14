@@ -1,12 +1,8 @@
 import { Router } from "express";
 import { readFile, writeFile } from "fs/promises";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { configPath } from "../paths.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const rootDir = join(__dirname, "../..");
-const dataFile = join(rootDir, "bot-prompt.json");
+const dataFile = configPath("bot-prompt.json");
 
 const DEFAULT_PROMPT = "You are an expert prompt engineer and AI assistant. Help users craft effective prompts, improve existing ones, and explain prompt engineering techniques. Be concise and actionable.";
 

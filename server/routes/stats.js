@@ -2,6 +2,7 @@ import { Router } from "express";
 import { execFile } from "child_process";
 import { join } from "path";
 import { existsSync } from "fs";
+import { homedir } from "os";
 import {
   getTotalCost, getProjectCost, getSessionCosts, getCostTimeline, getTotalTokens, getProjectTokens,
   getAnalyticsOverview, getDailyBreakdown, getHourlyActivity, getProjectBreakdown,
@@ -18,8 +19,18 @@ let cachedAccountInfo = null;
 
 // Resolve claude binary — check common locations if not on PATH
 function findClaudeBinary() {
-  const localBin = join(process.env.HOME || "", ".local", "bin", "claude");
-  if (existsSync(localBin)) return localBin;
+  const home = homedir();
+  const candidates = [
+    join(home, ".local", "bin", "claude"),           // Linux
+    "/usr/local/bin/claude",                          // macOS Homebrew
+  ];
+  if (process.platform === "win32") {
+    candidates.push(join(home, "AppData", "Local", "Programs", "claude", "claude.exe"));
+    candidates.push(join(home, ".claude", "local", "claude.exe"));
+  }
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
   return "claude"; // fallback to PATH
 }
 const claudeBin = findClaudeBinary();

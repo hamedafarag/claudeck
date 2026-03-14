@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
+import { homedir } from "os";
 
 const router = Router();
 
@@ -7,18 +8,28 @@ router.post("/", (req, res) => {
   const { command, cwd } = req.body;
   if (!command) return res.status(400).json({ error: "command is required" });
 
-  exec(command, {
-    cwd: cwd || process.env.HOME,
+  const execOpts = {
+    cwd: cwd || homedir(),
     timeout: 30000,
     maxBuffer: 512 * 1024,
-  }, (err, stdout, stderr) => {
+  };
+
+  const callback = (err, stdout, stderr) => {
     res.json({
       command,
       stdout: stdout || "",
       stderr: stderr || "",
       exitCode: err ? (err.code ?? 1) : 0,
     });
-  });
+  };
+
+  // Use execFile for simple "binary ." commands to avoid shell escaping issues
+  const parts = command.split(/\s+/);
+  if (parts.length <= 2 && !command.includes("|") && !command.includes(">") && !command.includes("&")) {
+    execFile(parts[0], parts.slice(1), execOpts, callback);
+  } else {
+    exec(command, execOpts, callback);
+  }
 });
 
 export default router;

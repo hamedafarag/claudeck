@@ -1,11 +1,7 @@
 import Database from "better-sqlite3";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { dbPath } from "./server/paths.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const db = new Database(join(__dirname, "data.db"));
+const db = new Database(dbPath);
 
 // Enable WAL mode for better concurrent performance
 db.pragma("journal_mode = WAL");

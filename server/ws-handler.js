@@ -1,6 +1,7 @@
 import { query } from "@anthropic-ai/claude-code";
 import { execPath } from "process";
 import { existsSync } from "fs";
+import { homedir } from "os";
 import {
   createSession,
   updateClaudeSessionId,
@@ -361,7 +362,7 @@ export function setupWebSocket(wss, sessionIds) {
           const effectivePermMode = wfPermMode || "bypass";
           const useBypass = effectivePermMode === "bypass";
           const usePlan = effectivePermMode === "plan";
-          const wfCwd = (cwd && existsSync(cwd)) ? cwd : process.env.HOME;
+          const wfCwd = (cwd && existsSync(cwd)) ? cwd : homedir();
           const stepOpts = {
             cwd: wfCwd,
             permissionMode: usePlan ? "plan" : (useBypass ? "bypassPermissions" : "default"),
@@ -449,7 +450,7 @@ export function setupWebSocket(wss, sessionIds) {
       const effectivePermMode = clientPermMode || "bypass";
       const useBypass = effectivePermMode === "bypass";
       const usePlan = effectivePermMode === "plan";
-      const resolvedCwd = (cwd && existsSync(cwd)) ? cwd : process.env.HOME;
+      const resolvedCwd = (cwd && existsSync(cwd)) ? cwd : homedir();
       const stderrChunks = [];
       const effectiveMaxTurns = clientMaxTurns > 0 ? clientMaxTurns : undefined;
       const opts = {

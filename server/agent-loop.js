@@ -1,6 +1,7 @@
 import { query } from "@anthropic-ai/claude-code";
 import { execPath } from "process";
 import { existsSync } from "fs";
+import { homedir } from "os";
 
 // Map short model names to current model IDs
 const MODEL_MAP = {
@@ -97,7 +98,7 @@ export async function runAgent({
   const effectivePermMode = permissionMode || "bypass";
   const useBypass = effectivePermMode === "bypass";
   const usePlan = effectivePermMode === "plan";
-  const resolvedCwd = (cwd && existsSync(cwd)) ? cwd : process.env.HOME;
+  const resolvedCwd = (cwd && existsSync(cwd)) ? cwd : homedir();
 
   const opts = {
     cwd: resolvedCwd,
