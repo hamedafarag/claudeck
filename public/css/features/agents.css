@@ -92,41 +92,13 @@
 
 .agent-form-field input {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  color: var(--text);
-  font-size: 13px;
-  font-family: var(--font-sans);
-  outline: none;
   margin-bottom: 14px;
-  transition: all 0.2s var(--ease-smooth);
-  caret-color: var(--accent);
-}
-
-.agent-form-field input:focus {
-  border-color: var(--accent);
-  box-shadow: var(--glow), 0 0 0 1px var(--accent-dim);
 }
 
 /* Agent modal icon select */
 #agent-form-icon {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  color: var(--text);
-  font-size: 13px;
-  font-family: var(--font-sans);
-  outline: none;
   margin-bottom: 14px;
-  cursor: pointer;
-}
-
-#agent-form-icon:focus {
-  border-color: var(--accent);
 }
 
 /* Agent header card in chat */
@@ -322,18 +294,8 @@
 
 .chain-agent-select {
   flex: 1;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
   padding: 6px 10px;
-  color: var(--text);
   font-size: 12px;
-  font-family: var(--font-sans);
-  outline: none;
-}
-
-.chain-agent-select:focus {
-  border-color: var(--accent);
 }
 
 .chain-agent-up,

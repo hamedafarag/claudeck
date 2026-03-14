@@ -37,19 +37,9 @@
 }
 
 .telegram-field input {
-  background: var(--bg-deep);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
   font-family: var(--font-mono);
   font-size: 12px;
   padding: 8px 10px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.telegram-field input:focus {
-  border-color: var(--accent);
 }
 
 .telegram-actions {

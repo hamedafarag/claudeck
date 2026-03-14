@@ -8,26 +8,15 @@
 
 .file-picker-search {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 9px 12px;
-  color: var(--text);
-  font-size: 13px;
-  font-family: var(--font-sans);
-  outline: none;
   margin-bottom: 10px;
-  transition: border-color 0.15s;
 }
-
-.file-picker-search:focus { border-color: var(--accent); }
 
 .file-picker-list {
   flex: 1;
   overflow-y: auto;
   max-height: 350px;
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg);
 }
 

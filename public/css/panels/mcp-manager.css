@@ -130,32 +130,13 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Select gets same styling as inputs from modals.css */
 .mcp-form-container select {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 8px 12px;
-  color: var(--text);
   font-size: 12px;
   font-family: var(--font-mono);
-  outline: none;
   margin-bottom: 12px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  cursor: pointer;
-}
-
-.mcp-form-container select:focus {
-  border-color: var(--accent);
-  box-shadow: var(--glow);
-}
-
-/* Override bg on inputs inside form-container so they match selects */
-.mcp-form-container input,
-.mcp-form-container textarea {
-  background: var(--bg-secondary);
 }
 
 /* Nested field groups — left accent border, no padding that eats width */

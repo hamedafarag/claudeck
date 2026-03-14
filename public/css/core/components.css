@@ -1,0 +1,232 @@
+/* ── Unified Component Foundation ─────────────────────── */
+/* Base styles for inputs, buttons, selects, and toggles  */
+/* to ensure consistent look and feel across the UI.      */
+
+/* ── Text Inputs & Textareas ─────────────────────────── */
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: all 0.2s var(--ease-smooth);
+  caret-color: var(--accent);
+}
+
+input[type="text"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-dim);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+  font-family: var(--font-mono);
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233a4250' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+select option {
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+/* ── Checkboxes ──────────────────────────────────────── */
+input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ── Labels (form context) ───────────────────────────── */
+.form-label,
+.modal form label,
+.prompt-var-group label,
+.agent-form-field label,
+.folder-picker label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  font-family: var(--font-display);
+}
+
+/* ── Primary Button ──────────────────────────────────── */
+.btn-primary,
+.modal-btn-save,
+.perm-allow-btn,
+.prompt-var-send,
+.git-commit-btn,
+.welcome-btn-primary {
+  background: var(--accent-solid);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  color: #000;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-smooth);
+}
+
+.btn-primary:hover,
+.modal-btn-save:hover,
+.perm-allow-btn:hover,
+.prompt-var-send:hover,
+.git-commit-btn:hover,
+.welcome-btn-primary:hover {
+  background: var(--accent);
+  box-shadow: var(--glow-strong);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active,
+.modal-btn-save:active,
+.perm-allow-btn:active,
+.prompt-var-send:active,
+.git-commit-btn:active,
+.welcome-btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled,
+.modal-btn-save:disabled,
+.perm-allow-btn:disabled,
+.prompt-var-send:disabled,
+.git-commit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ── Cancel / Secondary Button ───────────────────────── */
+.btn-cancel,
+.modal-btn-cancel,
+.welcome-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-smooth);
+}
+
+.btn-cancel:hover,
+.modal-btn-cancel:hover,
+.welcome-btn-secondary:hover {
+  border-color: var(--text-secondary);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Danger Button ───────────────────────────────────── */
+.btn-danger,
+.perm-deny-btn {
+  background: transparent;
+  border: 1px solid var(--error);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  color: var(--error);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-smooth);
+}
+
+.btn-danger:hover,
+.perm-deny-btn:hover {
+  background: rgba(237, 51, 59, 0.1);
+  color: #ff6b6f;
+}
+
+/* ── Icon Button (small action buttons) ──────────────── */
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  font-size: 14px;
+  line-height: 1;
+  transition: all 0.15s var(--ease-smooth);
+}
+
+.btn-icon:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ── Dashed "Add" Button ─────────────────────────────── */
+.btn-dashed {
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-smooth);
+}
+
+.btn-dashed:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-style: solid;
+}
+
+/* ── Compact Inputs (sidebars, toolbars, search) ─────── */
+.input-compact {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+/* ── Mono Inputs (code, paths, git) ──────────────────── */
+.input-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

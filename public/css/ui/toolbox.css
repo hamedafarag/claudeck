@@ -197,37 +197,10 @@
 
 .prompt-var-group input {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 9px 12px;
-  color: var(--text);
-  font-size: 13px;
-  font-family: var(--font-sans);
-  outline: none;
-  transition: all 0.2s var(--ease-smooth);
-}
-
-.prompt-var-group input:focus {
-  border-color: var(--accent);
-  box-shadow: var(--glow);
 }
 
 .prompt-var-send {
-  background: var(--accent-solid);
-  border: none;
-  border-radius: var(--radius-md);
   padding: 9px 20px;
-  color: #fff;
   font-size: 13px;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: all 0.2s var(--ease-smooth);
   margin-top: 4px;
-}
-
-.prompt-var-send:hover {
-  background: var(--accent);
-  box-shadow: var(--glow-strong);
 }

@@ -3,6 +3,7 @@
 
 @import url("css/core/variables.css");
 @import url("css/core/reset.css");
+@import url("css/core/components.css");
 @import url("css/core/layout.css");
 @import url("css/ui/sessions.css");
 @import url("css/ui/messages.css");

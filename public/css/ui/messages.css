@@ -701,7 +701,7 @@ html[data-theme="light"] .msg-user {
   border-top: 1px solid var(--border);
   display: flex;
   gap: 8px;
-  align-items: flex-end;
+  align-items: flex-start;
   max-width: calc(var(--chat-max-w) + 48px);
   width: 100%;
   margin: 0 auto;
@@ -766,11 +766,6 @@ html[data-theme="light"] .msg-user {
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.2s var(--ease-smooth);
-  margin-bottom: 28px;
-}
-
-.input-bar .toolbox-toggle {
-  margin-bottom: 28px;
 }
 
 #send-btn             { background: var(--accent-solid); color: #000; }

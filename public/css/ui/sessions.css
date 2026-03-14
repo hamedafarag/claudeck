@@ -140,6 +140,38 @@
   background: var(--accent-dim);
 }
 
+/* ── Sidebar Tooltips ─────────────────────────────────── */
+.sidebar-tooltip {
+  position: relative;
+}
+
+.sidebar-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  padding: 4px 10px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.15s var(--ease-out-expo);
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-tooltip:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
 /* ── Add Project Modal ──────────────────────────────── */
 .add-project-modal {
   width: 480px;
@@ -239,20 +271,9 @@
 
 .folder-select-row input {
   flex: 1;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 8px 10px;
-  color: var(--text);
   font-size: 12px;
   font-family: var(--font-mono);
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.folder-select-row input:focus {
-  border-color: var(--accent);
-  box-shadow: var(--glow);
 }
 
 .folder-select-row .modal-btn-save {
@@ -261,24 +282,10 @@
 
 .folder-picker select {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 8px 10px;
-  color: var(--accent);
   font-size: 12px;
   font-family: var(--font-mono);
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233a4250' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  transition: all 0.2s var(--ease-smooth);
 }
-
-.folder-picker select:focus { border-color: var(--accent); box-shadow: var(--glow); }
-.folder-picker select option { background: var(--bg-secondary); color: var(--text); }
 
 /* Sessions */
 .sessions-section {
@@ -308,25 +315,9 @@
 
 .session-search-wrapper input {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 7px 10px;
-  color: var(--accent);
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
-  outline: none;
-  transition: all 0.2s var(--ease-smooth);
-  caret-color: var(--accent);
-}
-
-.session-search-wrapper input:focus {
-  border-color: var(--accent);
-  box-shadow: var(--glow);
-}
-
-.session-search-wrapper input::placeholder {
-  color: var(--text-dim);
 }
 
 .session-title {

@@ -155,44 +155,16 @@
   align-items: center;
 }
 
-.welcome-btn-primary {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 10px 28px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--bg);
-  cursor: pointer;
-  transition: all 0.2s var(--ease-smooth);
-  box-shadow: 0 0 16px var(--accent-glow);
-}
-
-.welcome-btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 24px var(--accent-glow), var(--shadow-sm);
-}
-
+/* welcome-btn-primary and welcome-btn-secondary base styles in components.css */
+.welcome-btn-primary,
 .welcome-btn-secondary {
-  font-family: var(--font-display);
   font-size: 13px;
-  font-weight: 600;
   letter-spacing: 0.04em;
   padding: 10px 28px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--bg-secondary);
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.2s var(--ease-smooth);
 }
 
-.welcome-btn-secondary:hover {
-  border-color: var(--text-dim);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+.welcome-btn-primary {
+  box-shadow: 0 0 16px var(--accent-glow);
 }
 
 /* ── Keyboard hint ────────────────────────────────────── */
