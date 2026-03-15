@@ -42,7 +42,10 @@ router.get("/account", async (req, res) => {
   }
   try {
     const data = await new Promise((resolve, reject) => {
-      execFile(claudeBin, ["auth", "status"], { timeout: 10000 }, (err, stdout) => {
+      const opts = { timeout: 10000 };
+      // On Windows, use shell to resolve claude from PATH
+      if (process.platform === "win32") opts.shell = true;
+      execFile(claudeBin, ["auth", "status"], opts, (err, stdout) => {
         if (err) return reject(err);
         try { resolve(JSON.parse(stdout)); } catch (e) { reject(e); }
       });

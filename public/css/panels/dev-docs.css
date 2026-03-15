@@ -176,9 +176,14 @@
   margin: 0 0 12px;
 }
 
-.dev-docs-content ul {
+.dev-docs-content ul,
+.dev-docs-content ol {
   margin: 0 0 12px;
-  padding-left: 18px;
+  padding-left: 22px;
+}
+
+.dev-docs-content ol {
+  list-style-type: decimal;
 }
 
 .dev-docs-content li {

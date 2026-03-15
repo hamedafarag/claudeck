@@ -210,7 +210,15 @@ Claudeck includes 6 built-in plugins and supports user plugins via `~/.claudeck/
 | **Event Stream** | Real-time WebSocket event viewer |
 | **Games** | Tic-tac-toe and Sudoku |
 
-Create your own: add a `plugins/<name>/` directory with `client.js` and optionally `server.js`, `client.css`, `config.json`. See [CONFIGURATION.md](docs/CONFIGURATION.md#plugins) for details.
+**Create your own** — drop files in `~/.claudeck/plugins/<name>/` (persists across upgrades) with `client.js` and optionally `server.js`, `client.css`, `config.json`. No fork needed. See [CONFIGURATION.md](docs/CONFIGURATION.md#user-plugins) for details.
+
+**Scaffold with Claude Code** — install the plugin creator skill and let Claude build plugins for you:
+
+```bash
+npx skills add https://github.com/hamedafarag/claudeck-skills
+# Then in Claude Code:
+/claudeck-plugin-create my-widget A dashboard showing system metrics
+```
 
 ---
 
@@ -222,6 +230,21 @@ Create your own: add a `plugins/<name>/` directory with `client.js` and optional
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | User data directory, config files, plugin system |
 | [CROSS-PLATFORM-AUDIT.md](docs/CROSS-PLATFORM-AUDIT.md) | Windows/Linux compatibility |
 | [COMPETITIVE-ANALYSIS.md](docs/COMPETITIVE-ANALYSIS.md) | Feature comparison with similar tools |
+
+---
+
+## Contributing
+
+Contributions are welcome! Fork the repo, make your changes, and open a PR.
+
+```bash
+git clone https://github.com/hamedafarag/claudeck.git
+cd claudeck
+npm install
+npm start
+```
+
+See [DOCUMENTATION.md](docs/DOCUMENTATION.md) for architecture details and [CONFIGURATION.md](docs/CONFIGURATION.md) for the config system.
 
 ---
 

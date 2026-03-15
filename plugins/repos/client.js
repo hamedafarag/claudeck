@@ -227,7 +227,7 @@ registerTab({
         row.querySelector('.repos-inline-input').addEventListener('blur', handleInlineEditBlur);
         setTimeout(() => row.querySelector('.repos-inline-input')?.focus(), 0);
       } else {
-        const pathShort = repo.path ? repo.path.replace(/^\/Users\/[^/]+/, '~') : '';
+        const pathShort = repo.path ? repo.path.replace(/^\/Users\/[^/]+/, '~').replace(/^[A-Z]:\\Users\\[^\\]+/, '~') : '';
         row.innerHTML = `
           <span class="repos-chevron-spacer"></span>
           ${ICONS.repo}
@@ -355,8 +355,15 @@ registerTab({
             <input type="text" class="repos-dialog-input" name="name" placeholder="my-project" autocomplete="off">
           </label>
           <label class="repos-dialog-label">Local Path
-            <input type="text" class="repos-dialog-input" name="path" placeholder="/path/to/repo" autocomplete="off">
+            <div class="repos-path-row">
+              <input type="text" class="repos-dialog-input repos-path-input" name="path" placeholder="/path/to/repo" autocomplete="off" readonly>
+              <button class="repos-btn repos-browse-btn" type="button" title="Browse folders">Browse</button>
+            </div>
           </label>
+          <div class="repos-browser" style="display:none;">
+            <div class="repos-browser-breadcrumb"></div>
+            <div class="repos-browser-list"></div>
+          </div>
           <label class="repos-dialog-label">Remote URL
             <input type="text" class="repos-dialog-input" name="url" placeholder="https://github.com/..." autocomplete="off">
           </label>
@@ -372,6 +379,64 @@ registerTab({
           </div>
         </div>
       `;
+
+      const browserEl = overlay.querySelector('.repos-browser');
+      const breadcrumbEl = overlay.querySelector('.repos-browser-breadcrumb');
+      const browserListEl = overlay.querySelector('.repos-browser-list');
+      const pathInput = overlay.querySelector('[name="path"]');
+      let browserVisible = false;
+
+      async function navigateBrowser(dir) {
+        try {
+          const data = await ctx.api.browseFolders(dir || undefined);
+          pathInput.value = data.current;
+
+          // Breadcrumb
+          const parts = data.current.split(/[/\\]/).filter(Boolean);
+          let crumbPath = data.current.startsWith('/') ? '/' : '';
+          let crumbHtml = '';
+          // Root
+          const rootLabel = data.current.startsWith('/') ? '/' : parts[0];
+          const rootPath = data.current.startsWith('/') ? '/' : parts[0] + '\\';
+          crumbHtml += `<span class="repos-browser-crumb" data-path="${escapeHtml(rootPath)}">${escapeHtml(rootLabel)}</span>`;
+          const startIdx = data.current.startsWith('/') ? 0 : 1;
+          for (let i = startIdx; i < parts.length; i++) {
+            crumbPath += (i > 0 || !data.current.startsWith('/') ? (data.current.includes('\\') ? '\\' : '/') : '') + parts[i];
+            if (i >= startIdx) {
+              crumbHtml += `<span class="repos-browser-sep">/</span><span class="repos-browser-crumb" data-path="${escapeHtml(crumbPath)}">${escapeHtml(parts[i])}</span>`;
+            }
+          }
+          breadcrumbEl.innerHTML = crumbHtml;
+          breadcrumbEl.querySelectorAll('.repos-browser-crumb').forEach(crumb => {
+            crumb.addEventListener('click', () => navigateBrowser(crumb.dataset.path));
+          });
+
+          // Directory list
+          let listHtml = '';
+          if (data.parent) {
+            listHtml += `<div class="repos-browser-item repos-browser-parent" data-path="${escapeHtml(data.parent)}">${ICONS.folderClosed} <span>..</span></div>`;
+          }
+          for (const d of data.dirs) {
+            const fullPath = data.current + (data.current.endsWith('/') || data.current.endsWith('\\') ? '' : '/') + d.name;
+            listHtml += `<div class="repos-browser-item" data-path="${escapeHtml(fullPath)}">${ICONS.folderClosed} <span>${escapeHtml(d.name)}</span></div>`;
+          }
+          if (!data.dirs.length && !data.parent) {
+            listHtml = '<div class="repos-browser-empty">No subdirectories</div>';
+          }
+          browserListEl.innerHTML = listHtml;
+          browserListEl.querySelectorAll('.repos-browser-item').forEach(item => {
+            item.addEventListener('click', () => navigateBrowser(item.dataset.path));
+          });
+        } catch (err) {
+          browserListEl.innerHTML = `<div class="repos-browser-empty">Error: ${escapeHtml(err.message)}</div>`;
+        }
+      }
+
+      overlay.querySelector('.repos-browse-btn').addEventListener('click', () => {
+        browserVisible = !browserVisible;
+        browserEl.style.display = browserVisible ? '' : 'none';
+        if (browserVisible) navigateBrowser(pathInput.value || undefined);
+      });
 
       overlay.querySelector('.repos-dialog-cancel').addEventListener('click', () => overlay.remove());
       overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
@@ -510,7 +575,12 @@ registerTab({
 
       if (repo.path) {
         ctxMenu.appendChild(createMenuItem('Open in VS Code', () => ctx.api.execCommand('code .', repo.path)));
-        ctxMenu.appendChild(createMenuItem('Open in Terminal', () => ctx.api.execCommand('open -a Terminal .', repo.path)));
+        ctxMenu.appendChild(createMenuItem('Open in Terminal', () => {
+          const isWin = navigator.platform.startsWith('Win');
+          const isMac = navigator.platform.startsWith('Mac');
+          const cmd = isWin ? 'start cmd /k' : isMac ? 'open -a Terminal .' : 'x-terminal-emulator || xterm';
+          ctx.api.execCommand(cmd, repo.path);
+        }));
         ctxMenu.appendChild(createMenuItem('Copy Path', () => navigator.clipboard.writeText(repo.path)));
       }
 

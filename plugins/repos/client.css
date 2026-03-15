@@ -547,3 +547,114 @@
   background: var(--accent-dim);
   color: var(--accent);
 }
+
+/* ── Path row with browse button ────────────────────── */
+.repos-path-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.repos-path-input {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.repos-browse-btn {
+  flex-shrink: 0;
+  padding: 5px 10px !important;
+  font-size: 10px !important;
+}
+
+/* ── Inline folder browser ──────────────────────────── */
+.repos-browser {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.repos-browser-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.repos-browser-breadcrumb::-webkit-scrollbar { display: none; }
+
+.repos-browser-crumb {
+  cursor: pointer;
+  color: var(--accent);
+  padding: 1px 3px;
+  border-radius: 2px;
+  transition: background 0.1s;
+}
+
+.repos-browser-crumb:hover {
+  background: var(--accent-dim);
+}
+
+.repos-browser-crumb:last-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.repos-browser-sep {
+  color: var(--text-dim);
+  opacity: 0.4;
+}
+
+.repos-browser-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.repos-browser-list::-webkit-scrollbar { width: 4px; }
+.repos-browser-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.repos-browser-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.repos-browser-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.repos-browser-item svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.repos-browser-parent {
+  color: var(--text-dim);
+}
+
+.repos-browser-empty {
+  padding: 12px 8px;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  font-family: var(--font-mono);
+}

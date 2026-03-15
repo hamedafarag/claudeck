@@ -171,6 +171,22 @@ cp client.css ~/.claudeck/plugins/my-plugin/  # optional
 
 The plugin appears in the marketplace on next page load. No server restart needed.
 
+### Scaffolding plugins with Claude Code
+
+Install the Claudeck plugin creator skill and let Claude Code scaffold plugins for you:
+
+```bash
+npx skills add https://github.com/hamedafarag/claudeck-skills
+```
+
+Then in Claude Code, run:
+
+```
+/claudeck-plugin-create my-plugin A tab that shows GitHub notifications
+```
+
+Claude will generate the full plugin files (`client.js`, `client.css`, optionally `server.js`) in `~/.claudeck/plugins/` based on your description.
+
 **Server-side user plugins**: To allow user plugins with `server.js`, set `CLAUDECK_USER_SERVER_PLUGINS=true` in your `.env`. This is disabled by default for security.
 
 ### Static serving

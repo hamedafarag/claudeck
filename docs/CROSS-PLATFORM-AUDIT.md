@@ -52,9 +52,31 @@ if (!resolved.startsWith(resolve(base) + sep) && resolved !== resolve(base))
 pathStr.split(/[/\\]/).filter(Boolean)
 ```
 
-### 7. VS Code launch — safe execution ✅
+### 7. VS Code launch & shell commands — safe execution ✅
 
-`server/routes/exec.js` — simple commands (like `code .`) use `execFile()` to avoid shell interpretation issues with spaces in paths on Windows `cmd.exe`. Complex commands (pipes, redirects) still use `exec()`.
+`server/routes/exec.js` — on Windows, all commands use `exec()` (with shell, resolving through cmd.exe) so PATH-resolved commands like `code` work. On Unix, simple commands use `execFile()` for safety; complex commands (pipes, redirects) use `exec()`.
+
+### 8. Claude CLI account info — shell on Windows ✅
+
+`server/routes/stats.js` — `execFile` for `claude auth status` now passes `shell: true` on Windows so the `claude` binary can be resolved through PATH. Without this, `execFile` bypasses the shell and PATH-resolved commands aren't found.
+
+### 9. Notifications — user feedback for unsupported contexts ✅
+
+`public/js/ui/notifications.js` — `toggleNotifications()` now shows clear alerts when:
+- Notifications API is not supported in the browser
+- Notifications are blocked (user previously denied)
+- Running on non-HTTPS, non-localhost (browser security requirement)
+
+### 10. Repos — cross-platform "Open in Terminal" ✅
+
+`plugins/repos/client.js` — context menu "Open in Terminal" now detects the platform:
+- macOS: `open -a Terminal .`
+- Windows: `start cmd /k`
+- Linux: `x-terminal-emulator || xterm`
+
+### 11. Repos — Windows path shortening ✅
+
+`plugins/repos/client.js` — path display now shortens both Unix (`/Users/name/...` → `~/...`) and Windows (`C:\Users\name\...` → `~/...`) home directories.
 
 ---
 

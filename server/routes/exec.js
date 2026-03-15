@@ -23,9 +23,11 @@ router.post("/", (req, res) => {
     });
   };
 
-  // Use execFile for simple "binary ." commands to avoid shell escaping issues
+  // On Windows, always use exec (shell) so PATH-resolved commands like "code" work
+  // On Unix, use execFile for simple commands to avoid shell escaping issues
   const parts = command.split(/\s+/);
-  if (parts.length <= 2 && !command.includes("|") && !command.includes(">") && !command.includes("&")) {
+  const isSimple = parts.length <= 2 && !command.includes("|") && !command.includes(">") && !command.includes("&");
+  if (isSimple && process.platform !== "win32") {
     execFile(parts[0], parts.slice(1), execOpts, callback);
   } else {
     exec(command, execOpts, callback);

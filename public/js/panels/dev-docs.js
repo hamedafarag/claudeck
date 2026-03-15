@@ -25,10 +25,11 @@ registerDocSection({
     <h2>Tab SDK — Plugin Guide</h2>
     <p>Register custom tabs in the right panel with a single function call.
     No HTML or <code>dom.js</code> changes needed — the SDK handles DOM creation,
-    lifecycle hooks, badges, and state management.</p>
+    lifecycle hooks, badges, state management, and marketplace integration.</p>
 
     <h3>Quick Start</h3>
-    <pre><code>// plugins/my-tab/client.js
+    <pre><code>// ~/.claudeck/plugins/my-tab/client.js  (user plugin)
+// — or plugins/my-tab/client.js         (built-in plugin)
 import { registerTab } from '/js/ui/tab-sdk.js';
 
 registerTab({
@@ -158,50 +159,94 @@ registerDocSection({
   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
   render: () => `
     <h2>Architecture Overview</h2>
-    <p>Claudeck is a vanilla ES module frontend with no bundler. All modules are loaded via <code>&lt;script type="module"&gt;</code> from <code>main.js</code>.</p>
+    <p>Claudeck is a vanilla ES module frontend with no bundler. All modules are loaded via <code>&lt;script type="module"&gt;</code> from <code>main.js</code>. Server port is configurable (default 9009).</p>
 
     <h3>Module Loading Order</h3>
     <pre><code>main.js
-  ├── store.js        → Reactive state store
-  ├── dom.js          → Centralized DOM references
-  ├── constants.js    → Shared constants
-  ├── events.js       → Event bus (on/emit/off)
-  ├── utils.js        → Shared utilities
-  ├── ...             → Feature modules
-  ├── right-panel.js  → Right panel + Tab SDK init
-  ├── plugin-loader.js → Loads enabled plugins from plugins/
-  └── ...</code></pre>
+  ├── core/
+  │   ├── store.js          → Reactive state store (getState/setState/on)
+  │   ├── dom.js            → Centralized DOM references ($)
+  │   ├── constants.js      → Shared constants
+  │   ├── events.js         → Event bus (on/emit)
+  │   ├── utils.js          → Shared utilities
+  │   ├── api.js            → All fetch() helpers
+  │   └── ws.js             → WebSocket connection manager
+  ├── ui/
+  │   ├── formatting.js     → Markdown rendering, code highlighting
+  │   ├── diff.js           → Code diff viewer
+  │   ├── commands.js       → Slash command registry
+  │   ├── messages.js       → Chat message rendering
+  │   ├── parallel.js       → 2×2 parallel chat mode
+  │   ├── notifications.js  → Push notifications + sound
+  │   ├── permissions.js    → Tool approval modes
+  │   ├── model-selector.js → Model picker (Opus/Sonnet/Haiku)
+  │   ├── right-panel.js    → Right panel + Tab SDK init
+  │   ├── context-gauge.js  → Token usage indicator
+  │   └── shortcuts.js      → Keyboard shortcuts
+  ├── features/
+  │   ├── sessions.js       → Session management + search
+  │   ├── projects.js       → Project picker + system prompts
+  │   ├── chat.js           → Main chat loop
+  │   ├── prompts.js        → Prompt templates
+  │   ├── workflows.js      → Multi-step workflows
+  │   ├── agents.js         → Agent definitions, chains, DAGs
+  │   ├── home.js           → Home screen + activity grid
+  │   ├── attachments.js    → File/image attachments
+  │   ├── voice-input.js    → Web Speech API input
+  │   ├── telegram.js       → Telegram integration
+  │   └── welcome.js        → Guided tour (Driver.js)
+  ├── panels/
+  │   ├── file-explorer.js  → File tree + preview
+  │   ├── git-panel.js      → Git status, staging, commit
+  │   ├── mcp-manager.js    → MCP server management
+  │   ├── tips-feed.js      → Tips &amp; shortcuts feed
+  │   ├── assistant-bot.js  → Whaly bot assistant
+  │   └── dev-docs.js       → This documentation modal
+  └── plugin-loader.js      → Auto-discovers &amp; loads plugins</code></pre>
 
     <h3>Key Patterns</h3>
     <ul>
-      <li><strong>Event Bus</strong> — <code>events.js</code> provides <code>on(event, fn)</code>, <code>emit(event, data)</code>, <code>off(event, fn)</code>. All cross-module communication uses this.</li>
+      <li><strong>Event Bus</strong> — <code>events.js</code> provides <code>on(event, fn)</code> and <code>emit(event, data)</code>. All cross-module communication uses this.</li>
       <li><strong>Reactive Store</strong> — <code>store.js</code> provides <code>getState(key)</code>, <code>setState(key, val)</code>, and <code>on(key, fn)</code> for reactive subscriptions.</li>
       <li><strong>DOM Registry</strong> — <code>dom.js</code> exports <code>$</code> object with cached element references. Only used for built-in (HTML-defined) elements.</li>
-      <li><strong>API Layer</strong> — <code>api.js</code> contains all <code>fetch()</code> calls. Server runs on port 9009.</li>
+      <li><strong>API Layer</strong> — <code>api.js</code> contains all <code>fetch()</code> calls for server communication.</li>
+      <li><strong>Plugin System</strong> — Plugins are auto-discovered from <code>plugins/</code> (built-in) and <code>~/.claudeck/plugins/</code> (user). Managed via the Marketplace (<code>+</code> button in tab bar).</li>
     </ul>
 
-    <h3>Common Events</h3>
+    <h3>Event Bus Events</h3>
     <table class="param-table">
       <thead><tr><th>Event</th><th>Payload</th></tr></thead>
       <tbody>
         <tr><td>ws:message</td><td>Parsed WebSocket message object</td></tr>
-        <tr><td>session:changed</td><td>New session ID</td></tr>
-        <tr><td>rightPanel:opened</td><td>Active tab name</td></tr>
-        <tr><td>rightPanel:tabChanged</td><td>New tab name</td></tr>
+        <tr><td>ws:connected</td><td><em>none</em> — initial connection established</td></tr>
+        <tr><td>ws:reconnected</td><td><em>none</em> — reconnected after disconnect</td></tr>
+        <tr><td>ws:disconnected</td><td><em>none</em> — connection lost</td></tr>
+        <tr><td>rightPanel:opened</td><td>Active tab name (string)</td></tr>
+        <tr><td>rightPanel:tabChanged</td><td>New tab name (string)</td></tr>
       </tbody>
     </table>
 
     <h3>Store Keys</h3>
     <table class="param-table">
-      <thead><tr><th>Key</th><th>Description</th></tr></thead>
+      <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td>sessionId</td><td>Current active session ID</td></tr>
-        <tr><td>projectPath</td><td>Current project path</td></tr>
-        <tr><td>isStreaming</td><td>Whether AI is currently responding</td></tr>
+        <tr><td>view</td><td>string</td><td>Current view: <code>"home"</code> or <code>"chat"</code></td></tr>
+        <tr><td>sessionId</td><td>string|null</td><td>Current active session ID</td></tr>
+        <tr><td>parallelMode</td><td>boolean</td><td>Whether 2×2 parallel mode is active</td></tr>
+        <tr><td>streamingCharCount</td><td>number</td><td>Character count during streaming</td></tr>
+        <tr><td>notificationsEnabled</td><td>boolean</td><td>Whether push notifications are on</td></tr>
+        <tr><td>sessionTokens</td><td>object</td><td><code>{ input, output, cacheRead, cacheCreation }</code></td></tr>
+        <tr><td>prompts</td><td>array</td><td>Loaded prompt templates</td></tr>
+        <tr><td>workflows</td><td>array</td><td>Loaded workflow definitions</td></tr>
+        <tr><td>agents</td><td>array</td><td>Loaded agent definitions</td></tr>
+        <tr><td>projectsData</td><td>array</td><td>Configured projects list</td></tr>
+        <tr><td>attachedFiles</td><td>array</td><td>Files attached to current message</td></tr>
+        <tr><td>imageAttachments</td><td>array</td><td>Images attached to current message</td></tr>
+        <tr><td>backgroundSessions</td><td>Map</td><td>Sessions running in background</td></tr>
       </tbody>
     </table>
 
-    <div class="callout">All modules are independent — import only what you need. No global state beyond the event bus and store.</div>
+    <div class="callout">All modules are independent — import only what you need. No global state beyond the event bus and store. Plugins get access to both via the <code>ctx</code> object in <code>init()</code>.</div>
   `,
 });
 
@@ -209,15 +254,15 @@ registerDocSection({
 
 registerDocSection({
   id: 'adding-features',
-  title: 'Adding Features',
+  title: 'Contributing',
   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   render: () => `
-    <h2>Adding New Features</h2>
-    <p>Follow these patterns when extending the application.</p>
+    <h2>Contributing to Claudeck</h2>
+    <p>This guide is for contributors who have <strong>forked or cloned the Claudeck repo</strong> and want to extend the core application. If you're using Claudeck via <code>npx claudeck</code> and want to create your own plugins, see the <strong>User Plugins</strong> section instead.</p>
 
-    <h3>Adding a New Plugin Tab</h3>
+    <h3>Adding a Built-in Plugin</h3>
     <ol>
-      <li>Create a directory: <code>plugins/my-feature/</code></li>
+      <li>Create a directory: <code>plugins/my-feature/</code> in the repo</li>
       <li>Create <code>plugins/my-feature/client.js</code> — import <code>registerTab()</code> from <code>/js/ui/tab-sdk.js</code></li>
       <li>Build all DOM inside <code>init(ctx)</code></li>
       <li>Optionally add <code>client.css</code> in the same directory (auto-injected)</li>
@@ -246,7 +291,7 @@ registerDocSection({
       <li>Use CSS variables from <code>variables.css</code> for consistency</li>
     </ol>
 
-    <h3>Plugin Structure</h3>
+    <h3>Built-in Plugin Structure</h3>
     <ul>
       <li>Plugin directories: <code>plugins/kebab-case/</code></li>
       <li>Client module: <code>client.js</code> (required)</li>
@@ -257,6 +302,123 @@ registerDocSection({
     </ul>
 
     <div class="callout">When in doubt, look at <code>plugins/event-stream/</code>, <code>plugins/repos/</code>, or <code>plugins/tasks/</code> as reference implementations. For full-stack with server routes, see <code>plugins/linear/</code>.</div>
+  `,
+});
+
+// ── Built-in: User Plugins Guide ────────────────────────
+
+registerDocSection({
+  id: 'user-plugins',
+  title: 'User Plugins',
+  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>',
+  render: () => `
+    <h2>User Plugins</h2>
+    <p>This guide is for developers using Claudeck via <code>npx claudeck</code> who want to create their own plugins. User plugins live in <code>~/.claudeck/plugins/</code>, persist across npm upgrades, and work identically to built-in plugins — no need to fork the repo.</p>
+
+    <h3>Creating a User Plugin</h3>
+    <ol>
+      <li>Create a directory in <code>~/.claudeck/plugins/</code>:
+        <pre><code>mkdir -p ~/.claudeck/plugins/my-plugin</code></pre>
+      </li>
+      <li>Create <code>client.js</code> with a <code>registerTab()</code> call:
+        <pre><code>// ~/.claudeck/plugins/my-plugin/client.js
+import { registerTab } from '/js/ui/tab-sdk.js';
+
+registerTab({
+  id: 'my-plugin',
+  title: 'My Plugin',
+  lazy: true,
+  init(ctx) {
+    const root = document.createElement('div');
+    root.innerHTML = '&lt;h3&gt;Hello from my plugin!&lt;/h3&gt;';
+    return root;
+  },
+});</code></pre>
+      </li>
+      <li>Optionally add <code>client.css</code> for styles (auto-injected)</li>
+      <li>Optionally add <code>server.js</code> for backend routes (requires <code>CLAUDECK_USER_SERVER_PLUGINS=true</code> in <code>~/.claudeck/.env</code>)</li>
+      <li>Optionally add <code>config.json</code> for default settings (auto-copied to <code>~/.claudeck/config/</code>)</li>
+    </ol>
+
+    <h3>Plugin Directories</h3>
+    <table class="param-table">
+      <thead><tr><th>Directory</th><th>URL Path</th><th>Writable</th></tr></thead>
+      <tbody>
+        <tr><td><code>&lt;package&gt;/plugins/</code></td><td><code>/plugins/</code></td><td>No (built-in)</td></tr>
+        <tr><td><code>~/.claudeck/plugins/</code></td><td><code>/user-plugins/</code></td><td>Yes (user)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Server-Side Routes</h3>
+    <p>If your plugin has a <code>server.js</code>, it exports an Express router that is auto-mounted at <code>/api/plugins/&lt;name&gt;/</code>:</p>
+    <pre><code>// ~/.claudeck/plugins/my-plugin/server.js
+import { Router } from 'express';
+const router = Router();
+
+router.get('/data', (req, res) =&gt; {
+  res.json({ message: 'Hello from server!' });
+});
+
+export default router;</code></pre>
+    <div class="callout"><strong>Security:</strong> User server plugins are disabled by default. Set <code>CLAUDECK_USER_SERVER_PLUGINS=true</code> in <code>~/.claudeck/.env</code> to enable them.</div>
+
+    <h3>Discovery</h3>
+    <p>Plugins are auto-discovered on page load. No server restart is needed for client-only plugins. The Marketplace tab shows all plugins with their source (<code>builtin</code> or <code>user</code>).</p>
+
+    <h3>Scaffolding Plugins with Claude Code</h3>
+    <p>Install the Claudeck plugin creator skill, then let Claude Code scaffold plugins for you:</p>
+    <pre><code>npx skills add https://github.com/hamedafarag/claudeck-skills</code></pre>
+    <p>Then in Claude Code, run:</p>
+    <pre><code>/claudeck-plugin-create my-plugin A tab that shows GitHub notifications</code></pre>
+    <p>Claude will generate the full plugin files in <code>~/.claudeck/plugins/</code> based on your description. Examples:</p>
+    <ul>
+      <li><code>/claudeck-plugin-create github-notifs Show my GitHub notifications</code></li>
+      <li><code>/claudeck-plugin-create sys-metrics A dashboard showing system metrics</code></li>
+      <li><code>/claudeck-plugin-create api-proxy A plugin with a server route that proxies an external API</code></li>
+    </ul>
+  `,
+});
+
+// ── Built-in: Links & Resources ─────────────────────────
+
+registerDocSection({
+  id: 'resources',
+  title: 'Resources',
+  icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  render: () => `
+    <h2>Resources &amp; Links</h2>
+
+    <h3>GitHub</h3>
+    <ul>
+      <li><a href="https://github.com/hamedafarag/claudeck" target="_blank" style="color:var(--accent)">github.com/hamedafarag/claudeck</a> — Source code, issues, and discussions</li>
+      <li><a href="https://github.com/hamedafarag/claudeck/issues" target="_blank" style="color:var(--accent)">Issues</a> — Report bugs or request features</li>
+      <li><a href="https://github.com/hamedafarag/claudeck/blob/main/docs/DOCUMENTATION.md" target="_blank" style="color:var(--accent)">Full Documentation</a> — Complete feature docs and API reference</li>
+      <li><a href="https://github.com/hamedafarag/claudeck/blob/main/docs/CONFIGURATION.md" target="_blank" style="color:var(--accent)">Configuration Guide</a> — User data directory, config files, plugin system</li>
+    </ul>
+
+    <h3>npm</h3>
+    <ul>
+      <li><a href="https://www.npmjs.com/package/claudeck" target="_blank" style="color:var(--accent)">npmjs.com/package/claudeck</a> — Package page</li>
+    </ul>
+
+    <h3>Claude Code Skills</h3>
+    <ul>
+      <li><a href="https://github.com/hamedafarag/claudeck-skills" target="_blank" style="color:var(--accent)">github.com/hamedafarag/claudeck-skills</a> — Plugin creator skill for Claude Code</li>
+    </ul>
+    <pre><code>npx skills add https://github.com/hamedafarag/claudeck-skills</code></pre>
+
+    <h3>Quick Reference</h3>
+    <table class="param-table">
+      <thead><tr><th>Command</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>npx claudeck</code></td><td>Launch Claudeck (installs if needed)</td></tr>
+        <tr><td><code>npx claudeck --port 3000</code></td><td>Launch on a custom port</td></tr>
+        <tr><td><code>npm i -g claudeck</code></td><td>Install globally</td></tr>
+      </tbody>
+    </table>
+
+    <h3>License</h3>
+    <p>Claudeck is open-source under the <strong>MIT License</strong>. Contributions are welcome!</p>
   `,
 });
 

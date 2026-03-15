@@ -162,6 +162,18 @@ async function unsubscribeFromPush() {
 export async function toggleNotifications() {
   const current = getState('notificationsEnabled');
   if (!current) {
+    if (!('Notification' in window)) {
+      alert('Notifications are not supported in this browser.');
+      return false;
+    }
+    if (Notification.permission === 'denied') {
+      alert('Notifications are blocked. Please enable them in your browser settings for this site.');
+      return false;
+    }
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      alert('Notifications require HTTPS or localhost. Please access Claudeck via https:// or http://localhost.');
+      return false;
+    }
     const granted = await requestNotificationPermission();
     if (!granted) return false;
     setState('notificationsEnabled', true);

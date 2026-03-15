@@ -1,10 +1,9 @@
 # Claudeck
 
-A browser-based UI for Claude Code — chat, run workflows, manage MCP servers, track costs, and orchestrate autonomous agents from a local web interface. Installable as a PWA. Cross-platform (macOS, Linux, Windows).
+A browser-based UI for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — chat, run workflows, manage MCP servers, track costs, and orchestrate autonomous agents from a local web interface. Installable as a PWA. Cross-platform (macOS, Linux, Windows).
 
-```
-> claude connected hamed@wakecap.com [max]
-```
+- **GitHub**: [github.com/hamedafarag/claudeck](https://github.com/hamedafarag/claudeck)
+- **npm**: [npmjs.com/package/claudeck](https://www.npmjs.com/package/claudeck)
 
 ## Quick Start
 
@@ -438,7 +437,7 @@ The default landing view before selecting a project:
 ### 4. Add Project via UI
 - "+" button in the sidebar project picker opens a folder browser modal
 - "Open in VS Code" button in the project selector header — opens the selected project in VS Code
-- Server-side directory browsing — navigates the host filesystem (defaults to `$HOME`)
+- Server-side directory browsing — navigates the host filesystem (defaults to user home via `os.homedir()`)
 - Clickable breadcrumb path segments for quick navigation up
 - Directory list with parent directory (..) navigation
 - Hidden directories (`.git`, `.cache`, etc.) are excluded from listing
@@ -665,7 +664,7 @@ The right side of the UI hosts a resizable tabbed panel with built-in and plugin
 - **Git** — git integration
 - **Repos** — repository management
 - **Events** — structured activity log (plugin tab via Tab SDK)
-- **"+" button** — opens Developer Documentation, guiding developers to add new tabs
+- **"+" button** — opens Plugin Marketplace for enabling, disabling, and reordering plugins
 
 **Tab SDK plugin system** — developers can register new tabs with a single `registerTab()` call in a JS module, with no HTML or `dom.js` changes required:
 - `registerTab({ id, title, icon, init(ctx) })` — creates tab button and pane dynamically
@@ -674,6 +673,7 @@ The right side of the UI hosts a resizable tabbed panel with built-in and plugin
 - **Lazy initialization** — `lazy: true` defers `init()` until the tab is first opened
 - **Positional insert** — `position` option to control tab order
 - **Auto-discovery** — full-stack plugins live in `plugins/<name>/` (with `client.js`, optional `server.js`, `client.css`, `config.json`). User plugins go in `~/.claudeck/plugins/`. All discovered via `GET /api/plugins`
+- **Plugin creator skill** — install via `npx skills add https://github.com/hamedafarag/claudeck-skills`, then run `/claudeck-plugin-create <name> <description>` in Claude Code to scaffold plugins automatically
 - **Plugin marketplace** — enable/disable/reorder plugins from the "+" button; state persisted to `localStorage`
 - **Built-in plugins**: Linear (issues + settings), Tasks (todo + brags), Repos, Events, CLAUDE.md Editor, Sudoku, Tic-Tac-Toe
 
@@ -706,11 +706,11 @@ Git panel in the Git tab — all operations via `POST /api/exec`:
 Repository management panel in the Repos tab — backed by `repos.json`:
 - **Groups** — create nested groups as collapsible containers (folder icon + chevron + badge count)
 - **Repos** — add repositories with name, local path (optional), and GitHub URL (optional)
-- **Two add modes** — "Browse Folder" reuses the folder browser to select a local git repo; "Add Manually" shows an inline form for remote-only repos (no local folder needed)
-- **Add to group** — right-click a group → "Add Repo Here (Browse)" or "Add Repo Here (Manual)"
+- **Browse button** — "Add Repository" dialog includes a Browse button that opens an inline folder browser (reuses `/api/projects/browse`); users click through directories instead of typing paths manually
+- **Add to group** — right-click a group → "Add Repo Here"
 - **Move to group** — right-click a repo → "Move to Group" submenu lists all groups + "Ungrouped"
 - **GitHub URL** — right-click a repo → "Set GitHub URL" / "Edit GitHub URL"; once set, "Open in Browser" appears at the top of the context menu
-- **Context menus** — repos: Open in Browser, Open in VS Code, Copy Path, Set GitHub URL, Move to Group, Remove; groups: Add Repo Here, Open All in VS Code, Rename, Delete Group
+- **Context menus** — repos: Open in Browser, Open in VS Code, Open in Terminal (cross-platform: cmd on Windows, Terminal on macOS, x-terminal-emulator on Linux), Copy Path, Set GitHub URL, Move to Group, Remove; groups: Add Repo Here, Open All in VS Code, Rename, Delete Group
 - **Inline editing** — rename groups in-place (click, type, Enter/Escape)
 - **Search filter** — debounced (200ms) filter across repo names, paths, and group names
 - **Expand/collapse** — group state persisted per group in `localStorage`
@@ -745,6 +745,11 @@ Browser notifications for events that happen while the tab is unfocused, **inclu
 - Background session completed — title of the finished session
 - Background session error — session title + error message
 - Permission request — tool name + background session label (if applicable)
+
+**User feedback** — clear alerts when notifications can't be enabled:
+- Browser doesn't support Notification API
+- Permission previously denied (directs user to browser settings)
+- Non-HTTPS/non-localhost access (browser security requirement)
 
 **Web Push notifications** (works even with the tab/browser closed):
 - Server sends push via `web-push` library when a chat query or workflow completes
