@@ -158,14 +158,11 @@ registerTab({
       }
     });
 
-    // Listen for project changes (projectSelect is a DOM <select>, not in store)
-    const projectSelect = document.getElementById('project-select');
-    if (projectSelect) {
-      projectSelect.addEventListener('change', () => {
-        if (isDirty && !confirm('You have unsaved CLAUDE.md changes. Discard them?')) return;
-        loadFile();
-      });
-    }
+    // Reload when project changes
+    ctx.on('projectChanged', () => {
+      if (isDirty && !confirm('You have unsaved CLAUDE.md changes. Discard them?')) return;
+      loadFile();
+    });
 
     // Also reload when projects data arrives (covers initial page load)
     ctx.onState('projectsData', () => {

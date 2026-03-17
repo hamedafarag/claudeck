@@ -72,14 +72,45 @@
 //   getRegisteredTabs()       Returns array of registered tab IDs
 //   initTabSDK()              Called by right-panel.js — do not call manually
 //
+// ── Events ──────────────────────────────────────────────────────
+//
+//   ctx.on('projectChanged', (path) => ...)   Fires when user switches project
+//   ctx.on('ws:message', (msg) => ...)        Live WebSocket stream messages
+//   ctx.onState('sessionId', (id) => ...)     Session switch
+//
 // ── Tips ────────────────────────────────────────────────────────
 //
 //   • Use lazy:true for heavy tabs — init runs only on first open
 //   • Build all DOM in init(); no index.html edits needed
-//   • Use ctx.on('ws:message', fn) for real-time streaming events
+//   • ALWAYS use ctx.getProjectPath() to read the current project path.
+//     NEVER use document.getElementById('project-select') directly.
+//   • Use ctx.on('projectChanged', fn) to reload data on project switch.
+//     NEVER add your own change listener to the project select element.
 //   • Use ctx.onState('sessionId', fn) to reload on session switch
 //   • Existing shortcuts (e.g. openRightPanel('my-tab')) work automatically
 //   • See plugins/event-stream/client.js for a full working example
+//
+// ── Project-aware plugin example ────────────────────────────────
+//
+//   registerTab({
+//     id: 'my-project-tab',
+//     title: 'My Tab',
+//     init(ctx) {
+//       const root = document.createElement('div');
+//
+//       function loadData() {
+//         const project = ctx.getProjectPath();
+//         if (!project) return;
+//         fetch(`/api/my-data?project=${encodeURIComponent(project)}`)
+//           .then(r => r.json())
+//           .then(data => { /* render */ });
+//       }
+//
+//       ctx.on('projectChanged', loadData);
+//       loadData();
+//       return root;
+//     },
+//   });
 //
 // ════════════════════════════════════════════════════════════════
 
@@ -364,6 +395,14 @@ export function initTabSDK() {
   // Apply saved plugin order
   const savedEnabled = getEnabledPluginNames();
   if (savedEnabled.length) reorderPluginTabs(savedEnabled);
+
+  // Emit projectChanged event when the project selector changes
+  if ($.projectSelect) {
+    $.projectSelect.addEventListener('change', () => {
+      const path = $.projectSelect.value || '';
+      emit('projectChanged', path);
+    });
+  }
 
   // Listen for tab changes to fire lifecycle hooks
   on('rightPanel:tabChanged', onTabActivated);

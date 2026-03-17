@@ -57,13 +57,33 @@ registerTab({
 
     // Build the UI innerHTML here...
 
-    // ── Event listeners ──
-    // ctx.on('ws:message', (msg) => { ... });
-    // ctx.onState('sessionId', (id) => { ... });
-    // ctx.api — full API module for fetch calls
-    // ctx.showBadge(count) — show badge on tab button
-    // ctx.getProjectPath() — current project path
-    // ctx.getSessionId() — current session ID
+    // ── Context API (ctx) ──
+    // ctx.getProjectPath()              — Current project path (from #project-select)
+    // ctx.getSessionId()                — Current session ID
+    // ctx.on('projectChanged', fn)      — Fires when user switches project
+    // ctx.on('ws:message', fn)          — Live WebSocket stream messages
+    // ctx.onState('sessionId', fn)      — Session switch
+    // ctx.api                           — Full API module for fetch calls
+    // ctx.showBadge(count)              — Show badge on tab button
+    // ctx.clearBadge()                  — Hide badge
+    // ctx.setTitle(text)                — Update tab button label
+
+    // ── Project-scoped data ──
+    // If your plugin loads data scoped to a project, follow this pattern:
+    //
+    //   function loadData() {
+    //     const project = ctx.getProjectPath();
+    //     if (!project) return;
+    //     fetch(`/api/plugins/<name>/?project=${encodeURIComponent(project)}`)
+    //       .then(r => r.json()).then(data => { /* render */ });
+    //   }
+    //   ctx.on('projectChanged', loadData);  // reload on project switch
+    //   loadData();                           // initial load
+    //
+    // IMPORTANT: ALWAYS use ctx.getProjectPath() to read the project path.
+    //   NEVER use document.getElementById('project-select') directly.
+    // IMPORTANT: ALWAYS use ctx.on('projectChanged', fn) to react to project changes.
+    //   NEVER add your own change listener to the project select element.
 
     return root;  // must return an HTMLElement
   },
@@ -160,8 +180,11 @@ Now implement the plugin based on the user's description. Build a fully function
 - Event handlers and interactivity
 - Real-time updates via `ctx.on('ws:message', ...)` if relevant
 - Session awareness via `ctx.onState('sessionId', ...)` if relevant
+- Project awareness via `ctx.getProjectPath()` and `ctx.on('projectChanged', ...)` if the plugin loads project-scoped data
 - Proper CSS styling matching the app's dark terminal aesthetic
 - Badge counts via `ctx.showBadge()` where meaningful
+
+**CRITICAL**: Never access the project select DOM element directly. Always use `ctx.getProjectPath()` and `ctx.on('projectChanged', fn)` from the tab SDK context.
 
 ## After creating the files
 
