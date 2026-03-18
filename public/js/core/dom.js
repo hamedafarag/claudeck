@@ -209,6 +209,16 @@ export const $ = {
   filePreviewClose: document.getElementById("file-preview-close"),
 
 
+  // Memory panel (inside right panel memory tab)
+  memoryTitle: document.getElementById("memory-title"),
+  memoryOptimizeBtn: document.getElementById("memory-optimize-btn"),
+  memoryAddBtn: document.getElementById("memory-add-btn"),
+  memorySearchInput: document.getElementById("memory-search-input"),
+  memoryFilters: document.getElementById("memory-filters"),
+  memoryList: document.getElementById("memory-list"),
+  memoryInputBar: document.getElementById("memory-input-bar"),
+  memoryStatsBar: document.getElementById("memory-stats-bar"),
+
   // Git panel (inside right panel git tab)
   gitBranchSelect: document.getElementById("git-branch-select"),
   gitRefreshBtn: document.getElementById("git-refresh-btn"),

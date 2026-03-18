@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { createHash } from "crypto";
 import { dbPath } from "./server/paths.js";
 
 const db = new Database(dbPath);
@@ -118,6 +119,75 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_agent_runs_started ON agent_runs(started_at);
   CREATE INDEX IF NOT EXISTS idx_agent_runs_run_id ON agent_runs(run_id);
 `);
+
+// Persistent memories table (cross-session context)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS memories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_path TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'discovery',
+    content TEXT NOT NULL,
+    content_hash TEXT,
+    source_session_id TEXT,
+    source_agent_id TEXT,
+    relevance_score REAL DEFAULT 1.0,
+    created_at INTEGER DEFAULT (unixepoch()),
+    accessed_at INTEGER DEFAULT (unixepoch()),
+    expires_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_path);
+  CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(category);
+  CREATE INDEX IF NOT EXISTS idx_memories_relevance ON memories(relevance_score DESC);
+`);
+
+// Migration: add content_hash column if missing (existing DBs)
+try { db.exec(`ALTER TABLE memories ADD COLUMN content_hash TEXT`); } catch { /* already exists */ }
+try { db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_hash ON memories(project_path, content_hash)`); } catch { /* already exists */ }
+
+// FTS5 full-text search for memories
+db.exec(`
+  CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+    content,
+    content='memories',
+    content_rowid='id'
+  );
+`);
+
+// Triggers to keep FTS in sync
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
+    INSERT INTO memories_fts(rowid, content) VALUES (new.id, new.content);
+  END;
+  CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
+    INSERT INTO memories_fts(memories_fts, rowid, content) VALUES ('delete', old.id, old.content);
+  END;
+  CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE OF content ON memories BEGIN
+    INSERT INTO memories_fts(memories_fts, rowid, content) VALUES ('delete', old.id, old.content);
+    INSERT INTO memories_fts(rowid, content) VALUES (new.id, new.content);
+  END;
+`);
+
+// Backfill content_hash for existing rows
+const unhashed = db.prepare(`SELECT id, project_path, content FROM memories WHERE content_hash IS NULL`).all();
+if (unhashed.length > 0) {
+  const backfill = db.prepare(`UPDATE memories SET content_hash = ? WHERE id = ?`);
+  const backfillTx = db.transaction((rows) => {
+    for (const row of rows) {
+      const hash = createHash("sha256").update(`${row.project_path}:${row.content}`).digest("hex");
+      backfill.run(hash, row.id);
+    }
+  });
+  backfillTx(unhashed);
+}
+
+// Backfill FTS index for existing memories not yet indexed
+try {
+  const ftsCount = db.prepare(`SELECT COUNT(*) as c FROM memories_fts`).get();
+  const memCount = db.prepare(`SELECT COUNT(*) as c FROM memories`).get();
+  if (ftsCount.c < memCount.c) {
+    db.exec(`INSERT INTO memories_fts(memories_fts) VALUES ('rebuild')`);
+  }
+} catch { /* ignore */ }
 
 // Brags table
 db.exec(`
@@ -1191,6 +1261,135 @@ export function getAgentRunsByType() {
 
 export function getAgentRunsDaily() {
   return runStmts.dailyRuns.all();
+}
+
+// ── Memories (persistent cross-session context) ──────────
+function hashContent(projectPath, content) {
+  return createHash("sha256").update(`${projectPath}:${content}`).digest("hex");
+}
+
+const memStmts = {
+  insert: db.prepare(
+    `INSERT OR IGNORE INTO memories (project_path, category, content, content_hash, source_session_id, source_agent_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ),
+  findByHash: db.prepare(
+    `SELECT id FROM memories WHERE project_path = ? AND content_hash = ?`
+  ),
+  list: db.prepare(
+    `SELECT * FROM memories WHERE project_path = ?
+     ORDER BY relevance_score DESC, accessed_at DESC`
+  ),
+  listByCategory: db.prepare(
+    `SELECT * FROM memories WHERE project_path = ? AND category = ?
+     ORDER BY relevance_score DESC, accessed_at DESC`
+  ),
+  searchFts: db.prepare(
+    `SELECT m.* FROM memories m
+     JOIN memories_fts fts ON fts.rowid = m.id
+     WHERE m.project_path = ? AND memories_fts MATCH ?
+     ORDER BY rank, m.relevance_score DESC LIMIT ?`
+  ),
+  searchLike: db.prepare(
+    `SELECT * FROM memories WHERE project_path = ? AND content LIKE ?
+     ORDER BY relevance_score DESC LIMIT ?`
+  ),
+  topRelevant: db.prepare(
+    `SELECT * FROM memories WHERE project_path = ?
+     ORDER BY relevance_score DESC, accessed_at DESC LIMIT ?`
+  ),
+  update: db.prepare(
+    `UPDATE memories SET content = ?, category = ? WHERE id = ?`
+  ),
+  touch: db.prepare(
+    `UPDATE memories SET accessed_at = unixepoch(),
+     relevance_score = MIN(relevance_score + 0.1, 2.0) WHERE id = ?`
+  ),
+  decay: db.prepare(
+    `UPDATE memories SET relevance_score = MAX(relevance_score * 0.95, 0.1)
+     WHERE project_path = ? AND accessed_at < unixepoch() - ?`
+  ),
+  delete: db.prepare(`DELETE FROM memories WHERE id = ?`),
+  deleteExpired: db.prepare(
+    `DELETE FROM memories WHERE expires_at IS NOT NULL AND expires_at < unixepoch()`
+  ),
+  count: db.prepare(
+    `SELECT category, COUNT(*) as count FROM memories
+     WHERE project_path = ? GROUP BY category`
+  ),
+  stats: db.prepare(
+    `SELECT COUNT(*) as total,
+     SUM(CASE WHEN accessed_at > unixepoch() - 86400 THEN 1 ELSE 0 END) as accessed_today,
+     AVG(relevance_score) as avg_relevance
+     FROM memories WHERE project_path = ?`
+  ),
+};
+
+export function createMemory(projectPath, category, content, sourceSessionId = null, sourceAgentId = null) {
+  const hash = hashContent(projectPath, content);
+  // Dedup: if identical content already exists, just touch it
+  const existing = memStmts.findByHash.get(projectPath, hash);
+  if (existing) {
+    memStmts.touch.run(existing.id);
+    return { lastInsertRowid: existing.id, changes: 0, isDuplicate: true };
+  }
+  return memStmts.insert.run(projectPath, category, content, hash, sourceSessionId, sourceAgentId);
+}
+
+export function listMemories(projectPath, category = null) {
+  if (category) return memStmts.listByCategory.all(projectPath, category);
+  return memStmts.list.all(projectPath);
+}
+
+export function searchMemories(projectPath, queryText, limit = 20) {
+  // Try FTS5 first, fall back to LIKE for non-FTS-compatible queries
+  try {
+    const ftsQuery = queryText.split(/\s+/).filter(Boolean).map(w => `"${w}"`).join(" OR ");
+    if (ftsQuery) {
+      return memStmts.searchFts.all(projectPath, ftsQuery, limit);
+    }
+  } catch {
+    // FTS parse error — fall back
+  }
+  return memStmts.searchLike.all(projectPath, `%${queryText}%`, limit);
+}
+
+export function getTopMemories(projectPath, limit = 10) {
+  return memStmts.topRelevant.all(projectPath, limit);
+}
+
+export function updateMemory(id, content, category) {
+  return memStmts.update.run(content, category, id);
+}
+
+export function touchMemory(id) {
+  return memStmts.touch.run(id);
+}
+
+export function decayMemories(projectPath, olderThanSecs = 604800) {
+  return memStmts.decay.run(projectPath, olderThanSecs);
+}
+
+export function deleteMemory(id) {
+  return memStmts.delete.run(id);
+}
+
+export function deleteExpiredMemories() {
+  return memStmts.deleteExpired.run();
+}
+
+export function getMemoryCounts(projectPath) {
+  return memStmts.count.all(projectPath);
+}
+
+export function getMemoryStats(projectPath) {
+  return memStmts.stats.get(projectPath);
+}
+
+// Run decay + cleanup for a project (call on session start)
+export function maintainMemories(projectPath) {
+  decayMemories(projectPath, 604800); // 7 days
+  deleteExpiredMemories();
 }
 
 export function getDb() {

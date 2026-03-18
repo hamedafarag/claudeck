@@ -29,6 +29,7 @@ import mcpRouter from "./server/routes/mcp.js";
 import tipsRouter from "./server/routes/tips.js";
 import botRouter from "./server/routes/bot.js";
 import notificationsRouter, { setVapidPublicKey } from "./server/routes/notifications.js";
+import memoryRouter from "./server/routes/memory.js";
 import { setupWebSocket } from "./server/ws-handler.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -104,6 +105,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/tips", tipsRouter);
 app.use("/api/bot", botRouter);
 app.use("/api/telegram", telegramRouter);
+app.use("/api/memory", memoryRouter);
 
 // Version endpoint
 import { readFileSync } from "fs";

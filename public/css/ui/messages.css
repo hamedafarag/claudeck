@@ -602,6 +602,75 @@ html[data-theme="light"] .msg-user {
 
 .status.error { color: var(--error); }
 
+/* Memory indicator — collapsible block showing injected memories */
+.memory-indicator {
+  max-width: var(--chat-max-w);
+  width: 100%;
+  margin: 4px auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.memory-indicator-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: var(--radius);
+  user-select: none;
+}
+
+.memory-indicator-header:hover {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.memory-indicator-icon {
+  font-size: 12px;
+}
+
+.memory-indicator-toggle {
+  margin-left: auto;
+  font-size: 9px;
+  opacity: 0.5;
+}
+
+.memory-indicator-list {
+  padding: 4px 8px 4px 28px;
+}
+
+.memory-indicator-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 0;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.memory-indicator-cat {
+  flex-shrink: 0;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  color: var(--text-dim);
+}
+
+.memory-indicator-cat.convention { color: var(--accent); }
+.memory-indicator-cat.decision { color: var(--success); }
+.memory-indicator-cat.warning { color: var(--warning); }
+.memory-indicator-cat.discovery { color: var(--text-secondary); }
+
+.memory-indicator-content {
+  flex: 1;
+  word-break: break-word;
+}
+
 .thinking-bar {
   display: flex;
   align-items: center;

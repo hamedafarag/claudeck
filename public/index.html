@@ -446,6 +446,7 @@
       <div class="right-panel-tab-bar">
         <button class="right-panel-tab active" data-tab="files">Files</button>
         <button class="right-panel-tab" data-tab="git">Git</button>
+        <button class="right-panel-tab" data-tab="memory">Memory</button>
         <button id="right-panel-close" class="right-panel-close" title="Close panel">&times;</button>
       </div>
       <div class="right-panel-content">
@@ -494,6 +495,26 @@
         </div>
 
 
+
+        <!-- Memory pane -->
+        <div class="right-panel-pane" data-tab="memory">
+          <div class="memory-tab">
+            <div class="memory-panel-header">
+              <h3 id="memory-title">Memory</h3>
+              <div class="memory-header-actions">
+                <button id="memory-optimize-btn" class="memory-optimize-btn" title="Optimize memories">Optimize</button>
+                <button id="memory-add-btn" class="memory-add-btn" title="Add memory">+</button>
+              </div>
+            </div>
+            <div class="memory-search-bar">
+              <input id="memory-search-input" type="text" class="memory-search-input" placeholder="Search memories..." autocomplete="off">
+            </div>
+            <div id="memory-filters" class="memory-filters"></div>
+            <div id="memory-list" class="memory-list"></div>
+            <div id="memory-input-bar" class="memory-input-bar" style="display:none;"></div>
+            <div id="memory-stats-bar" class="memory-stats-bar"></div>
+          </div>
+        </div>
 
         <!-- Plugin tabs are injected here by tab-sdk.js -->
       </div>

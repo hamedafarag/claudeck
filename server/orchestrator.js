@@ -27,6 +27,7 @@ import { getProjectSystemPrompt } from "./routes/projects.js";
 import { runAgent } from "./agent-loop.js";
 import { sendPushNotification } from "./push-sender.js";
 import { sendTelegramNotification } from "./telegram-sender.js";
+import { buildAgentMemoryPrompt } from "./memory-injector.js";
 
 const MODEL_MAP = {
   haiku: "claude-haiku-4-5-20251001",
@@ -65,6 +66,17 @@ For each sub-task you want to delegate, output a fenced code block with the lang
 
 ## Task
 ${task}`;
+}
+
+function buildOrchestratorPromptWithMemory(task, agents, cwd) {
+  let prompt = buildOrchestratorPrompt(task, agents);
+  if (cwd) {
+    const memPrompt = buildAgentMemoryPrompt(cwd, 6);
+    if (memPrompt) {
+      prompt += '\n\n' + memPrompt;
+    }
+  }
+  return prompt;
 }
 
 function buildSynthesisPrompt(task, agentResults) {
@@ -173,7 +185,7 @@ export async function runOrchestrator({
   orchSend({ type: "orchestrator_phase", phase: "planning" });
 
   try {
-    const prompt = buildOrchestratorPrompt(task, agents);
+    const prompt = buildOrchestratorPromptWithMemory(task, agents, cwd);
     const q = query({ prompt, options: plannerOpts });
 
     for await (const sdkMsg of q) {

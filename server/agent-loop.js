@@ -31,16 +31,32 @@ import {
 import { getProjectSystemPrompt } from "./routes/projects.js";
 import { sendPushNotification } from "./push-sender.js";
 import { sendTelegramNotification } from "./telegram-sender.js";
+import { buildAgentMemoryPrompt } from "./memory-injector.js";
+import { captureMemories } from "./memory-extractor.js";
+import { saveExplicitMemories } from "./memory-injector.js";
 
 /**
  * Build the agent system prompt that instructs Claude to work autonomously
  * toward the given goal.
  */
-function buildAgentPrompt(agentDef, userContext, sharedContext) {
+function buildAgentPrompt(agentDef, userContext, sharedContext, cwd) {
   let prompt = `You are an autonomous AI agent. Work toward the following goal step by step, using any tools available to you.\n\n`;
   prompt += `## Goal\n${agentDef.goal}\n\n`;
   if (userContext) {
     prompt += `## Additional Context from User\n${userContext}\n\n`;
+  }
+  // Inject persistent memories from previous sessions
+  if (cwd) {
+    const memoryPrompt = buildAgentMemoryPrompt(cwd, 8);
+    if (memoryPrompt) {
+      prompt += memoryPrompt + '\n\n';
+      console.log(`\n══════ AGENT MEMORY INJECTION ══════`);
+      console.log(`Agent: ${agentDef.title || agentDef.id}`);
+      console.log(`Project: ${cwd}`);
+      console.log(`Memory prompt (${memoryPrompt.length} chars):`);
+      console.log(memoryPrompt);
+      console.log(`════════════════════════════════════\n`);
+    }
   }
   if (sharedContext && sharedContext.length > 0) {
     prompt += `## Context from Previous Agents\n`;
@@ -144,7 +160,7 @@ export async function runAgent({
 
   // Load shared context from previous agents in this run
   const sharedContext = runId ? getAllAgentContext(runId) : [];
-  const prompt = buildAgentPrompt(agentDef, userContext, sharedContext);
+  const prompt = buildAgentPrompt(agentDef, userContext, sharedContext, cwd);
   let resolvedSid = clientSid;
   let claudeSessionId = null;
   let sessionModel = null;
@@ -183,7 +199,7 @@ export async function runAgent({
       if (sdkMsg.type === "assistant" && sdkMsg.message?.content) {
         for (const block of sdkMsg.message.content) {
           if (block.type === "text" && block.text) {
-            lastAssistantText = block.text;
+            lastAssistantText += (lastAssistantText ? "\n\n" : "") + block.text;
             agentSend({ type: "text", text: block.text });
             if (resolvedSid) {
               addMessage(resolvedSid, "assistant", JSON.stringify({ text: block.text }), null);
@@ -378,6 +394,18 @@ export async function runAgent({
         model: lastAgentMetrics.model,
         turns: lastAgentMetrics.turns,
       });
+    }
+
+    // Auto-capture memories from agent output
+    if (cwd && lastAssistantText) {
+      try {
+        const explicitCount = saveExplicitMemories(cwd, lastAssistantText, resolvedSid);
+        const autoCount = captureMemories(cwd, lastAssistantText, resolvedSid, agentId);
+        const totalCaptured = explicitCount + autoCount;
+        if (totalCaptured > 0) {
+          console.log(`Captured ${totalCaptured} memories (${explicitCount} explicit, ${autoCount} auto) from agent ${agentId}`);
+        }
+      } catch (e) { console.error("Memory capture error:", e.message); }
     }
   }
 

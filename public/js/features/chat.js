@@ -225,6 +225,47 @@ export function finishStreamingHandler(pane) {
 // Register the chat functions with parallel.js to break circular dependency
 _setChatFns({ sendMessage, stopGeneration });
 
+// Render a collapsible memory indicator in the chat
+function appendMemoryIndicator(memories, pane) {
+  pane = pane || getPane(null);
+  const div = document.createElement('div');
+  div.className = 'memory-indicator';
+
+  const header = document.createElement('div');
+  header.className = 'memory-indicator-header';
+  header.innerHTML = `<span class="memory-indicator-icon">&#x1f9e0;</span> <span>${memories.length} memor${memories.length === 1 ? 'y' : 'ies'} loaded</span> <span class="memory-indicator-toggle">&#x25B6;</span>`;
+
+  const list = document.createElement('div');
+  list.className = 'memory-indicator-list';
+  list.style.display = 'none';
+
+  for (const m of memories) {
+    const item = document.createElement('div');
+    item.className = 'memory-indicator-item';
+    const catSpan = document.createElement('span');
+    catSpan.className = `memory-indicator-cat ${m.category}`;
+    catSpan.textContent = m.category;
+    const contentSpan = document.createElement('span');
+    contentSpan.className = 'memory-indicator-content';
+    contentSpan.textContent = m.content;
+    item.appendChild(catSpan);
+    item.appendChild(contentSpan);
+    list.appendChild(item);
+  }
+
+  let expanded = false;
+  header.addEventListener('click', () => {
+    expanded = !expanded;
+    list.style.display = expanded ? '' : 'none';
+    header.querySelector('.memory-indicator-toggle').innerHTML = expanded ? '&#x25BC;' : '&#x25B6;';
+  });
+
+  div.appendChild(header);
+  div.appendChild(list);
+  pane.messagesDiv.appendChild(div);
+  pane.messagesDiv.scrollTop = pane.messagesDiv.scrollHeight;
+}
+
 // Handle WebSocket messages
 function handleServerMessage(msg) {
   // Ignore assistant-bot messages — handled by assistant-bot.js
@@ -398,6 +439,22 @@ function handleServerMessage(msg) {
 
     case "permission_response_external":
       handleExternalPermissionResponse(msg.id, msg.behavior);
+      break;
+
+    case "memories_injected":
+      if (msg.count > 0 && msg.memories) {
+        appendMemoryIndicator(msg.memories, pane);
+      }
+      break;
+
+    case "memories_captured":
+      if (msg.count > 0) {
+        addStatus(`${msg.count} new memor${msg.count === 1 ? 'y' : 'ies'} saved`, false, pane);
+      }
+      break;
+
+    case "memory_saved":
+      // /remember command response — already handled by "text" message
       break;
   }
 }

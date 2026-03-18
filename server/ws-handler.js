@@ -12,8 +12,12 @@ import {
   getTotalCost,
   setClaudeSession,
   updateSessionTitle,
+  getTopMemories,
+  touchMemory,
 } from "../db.js";
 import { getProjectSystemPrompt } from "./routes/projects.js";
+import { buildMemoryPrompt, parseRememberCommand, saveExplicitMemories } from "./memory-injector.js";
+import { captureMemories, runMaintenance } from "./memory-extractor.js";
 
 // Map short model names to current model IDs
 const MODEL_MAP = {
@@ -643,6 +647,27 @@ export function setupWebSocket(wss, sessionIds) {
       if (msg.type !== "chat") return;
 
       const { message, cwd, sessionId: clientSid, projectName, chatId, permissionMode: clientPermMode, model: chatModel, maxTurns: clientMaxTurns, images, systemPrompt, disabledTools } = msg;
+
+      // Handle /remember command — save memory and respond without calling Claude
+      if (message && message.trim().toLowerCase().startsWith('/remember ') && cwd) {
+        const result = parseRememberCommand(message, cwd, clientSid);
+        function remSend(payload) {
+          if (ws.readyState !== 1) return;
+          if (chatId) payload.chatId = chatId;
+          ws.send(JSON.stringify(payload));
+        }
+        if (result) {
+          remSend({ type: "text", text: result.saved
+            ? `Saved memory [${result.category}]: ${result.content}`
+            : `Memory already exists: ${result.content}` });
+          remSend({ type: "memory_saved", category: result.category, content: result.content, isDuplicate: !result.saved });
+        } else {
+          remSend({ type: "text", text: "Usage: /remember [category] what to remember\nCategories: convention, decision, discovery, warning" });
+        }
+        remSend({ type: "done" });
+        return;
+      }
+
       const queryKey = chatId || "__default__";
 
       const sessionKey = chatId ? `${clientSid}::${chatId}` : clientSid;
@@ -681,6 +706,39 @@ export function setupWebSocket(wss, sessionIds) {
       if (systemPrompt) {
         opts.appendSystemPrompt = (opts.appendSystemPrompt || '') +
           (opts.appendSystemPrompt ? '\n\n' : '') + systemPrompt;
+      }
+      // Run memory maintenance (decay stale, clean expired) on each session
+      if (cwd) runMaintenance(cwd);
+      // Inject persistent memories for this project (smart: uses user message for relevance)
+      if (cwd) {
+        const { prompt: memPrompt, count: memCount, memories: memList } = buildMemoryPrompt(cwd, 10, message);
+        if (memPrompt) {
+          opts.appendSystemPrompt = (opts.appendSystemPrompt || '') +
+            (opts.appendSystemPrompt ? '\n\n' : '') + memPrompt;
+
+          // Log memories being passed to Claude SDK
+          console.log(`\n══════ MEMORY INJECTION ══════`);
+          console.log(`Project: ${cwd}`);
+          console.log(`User message: "${(message || '').slice(0, 100)}"`);
+          console.log(`Memories injected: ${memCount}`);
+          for (const m of memList) {
+            console.log(`  [${m.category}] ${m.content.slice(0, 120)}`);
+          }
+          console.log(`Prompt appended to appendSystemPrompt (${memPrompt.length} chars)`);
+          console.log(`══════════════════════════════\n`);
+
+          // Notify client that memories were injected (include content for display)
+          if (ws.readyState === 1) {
+            const payload = { type: "memories_injected", count: memCount, memories: memList };
+            if (chatId) payload.chatId = chatId;
+            ws.send(JSON.stringify(payload));
+          }
+        } else {
+          console.log(`\n══════ MEMORY INJECTION ══════`);
+          console.log(`Project: ${cwd}`);
+          console.log(`No memories found for this project`);
+          console.log(`══════════════════════════════\n`);
+        }
       }
       if (resumeId) opts.resume = resumeId;
 
@@ -767,7 +825,7 @@ export function setupWebSocket(wss, sessionIds) {
           if (sdkMsg.type === "assistant" && sdkMsg.message?.content) {
             for (const block of sdkMsg.message.content) {
               if (block.type === "text" && block.text) {
-                lastAssistantText = block.text;
+                lastAssistantText += (lastAssistantText ? "\n\n" : "") + block.text;
                 wsSend({ type: "text", text: block.text });
                 if (resolvedSid) addMessage(resolvedSid, "assistant", JSON.stringify({ text: block.text }), chatId || null);
               } else if (block.type === "tool_use") {
@@ -919,6 +977,28 @@ export function setupWebSocket(wss, sessionIds) {
           generateSessionSummary(resolvedSid).catch(err =>
             console.error("Summary generation error:", err.message)
           );
+        }
+
+        // Auto-capture memories from assistant output
+        if (cwd && lastAssistantText) {
+          try {
+            // 1. Parse explicit ```memory blocks (Claude-requested saves)
+            const explicitCount = saveExplicitMemories(cwd, lastAssistantText, resolvedSid);
+
+            // 2. Heuristic extraction from assistant text
+            const autoCount = captureMemories(cwd, lastAssistantText, resolvedSid, null);
+
+            const totalCaptured = explicitCount + autoCount;
+            if (totalCaptured > 0) {
+              console.log(`Captured ${totalCaptured} memories (${explicitCount} explicit, ${autoCount} auto) from session ${resolvedSid}`);
+              // Notify client
+              if (ws.readyState === 1) {
+                const payload = { type: "memories_captured", count: totalCaptured, explicit: explicitCount, auto: autoCount };
+                if (chatId) payload.chatId = chatId;
+                ws.send(JSON.stringify(payload));
+              }
+            }
+          } catch (e) { console.error("Memory capture error:", e.message); }
         }
       }
     });

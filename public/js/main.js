@@ -44,6 +44,7 @@ import './panels/git-panel.js';
 import './panels/mcp-manager.js';
 import './panels/tips-feed.js';
 import './panels/assistant-bot.js';
+import './panels/memory.js';
 import './panels/dev-docs.js';
 
 // Auto-discover and load tab-sdk plugins from /js/plugins/
