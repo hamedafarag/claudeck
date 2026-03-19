@@ -44,6 +44,7 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 
 - **Zero-framework** — Vanilla JS, 6 npm dependencies, no build step
 - **Full agent orchestration** — Chains, DAGs, orchestrator, and monitoring dashboard
+- **Persistent memory** — Cross-session project knowledge with FTS5 search and AI optimization
 - **Cost visibility** — Per-session tracking, daily charts, token breakdowns
 - **Works everywhere** — PWA, mobile responsive, Telegram AFK approval
 - **Extensible** — Full-stack plugin system with auto-discovery
@@ -87,6 +88,15 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 - Input/output token breakdown, streaming token counter
 - Error pattern analysis (9 categories), tool usage stats
 
+### Persistent Memory
+
+- Cross-session project knowledge that survives restarts
+- Auto-capture from assistant responses using pattern-based heuristic extraction
+- `/remember` command for manual memory creation
+- FTS5 full-text search with relevance scoring and time-decay
+- AI-powered optimization (consolidation via Claude Haiku)
+- Memory panel in right sidebar with search, filtering, and inline editing
+
 ### Integrations
 
 - **MCP Manager** — Add/edit/remove MCP servers (global + per-project)
@@ -127,8 +137,9 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
                           server/routes/         ~/.claudeck/
                           server/agent-loop.js     ├── config/     (JSON configs)
                           server/orchestrator.js   ├── plugins/    (user plugins)
-                          server/dag-executor.js   ├── data.db     (SQLite)
-                          plugins/                 └── .env        (VAPID keys)
+                          server/dag-executor.js   ├── data.db     (SQLite + memories)
+                          server/memory-optimizer.js └── .env      (VAPID keys)
+                          plugins/
 ```
 
 | Layer | Technology |
@@ -148,6 +159,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 /clear /new /parallel /export /theme /shortcuts       App
 /costs /analytics                                      Dashboards
 /files /git /repos /events /mcp /tips                  Panels
+/remember                                              Memory
 /review-pr /onboard-repo /migration-plan /code-health  Workflows
 /agent-pr-reviewer /agent-bug-hunter /agent-test-writer Agents
 /orchestrate /monitor /chain-* /dag-*                   Multi-Agent
@@ -199,7 +211,7 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for the full guide.
 
 ## Plugins
 
-Claudeck includes 6 built-in plugins and supports user plugins via `~/.claudeck/plugins/`:
+Claudeck includes 7 built-in plugins and supports user plugins via `~/.claudeck/plugins/`:
 
 | Plugin | Description |
 |--------|-------------|
@@ -228,6 +240,7 @@ npx skills add https://github.com/hamedafarag/claudeck-skills
 |----------|-------------|
 | [DOCUMENTATION.md](docs/DOCUMENTATION.md) | Full feature docs, API reference, database schema |
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | User data directory, config files, plugin system |
+| [AGENT-ARCHITECTURE.md](docs/AGENT-ARCHITECTURE.md) | How agents, chains, DAGs, and orchestrator work |
 | [CROSS-PLATFORM-AUDIT.md](docs/CROSS-PLATFORM-AUDIT.md) | Windows/Linux compatibility |
 | [COMPETITIVE-ANALYSIS.md](docs/COMPETITIVE-ANALYSIS.md) | Feature comparison with similar tools |
 

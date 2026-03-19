@@ -60,6 +60,14 @@ pathStr.split(/[/\\]/).filter(Boolean)
 
 `server/routes/stats.js` — `execFile` for `claude auth status` now passes `shell: true` on Windows so the `claude` binary can be resolved through PATH. Without this, `execFile` bypasses the shell and PATH-resolved commands aren't found.
 
+### 12. Claude binary resolution — Windows npm global installs ✅
+
+Added plain `claude` (no extension) path for npm global installs on Windows. Quoted binary path in `exec` to handle spaces in Windows paths. Graceful JSON fallback when `claude auth status` returns non-JSON output. Set `FORCE_COLOR=0` to prevent ANSI codes in output. Use `exec` instead of `execFile` on Windows so `.cmd` shims resolve correctly.
+
+### 13. Git branch display — bash-only syntax on Windows ✅
+
+Fixed git branch command that used `2>/dev/null` (bash-only syntax) which fails on Windows. Now uses cross-platform compatible approach.
+
 ### 9. Notifications — user feedback for unsupported contexts ✅
 
 `public/js/ui/notifications.js` — `toggleNotifications()` now shows clear alerts when:

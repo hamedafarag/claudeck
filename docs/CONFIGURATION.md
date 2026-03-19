@@ -233,6 +233,8 @@ The SQLite database lives at `~/.claudeck/data.db`. It stores:
 - Claude session mappings (for SDK session resumption)
 - Push subscriptions (for web push notifications)
 - Todos and brags
+- Persistent memories (cross-session project knowledge with FTS5 search)
+- Agent runs and agent context (shared memory between agents)
 
 The database is created automatically on first run with WAL mode enabled. Schema migrations run on startup via try/catch `ADD COLUMN` statements.
 

@@ -234,6 +234,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | Floating assistant bot (linked/free) | **Yes** | No | No | No | No | No |
 | Custom AI agents | **Yes** | **Yes** | No | No | No | No |
 | Voice dictation | **Yes** | No | No | No | No | **Yes** |
+| Persistent memory (cross-session) | **Yes** | No | No | No | Partial | No |
 | **Code & Files** |
 | Code diff viewer (LCS-based) | **Yes** | No | No | No | No | No |
 | File attachments | Yes | No | Partial | Yes | No | No |
@@ -437,13 +438,14 @@ These features are **not found in any competitor** (or found in very few):
 | **VS Code-style status bar** | Connection, branch, project, model, cost in persistent footer | No |
 | **Whaly mascot + easter egg** | Pixel whale mascot with hidden comic-book speech bubble | No |
 | **Voice input (Web Speech API)** | Zero-dependency browser-native speech-to-text with real-time transcription | CUI uses Gemini Flash |
+| **Persistent memory system** | Cross-session project knowledge with FTS5 search, auto-capture, AI optimization, relevance scoring | Pilot Shell has basic memory |
 
 ---
 
 ## Implementation Progress
 
-**Last updated**: March 14, 2026
-**Completed**: 14 / 14 (Phase 1-3) + 1 / 4 (Phase 4) + 17 / 17 (Phase 5-6)
+**Last updated**: March 19, 2026
+**Completed**: 14 / 14 (Phase 1-3) + 1 / 4 (Phase 4) + 17 / 17 (Phase 5-6) + 3 / 3 (Phase 7)
 
 ### Phase 1 — Quick Wins (Low Effort, High Impact)
 - [x] 1. Model switching (dropdown in header)
@@ -486,6 +488,11 @@ These features are **not found in any competitor** (or found in very few):
 - [x] 26. **VS Code-style status bar** — Connection, branch, project, model, cost
 - [x] 27. **Whaly mascot + Claudeck branding** — Pixel whale, favicon, typography, animations
 - [x] 28. **Easter egg** — Click Whaly 5 times for comic-book speech bubble
+
+### Phase 7 — Memory & Polish (v1.1.0)
+- [x] 29. **Persistent memory system** — SQLite FTS5, auto-capture, /remember command, memory panel with search/filter/optimize, Claude Haiku consolidation, content-hash dedup
+- [x] 30. **Tab SDK `projectChanged` event** — `ctx.on('projectChanged', fn)` and `ctx.getProjectPath()` for plugin project awareness
+- [x] 31. **Version in status bar** — `/api/version` endpoint, accent-colored version badge in status bar
 
 ---
 
@@ -531,15 +538,16 @@ Based on competitive gaps and market trends:
 - Unique AI workflow engine is a strong moat
 - Cost dashboard fills a gap that even Anthropic doesn't address
 - Repos management is a new category no competitor has
+- Persistent memory with FTS5 search and AI optimization — most competitors lack cross-session knowledge
 
 ---
 
 ## Summary
 
-Claudeck is the most feature-rich Claude Code web UI, with 22+ unique features not found in any competitor. All core feature gaps have been closed: mobile responsive layout, voice input, CLAUDE.md editor, plugin system with marketplace, autonomous agents, home page with AI activity grid, two-way Telegram integration (rich notifications + AFK tool approval), and a VS Code-style status bar. The platform now has a distinctive identity with the Whaly pixel whale mascot, Claudeck branding, and even an easter egg.
+Claudeck is the most feature-rich Claude Code web UI, with 23+ unique features not found in any competitor. All core feature gaps have been closed: mobile responsive layout, voice input, CLAUDE.md editor, plugin system with marketplace, autonomous agents, home page with AI activity grid, two-way Telegram integration (rich notifications + AFK tool approval), VS Code-style status bar, and persistent cross-session memory. The platform now has a distinctive identity with the Whaly pixel whale mascot, Claudeck branding, and even an easter egg.
 
 **Remaining gaps**: Authentication (#4) for remote/team usage, auto-update notifications (#12), rate limiting (#13), and HTTPS support (#14).
 
-The multi-agent system is now fully built out with agent chains, DAGs, orchestrator, shared context, and monitoring dashboard — closing all gaps identified in the previous analysis. NPX publishing is also complete.
+The multi-agent system is now fully built out with agent chains, DAGs, orchestrator, shared context, and monitoring dashboard. NPX publishing is complete. v1.1.0 added persistent memory (FTS5, auto-capture, AI optimization), Tab SDK enhancements, a landing page for GitHub Pages, and multiple Windows compatibility fixes.
 
 The biggest strategic question is whether to go deeper on unique AI features (workflows, analytics, agents) or broader on platform coverage (multi-CLI, desktop app). Given Claudeck's strong moat in AI features and zero-framework architecture, **authentication** is the last major blocker for remote/team adoption.

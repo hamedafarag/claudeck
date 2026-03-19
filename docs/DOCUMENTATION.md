@@ -90,7 +90,7 @@ browser ──────── WebSocket ──────── server.js �
 - **Event bus** — decoupled cross-module communication
 - **Modular backend** — 15 Express Router modules + shared WS handler + agent loop + Telegram sender
 - **Centralized path resolution** — `server/paths.js` manages all user data paths, sync bootstrap creates dirs and copies defaults on first run
-- **SQLite + WAL** persists sessions, messages, costs, and Claude session mappings
+- **SQLite + WAL** persists sessions, messages, costs, Claude session mappings, and persistent memories
 - **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
 - **Prepared statements** for all DB queries (no SQL injection risk)
 - **Session resumption** via stored Claude session IDs (survives page reloads)
@@ -211,6 +211,23 @@ browser ──────── WebSocket ──────── server.js �
 | key       | TEXT    | Context key (e.g. "summary")               |
 | value     | TEXT    | Context value (agent output)               |
 | created_at| INTEGER | Unix timestamp                             |
+
+### memories
+| Column            | Type    | Description                                    |
+| ----------------- | ------- | ---------------------------------------------- |
+| id                | INTEGER | Auto-increment PK                              |
+| project_path      | TEXT    | Project this memory belongs to                 |
+| category          | TEXT    | convention, decision, discovery, or warning     |
+| content           | TEXT    | Memory content text                            |
+| content_hash      | TEXT    | SHA-256 hash for deduplication (unique per project) |
+| source_session_id | TEXT    | Session that produced this memory              |
+| source_agent_id   | TEXT    | Agent that produced this memory (if any)       |
+| relevance_score   | REAL    | Relevance score (boosted on access, decayed over time) |
+| created_at        | INTEGER | Unix timestamp                                 |
+| accessed_at       | INTEGER | Unix timestamp (updated on each retrieval)     |
+| expires_at        | INTEGER | Optional expiration timestamp                  |
+
+**FTS5 index:** `memories_fts` virtual table for full-text search on `content`, kept in sync via INSERT/UPDATE/DELETE triggers.
 
 Migrations run automatically on startup (ADD COLUMN with try/catch).
 
@@ -375,6 +392,25 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 | GET    | /api/telegram/config    | Get config (token masked, includes notify prefs + AFK timeout) |
 | PUT    | /api/telegram/config    | Update config (botToken, chatId, enabled, afkTimeoutMinutes, notify). Restarts poller on change |
 | POST   | /api/telegram/test      | Send a rich test notification with sample metrics |
+
+### Memory
+| Method | Path                    | Description                              |
+| ------ | ----------------------- | ---------------------------------------- |
+| GET    | /api/memory             | List memories for a project (`?project=`) |
+| GET    | /api/memory/search      | FTS5 search (`?project=&q=&limit=`)      |
+| GET    | /api/memory/top         | Top relevant memories for prompt injection (`?project=&limit=`) |
+| GET    | /api/memory/stats       | Memory stats and category counts (`?project=`) |
+| POST   | /api/memory             | Create a memory (`{ project, category, content, sourceSessionId?, sourceAgentId? }`) |
+| PUT    | /api/memory/:id         | Update memory content and category        |
+| DELETE | /api/memory/:id         | Delete a memory                          |
+| POST   | /api/memory/maintain    | Run maintenance (decay scores, delete expired) |
+| POST   | /api/memory/optimize    | AI-powered optimization preview (Claude Haiku consolidation) |
+| POST   | /api/memory/optimize/apply | Apply optimization results              |
+
+### Version
+| Method | Path                    | Description                              |
+| ------ | ----------------------- | ---------------------------------------- |
+| GET    | /api/version            | Returns `{ version }` from package.json  |
 
 ### WebSocket (`/ws`)
 
@@ -668,7 +704,7 @@ The right side of the UI hosts a resizable tabbed panel with built-in and plugin
 
 **Tab SDK plugin system** — developers can register new tabs with a single `registerTab()` call in a JS module, with no HTML or `dom.js` changes required:
 - `registerTab({ id, title, icon, init(ctx) })` — creates tab button and pane dynamically
-- **Context object (ctx)** — provides event bus (`on`/`emit`), reactive store (`getState`/`onState`), API module, badge/title helpers
+- **Context object (ctx)** — provides event bus (`on`/`emit`), reactive store (`getState`/`onState`), API module, badge/title helpers, `getProjectPath()`, and `on('projectChanged', fn)` event
 - **Lifecycle hooks** — `onActivate`, `onDeactivate`, `onDestroy`
 - **Lazy initialization** — `lazy: true` defers `init()` until the tab is first opened
 - **Positional insert** — `position` option to control tab order
@@ -936,6 +972,7 @@ A 24px footer bar at the bottom of the page showing key information at a glance:
 - **Connection status** — green/red dot with "connected"/"disconnected" label
 - **Git branch** — current branch name with git icon, click to open Git panel
 - **Project** — selected project name with folder icon, click to focus project selector
+- **Version** — Claudeck version badge (accent colored) fetched from `/api/version`
 - **Activity indicator** — flashes "active" during WebSocket message streaming
 - **Background sessions** — count of active background sessions
 - **Model** — current model selection with hover tooltip
@@ -985,6 +1022,25 @@ Full mobile and tablet responsiveness with two breakpoints (CSS-first approach):
 ### 50. Easter Egg
 Click the Whaly mascot 5 times rapidly on the empty chat screen — Whaly wiggles and pops up a comic-book-style speech bubble with a sassy greeting. Try it!
 
+### 51. Persistent Memory System
+Cross-session project knowledge that survives server restarts and upgrades:
+- **SQLite-backed** — `memories` table with content-hash deduplication, relevance scoring, and time-decay
+- **FTS5 full-text search** — `memories_fts` virtual table with triggers for automatic index sync
+- **Auto-capture** — pattern-based heuristic extraction from assistant responses (conventions, decisions, discoveries, warnings)
+- **Manual creation** — `/remember` command for user-driven memory capture from chat
+- **Code block capture** — Claude can save memories via ` ```memory ` code blocks in responses
+- **Smart retrieval** — combines top-N relevance with query-matched FTS results for prompt injection
+- **Memory injection** — loaded memories are injected into Claude's context with a collapsible UI indicator
+- **AI optimization** — two-phase optimizer: heuristic pre-filter + Claude Haiku consolidation with before/after diff preview
+- **Memory panel** — right sidebar tab with search, category filtering, inline edit, and optimize button
+- **Categories**: convention, decision, discovery, warning
+- **Relevance scoring** — accessed memories get a 0.1 boost (capped at 2.0); idle memories decay by 5% over configurable period
+
+### 52. Tab SDK `projectChanged` Event
+- Centralizes project-select change handling in the Tab SDK
+- Plugins use `ctx.on('projectChanged', fn)` and `ctx.getProjectPath()` instead of accessing the DOM element directly
+- Updated plugin scaffold and claude-editor plugin follow the new pattern
+
 ---
 
 ## Slash Commands
@@ -1010,6 +1066,7 @@ Click the Whaly mascot 5 times rapidly on the empty chat screen — Whaly wiggle
 | /mcp             | Open MCP server manager modal  |
 | /notifications   | Toggle browser notifications   |
 | /tips            | Toggle tips feed panel         |
+| /remember        | Save a memory from chat        |
 
 ### CLI
 | Command       | Description                     |
@@ -1210,7 +1267,7 @@ All colors are CSS custom properties on `:root` (defined in `css/variables.css`)
 - **Sidebar** (272px): project selector (with add project button), session controls (search, new session, parallel toggle), session list (with right-click context menu)
 - **Main area**: messages (820px max-width), input bar (with tooltipped action buttons), toolbox/workflow/agent panels
 - **Right panel** (300px, resizable): tabbed container with Tasks, Files, Git, Repos, Events, plugin tabs
-- **Status bar** (24px): connection dot, git branch, project name, activity, background sessions, model, permission mode, max turns, cost
+- **Status bar** (24px): connection dot, git branch, project name, version badge, activity, background sessions, model, permission mode, max turns, cost
 - **Responsive**: tablet (≤1024px) — sidebar becomes slide-in overlay; mobile (≤640px) — full-screen overlays, bottom-sheet dropdowns, compact input bar
 
 ---
@@ -1229,6 +1286,7 @@ Claudeck/
 │   ├── push-sender.js     Web Push notification sender
 │   ├── telegram-sender.js Telegram Bot API (rich messages, inline keyboards, permissions)
 │   ├── telegram-poller.js Telegram callback listener (long-poll getUpdates, routes approvals)
+│   ├── memory-optimizer.js AI memory optimization (Claude Haiku consolidation)
 │   └── routes/
 │       ├── projects.js    Project CRUD + system prompts + commands
 │       ├── sessions.js    Session CRUD + pin/unpin
@@ -1246,7 +1304,8 @@ Claudeck/
 │       ├── bot.js         Assistant bot system prompt API
 │       ├── agents.js      Agents listing API
 │       ├── todos.js       Todo + brag CRUD
-│       └── telegram.js    Telegram notification config + test
+│       ├── telegram.js    Telegram notification config + test
+│       └── memory.js      Memory CRUD, search, stats, optimize
 ├── config/                Default JSON configs (copied to ~/.claudeck/ on first run)
 │   ├── folders.json       Project configurations
 │   ├── repos.json         Repository groups + repos
