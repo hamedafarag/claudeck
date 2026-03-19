@@ -1527,7 +1527,7 @@ body::after {
         <div>
           <h4>Let Claude scaffold it</h4>
           <p>Install the <a href="https://github.com/hamedafarag/claudeck-skills/" target="_blank" rel="noopener">Claudeck skills</a> via <a href="https://skills.sh/" target="_blank" rel="noopener">skills.sh</a>:</p>
-          <code style="display:inline-block;margin-top:8px;padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-family:var(--ff-mono);font-size:13px;color:var(--accent);">npx skills.sh install hamedafarag/claudeck-skills</code>
+          <code style="display:inline-block;margin-top:8px;padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-family:var(--ff-mono);font-size:13px;color:var(--accent);">npx skills add https://github.com/hamedafarag/claudeck-skills</code>
           <p style="margin-top:8px;">Then ask Claude to create a plugin:</p>
           <code style="display:inline-block;margin-top:4px;padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-family:var(--ff-mono);font-size:13px;color:var(--accent);">/claudeck-plugin-create &lt;plugin-name&gt; &lt;short description of what the plugin does&gt;</code>
           <p style="margin-top:6px;font-size:12px;color:var(--text-dim);">Claude generates client.js, server.js, and CSS for you automatically.</p>
@@ -1537,19 +1537,19 @@ body::after {
 
     <div class="plugin-code reveal reveal-delay-2">
       <div class="plugin-code-header">client.js</div>
-      <div class="plugin-code-body"><span class="kw">export default function</span> <span class="fn">register</span><span class="punc">(</span><span class="prop">registerTab</span><span class="punc">) {</span>
-  <span class="fn">registerTab</span><span class="punc">({</span>
-    <span class="prop">id</span><span class="punc">:</span>    <span class="str">'my-widget'</span><span class="punc">,</span>
-    <span class="prop">title</span><span class="punc">:</span> <span class="str">'My Widget'</span><span class="punc">,</span>
-    <span class="prop">icon</span><span class="punc">:</span>  <span class="str">'&#9733;'</span><span class="punc">,</span>
-    <span class="fn">init</span><span class="punc">(</span><span class="prop">ctx</span><span class="punc">) {</span>
-      <span class="cmt">// ctx gives you event bus, store,</span>
-      <span class="cmt">// API module, badge helpers</span>
-      <span class="prop">ctx</span><span class="punc">.</span><span class="prop">container</span><span class="punc">.</span><span class="prop">innerHTML</span> <span class="punc">=</span>
-        <span class="str">'&lt;h2&gt;Hello from my plugin!&lt;/h2&gt;'</span><span class="punc">;</span>
-    <span class="punc">}</span>
-  <span class="punc">});</span>
-<span class="punc">}</span></div>
+      <div class="plugin-code-body"><span class="kw">import</span> <span class="punc">{</span> <span class="fn">registerTab</span> <span class="punc">}</span> <span class="kw">from</span> <span class="str">'/js/ui/tab-sdk.js'</span><span class="punc">;</span>
+
+<span class="fn">registerTab</span><span class="punc">({</span>
+  <span class="prop">id</span><span class="punc">:</span>    <span class="str">'my-widget'</span><span class="punc">,</span>
+  <span class="prop">title</span><span class="punc">:</span> <span class="str">'My Widget'</span><span class="punc">,</span>
+  <span class="prop">icon</span><span class="punc">:</span>  <span class="str">'&#9733;'</span><span class="punc">,</span>
+  <span class="fn">init</span><span class="punc">(</span><span class="prop">ctx</span><span class="punc">) {</span>
+    <span class="cmt">// ctx: event bus, store, API, badges</span>
+    <span class="kw">const</span> <span class="prop">root</span> <span class="punc">=</span> document<span class="punc">.</span><span class="fn">createElement</span><span class="punc">(</span><span class="str">'div'</span><span class="punc">);</span>
+    <span class="prop">root</span><span class="punc">.</span><span class="prop">innerHTML</span> <span class="punc">=</span> <span class="str">'&lt;h2&gt;Hello!&lt;/h2&gt;'</span><span class="punc">;</span>
+    <span class="kw">return</span> <span class="prop">root</span><span class="punc">;</span>  <span class="cmt">// must return HTMLElement</span>
+  <span class="punc">}</span>
+<span class="punc">});</span></div>
     </div>
   </div>
 
