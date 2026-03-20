@@ -34,6 +34,7 @@ import { sendTelegramNotification } from "./telegram-sender.js";
 import { buildAgentMemoryPrompt } from "./memory-injector.js";
 import { captureMemories } from "./memory-extractor.js";
 import { saveExplicitMemories } from "./memory-injector.js";
+import { logNotification } from "./notification-logger.js";
 
 /**
  * Build the agent system prompt that instructs Claude to work autonomously
@@ -302,6 +303,12 @@ export async function runAgent({
             recordAgentRunComplete(monitorRunId, agentId, 'completed', numTurns, costUsd, durationMs, inputTokens, outputTokens);
           } catch (e) { /* ignore */ }
 
+          // Log notification
+          logNotification('agent', `Agent "${agentDef.title}" completed`,
+            `${numTurns} turns · $${costUsd.toFixed(4)} · ${(durationMs / 1000).toFixed(1)}s`,
+            JSON.stringify({ costUsd, durationMs, inputTokens, outputTokens, turns: numTurns }),
+            resolvedSid, agentId);
+
           // Store agent output as shared context for downstream agents
           if (runId && lastAssistantText) {
             const summary = lastAssistantText.length > 4000
@@ -339,6 +346,12 @@ export async function runAgent({
           try {
             recordAgentRunComplete(monitorRunId, agentId, 'error', numTurns, costUsd, durationMs, inputTokens, outputTokens, errMsg);
           } catch (e) { /* ignore */ }
+
+          // Log error notification
+          logNotification('error', `Agent "${agentDef.title}" failed`,
+            errMsg.slice(0, 200),
+            JSON.stringify({ costUsd, durationMs, error: errMsg }),
+            resolvedSid, agentId);
         }
         continue;
       }

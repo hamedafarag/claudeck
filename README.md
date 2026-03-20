@@ -97,6 +97,15 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 - AI-powered optimization (consolidation via Claude Haiku)
 - Memory panel in right sidebar with search, filtering, and inline editing
 
+### Notifications
+
+- **Notification Bell** — Persistent notification history with unread badge in the header
+- Background session events (completed, errored, input needed) logged automatically
+- Agent completion/error notifications with cost and duration metrics
+- Full history modal with type/status filters, bulk actions, and pagination
+- 4 read strategies: explicit click, mark all, auto-read on view, click-through to session
+- Real-time cross-tab sync via WebSocket broadcasts
+
 ### Integrations
 
 - **MCP Manager** — Add/edit/remove MCP servers (global + per-project)
@@ -138,6 +147,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
                           server/agent-loop.js     ├── config/     (JSON configs)
                           server/orchestrator.js   ├── plugins/    (user plugins)
                           server/dag-executor.js   ├── data.db     (SQLite + memories)
+                          server/notification-logger.js
                           server/memory-optimizer.js └── .env      (VAPID keys)
                           plugins/
 ```

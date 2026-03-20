@@ -229,6 +229,21 @@ browser ──────── WebSocket ──────── server.js �
 
 **FTS5 index:** `memories_fts` virtual table for full-text search on `content`, kept in sync via INSERT/UPDATE/DELETE triggers.
 
+### notifications
+| Column            | Type    | Description                                    |
+| ----------------- | ------- | ---------------------------------------------- |
+| id                | INTEGER | Auto-increment PK                              |
+| type              | TEXT    | session, agent, workflow, chain, dag, error, approval |
+| title             | TEXT    | Notification title                             |
+| body              | TEXT    | Optional body text                             |
+| metadata          | TEXT    | Optional JSON metadata (cost, tokens, etc.)    |
+| source_session_id | TEXT    | Session that triggered this notification       |
+| source_agent_id   | TEXT    | Agent that triggered this notification         |
+| read_at           | INTEGER | Unix timestamp when marked as read (NULL = unread) |
+| created_at        | INTEGER | Unix timestamp                                 |
+
+**Indexes:** `idx_notif_created` (created_at DESC), `idx_notif_unread` (partial index on read_at WHERE read_at IS NULL).
+
 Migrations run automatically on startup (ADD COLUMN with try/catch).
 
 ---
@@ -681,6 +696,7 @@ Background session behavior:
 - On WebSocket reconnect, background sessions are reconciled against the server's active query list (`GET /api/sessions/active`). Sessions no longer running get a completion toast; still-active sessions remain in the map
 - Server aborts all active SDK streams on client disconnect — no orphaned processes
 - Send/Stop buttons and thinking indicators reset correctly when backgrounding
+- **Notification bell integration** — background session events (completed, errored, input needed) are persisted as in-app notifications via `POST /api/notifications/create`, visible in the header bell dropdown with click-through to switch back to the session
 
 The guard dialog intercepts session clicks, project switches, and the New Session button.
 
@@ -801,6 +817,62 @@ Browser notifications for events that happen while the tab is unfocused, **inclu
 - Push notifications trigger sound via service worker `postMessage` to the client page
 - OS notification sound suppressed (`silent: true`) to avoid double-chime
 - Sound preference stored in `localStorage` (`claudeck-notifications-sound`)
+
+### 32b. Notification Bell & History
+
+Persistent in-app notification system with a bell icon in the header toolbar. Events are stored in the `notifications` SQLite table and survive page reloads.
+
+**Bell icon:**
+- Positioned in `.header-right` before the Session settings dropdown
+- Red badge shows unread count (hidden when 0, shows `99+` for large counts)
+- Bell icon turns accent-colored when unread notifications exist
+- Click toggles a dropdown panel with the 15 most recent notifications
+
+**Dropdown:**
+- Each row shows: type emoji icon, title, body, relative time ("2m", "1h", "3d"), unread dot
+- Type icons: session (💬), agent (🤖), workflow (⚙️), chain (🔗), dag (🌐), error (⚠️), approval (🔒)
+- Footer with "Mark all read" and "View All" buttons
+- Empty state with muted bell icon and "No notifications yet" message
+
+**Events that create notifications:**
+
+| Source | Type | When |
+|--------|------|------|
+| Agent completion | `agent` | After `recordAgentRunComplete` in `agent-loop.js` |
+| Agent error | `error` | After agent error handling in `agent-loop.js` |
+| Background session done | `session` | Toast in `background-sessions.js` |
+| Background session error | `error` | Toast in `background-sessions.js` |
+| Background session input needed | `approval` | Toast in `background-sessions.js` |
+
+**Read/unread management (4 strategies):**
+1. **Explicit click** — click the unread dot on a notification row
+2. **Mark all** — footer button marks all as read
+3. **Auto on view** — 1.5s timer on dropdown open marks visible items as read
+4. **Click-through** — clicking a notification marks it read + switches to the source session
+5. **Age-based** — unreads older than 7 days auto-marked as read during daily cleanup
+
+**Full history modal:**
+- Opened via "View All" in dropdown footer
+- Filter bar: type dropdown, read status (all/unread/read)
+- Checkbox column for multi-select with "Mark Selected Read" and "Purge Old" bulk actions
+- "Load More" pagination (30 items per page)
+- Escape key closes modal
+
+**Real-time sync:**
+- `notification:new` WS broadcast updates badge + dropdown across all tabs
+- `notification:read` WS broadcast syncs read state across tabs
+- Badge re-fetched on WS reconnect
+
+**API routes** (on `/api/notifications` router):
+- `POST /create` — create notification (type, title, body, metadata, sourceSessionId)
+- `GET /history?limit=20&offset=0&unread_only=false&type=` — paginated fetch
+- `GET /unread-count` — lightweight count for badge
+- `POST /read` — mark read: `{ ids: [...] }`, `{ all: true }`, or `{ before: timestamp }`
+- `DELETE /old` — purge notifications older than 90 days
+
+**Cleanup:** `purgeOldNotifications(90)` runs daily via `setInterval` in `server.js`. Marks stale unreads (>7 days) as read and deletes rows older than 90 days.
+
+**Key files:** `server/notification-logger.js`, `server/routes/notifications.js`, `public/js/ui/notification-bell.js`, `public/js/ui/notification-history.js`, `public/css/ui/notification-bell.css`
 
 ### 33. Telegram Integration (Two-Way)
 Full two-way Telegram bot integration for AFK developers — rich notifications outbound, tool approval inbound:
@@ -1263,7 +1335,7 @@ Configure via **Tools > Telegram** in the header or edit directly. Requires a Te
 All colors are CSS custom properties on `:root` (defined in `css/variables.css`). The light theme overrides them via `html[data-theme="light"]`. No page reload required.
 
 ### Layout
-- **Header** (36px): background session indicator, **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, notifications, Telegram, dev docs), panel toggle
+- **Header** (36px): background session indicator, **Notification bell** (badge + dropdown + history modal), **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, notifications, Telegram, dev docs), panel toggle
 - **Sidebar** (272px): project selector (with add project button), session controls (search, new session, parallel toggle), session list (with right-click context menu)
 - **Main area**: messages (820px max-width), input bar (with tooltipped action buttons), toolbox/workflow/agent panels
 - **Right panel** (300px, resizable): tabbed container with Tasks, Files, Git, Repos, Events, plugin tabs
@@ -1283,6 +1355,7 @@ Claudeck/
 │   ├── ws-handler.js      WebSocket handler with stale session retry
 │   ├── agent-loop.js      Autonomous agent execution
 │   ├── summarizer.js      AI session summary generation via Claude Haiku
+│   ├── notification-logger.js  In-app notification creation + WS broadcast
 │   ├── push-sender.js     Web Push notification sender
 │   ├── telegram-sender.js Telegram Bot API (rich messages, inline keyboards, permissions)
 │   ├── telegram-poller.js Telegram callback listener (long-poll getUpdates, routes approvals)
@@ -1299,7 +1372,7 @@ Claudeck/
 │       ├── linear.js      Linear API proxy (issues, teams, states)
 │       ├── mcp.js         MCP server CRUD (global + per-project)
 │       ├── repos.js       Repos CRUD (groups + repos)
-│       ├── notifications.js Push subscription management + VAPID key
+│       ├── notifications.js Push subscriptions + notification bell API (history, read, create)
 │       ├── tips.js        Tips feed API + RSS proxy
 │       ├── bot.js         Assistant bot system prompt API
 │       ├── agents.js      Agents listing API

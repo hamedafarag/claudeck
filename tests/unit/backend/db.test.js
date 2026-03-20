@@ -89,6 +89,14 @@ import {
   getModelUsage,
   getYearlyActivity,
   getCacheEfficiency,
+  // Notifications
+  createNotification,
+  getNotificationHistory,
+  getUnreadNotificationCount,
+  markNotificationsRead,
+  markAllNotificationsRead,
+  markNotificationsReadBefore,
+  purgeOldNotifications,
   // DB access
   getDb,
 } from "../../../db.js";
@@ -97,6 +105,7 @@ import {
 function clearAll() {
   const db = getDb();
   db.exec(`
+    DELETE FROM notifications;
     DELETE FROM agent_context;
     DELETE FROM agent_runs;
     DELETE FROM brags;
@@ -1562,7 +1571,214 @@ describe("Analytics", () => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// 12. getDb helper
+// ─────────────────────────────────────────────────────────────
+// 12. Notifications
+// ─────────────────────────────────────────────────────────────
+describe("Notifications", () => {
+  beforeEach(clearAll);
+
+  describe("createNotification", () => {
+    it("creates a notification and returns it with an id", () => {
+      const n = createNotification("agent", "Agent done", "5 turns", '{"cost":0.01}', "sid-1", "agent-1");
+
+      expect(n.id).toBeTypeOf("number");
+      expect(n.type).toBe("agent");
+      expect(n.title).toBe("Agent done");
+      expect(n.body).toBe("5 turns");
+      expect(n.metadata).toBe('{"cost":0.01}');
+      expect(n.source_session_id).toBe("sid-1");
+      expect(n.source_agent_id).toBe("agent-1");
+      expect(n.read_at).toBeNull();
+      expect(n.created_at).toBeTypeOf("number");
+    });
+
+    it("creates with only required fields", () => {
+      const n = createNotification("error", "Something failed");
+
+      expect(n.id).toBeTypeOf("number");
+      expect(n.type).toBe("error");
+      expect(n.title).toBe("Something failed");
+      expect(n.body).toBeNull();
+      expect(n.metadata).toBeNull();
+      expect(n.source_session_id).toBeNull();
+      expect(n.source_agent_id).toBeNull();
+    });
+
+    it("auto-increments IDs", () => {
+      const n1 = createNotification("agent", "First");
+      const n2 = createNotification("agent", "Second");
+
+      expect(n2.id).toBeGreaterThan(n1.id);
+    });
+  });
+
+  describe("getNotificationHistory", () => {
+    it("returns empty array when no notifications exist", () => {
+      const items = getNotificationHistory();
+      expect(items).toEqual([]);
+    });
+
+    it("returns notifications ordered by created_at DESC", () => {
+      const db = getDb();
+      db.prepare("INSERT INTO notifications (type, title, created_at) VALUES (?, ?, ?)").run("agent", "First", 1000);
+      db.prepare("INSERT INTO notifications (type, title, created_at) VALUES (?, ?, ?)").run("agent", "Second", 2000);
+      db.prepare("INSERT INTO notifications (type, title, created_at) VALUES (?, ?, ?)").run("agent", "Third", 3000);
+
+      const items = getNotificationHistory(10, 0);
+      expect(items).toHaveLength(3);
+      expect(items[0].title).toBe("Third");
+      expect(items[2].title).toBe("First");
+    });
+
+    it("respects limit and offset", () => {
+      for (let i = 0; i < 10; i++) {
+        createNotification("agent", `N-${i}`);
+      }
+
+      const page1 = getNotificationHistory(3, 0);
+      const page2 = getNotificationHistory(3, 3);
+
+      expect(page1).toHaveLength(3);
+      expect(page2).toHaveLength(3);
+      expect(page1[0].id).not.toBe(page2[0].id);
+    });
+
+    it("filters by unread_only", () => {
+      const n1 = createNotification("agent", "Unread");
+      const n2 = createNotification("agent", "Will be read");
+      markNotificationsRead([n2.id]);
+
+      const unread = getNotificationHistory(10, 0, true);
+      expect(unread).toHaveLength(1);
+      expect(unread[0].title).toBe("Unread");
+    });
+
+    it("filters by type", () => {
+      createNotification("agent", "Agent notif");
+      createNotification("error", "Error notif");
+      createNotification("agent", "Another agent");
+
+      const agents = getNotificationHistory(10, 0, false, "agent");
+      expect(agents).toHaveLength(2);
+      agents.forEach(n => expect(n.type).toBe("agent"));
+    });
+
+    it("filters by type AND unread_only", () => {
+      const n1 = createNotification("agent", "Agent unread");
+      const n2 = createNotification("agent", "Agent read");
+      createNotification("error", "Error unread");
+      markNotificationsRead([n2.id]);
+
+      const items = getNotificationHistory(10, 0, true, "agent");
+      expect(items).toHaveLength(1);
+      expect(items[0].title).toBe("Agent unread");
+    });
+  });
+
+  describe("getUnreadNotificationCount", () => {
+    it("returns 0 when no notifications", () => {
+      expect(getUnreadNotificationCount()).toBe(0);
+    });
+
+    it("counts only unread notifications", () => {
+      const n1 = createNotification("agent", "A");
+      createNotification("agent", "B");
+      createNotification("agent", "C");
+      markNotificationsRead([n1.id]);
+
+      expect(getUnreadNotificationCount()).toBe(2);
+    });
+  });
+
+  describe("markNotificationsRead", () => {
+    it("marks specific notifications as read", () => {
+      const n1 = createNotification("agent", "A");
+      const n2 = createNotification("agent", "B");
+      const n3 = createNotification("agent", "C");
+
+      markNotificationsRead([n1.id, n3.id]);
+
+      expect(getUnreadNotificationCount()).toBe(1);
+      const history = getNotificationHistory(10, 0);
+      const readIds = history.filter(n => n.read_at !== null).map(n => n.id);
+      expect(readIds).toContain(n1.id);
+      expect(readIds).toContain(n3.id);
+      expect(readIds).not.toContain(n2.id);
+    });
+
+    it("is idempotent — marking already-read items does not error", () => {
+      const n = createNotification("agent", "A");
+      markNotificationsRead([n.id]);
+      expect(() => markNotificationsRead([n.id])).not.toThrow();
+    });
+  });
+
+  describe("markAllNotificationsRead", () => {
+    it("marks all unread notifications as read", () => {
+      createNotification("agent", "A");
+      createNotification("error", "B");
+      createNotification("agent", "C");
+
+      expect(getUnreadNotificationCount()).toBe(3);
+      markAllNotificationsRead();
+      expect(getUnreadNotificationCount()).toBe(0);
+    });
+
+    it("does not error when no notifications exist", () => {
+      expect(() => markAllNotificationsRead()).not.toThrow();
+    });
+  });
+
+  describe("markNotificationsReadBefore", () => {
+    it("marks notifications created before timestamp as read", () => {
+      const db = getDb();
+      // Insert with explicit timestamps using raw SQL
+      db.prepare("INSERT INTO notifications (type, title, created_at) VALUES (?, ?, ?)").run("agent", "Old", 1000);
+      db.prepare("INSERT INTO notifications (type, title, created_at) VALUES (?, ?, ?)").run("agent", "Newer", 2000);
+      db.prepare("INSERT INTO notifications (type, title, created_at) VALUES (?, ?, ?)").run("agent", "Newest", 3000);
+
+      markNotificationsReadBefore(2500);
+
+      const unread = getNotificationHistory(10, 0, true);
+      expect(unread).toHaveLength(1);
+      expect(unread[0].title).toBe("Newest");
+    });
+  });
+
+  describe("purgeOldNotifications", () => {
+    it("deletes notifications older than specified days", () => {
+      const db = getDb();
+      const veryOld = Math.floor(Date.now() / 1000) - (100 * 86400); // 100 days ago
+      db.prepare("INSERT INTO notifications (type, title, created_at) VALUES (?, ?, ?)").run("agent", "Ancient", veryOld);
+      createNotification("agent", "Recent");
+
+      purgeOldNotifications(90);
+
+      const history = getNotificationHistory(10, 0);
+      expect(history).toHaveLength(1);
+      expect(history[0].title).toBe("Recent");
+    });
+
+    it("marks stale unread (>7 days) as read", () => {
+      const db = getDb();
+      const eightDaysAgo = Math.floor(Date.now() / 1000) - (8 * 86400);
+      db.prepare("INSERT INTO notifications (type, title, created_at) VALUES (?, ?, ?)").run("agent", "Stale", eightDaysAgo);
+      createNotification("agent", "Fresh");
+
+      purgeOldNotifications(90);
+
+      // Stale should now be read, Fresh should still be unread
+      expect(getUnreadNotificationCount()).toBe(1);
+    });
+
+    it("does not error on empty table", () => {
+      expect(() => purgeOldNotifications(90)).not.toThrow();
+    });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// 13. getDb helper
 // ─────────────────────────────────────────────────────────────
 describe("getDb", () => {
   it("returns a Database instance", () => {

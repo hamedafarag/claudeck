@@ -9,7 +9,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { appendFileSync, readdirSync, existsSync, statSync } from "fs";
 import webpush from "web-push";
-import { getDb, allClaudeSessions } from "./db.js";
+import { getDb, allClaudeSessions, purgeOldNotifications } from "./db.js";
 import { initPushSender } from "./server/push-sender.js";
 import { initTelegramSender } from "./server/telegram-sender.js";
 import { startTelegramPoller, stopTelegramPoller } from "./server/telegram-poller.js";
@@ -31,6 +31,7 @@ import botRouter from "./server/routes/bot.js";
 import notificationsRouter, { setVapidPublicKey } from "./server/routes/notifications.js";
 import memoryRouter from "./server/routes/memory.js";
 import { setupWebSocket } from "./server/ws-handler.js";
+import { setWss } from "./server/notification-logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -164,6 +165,7 @@ app.get("/api/plugins", (req, res) => {
 });
 
 // WebSocket
+setWss(wss);
 setupWebSocket(wss, sessionIds);
 
 const PORT = process.env.PORT || 9009;
@@ -188,6 +190,9 @@ mountPluginRoutes(app, fullStackPluginsDir).then(() => {
 `);
   });
 });
+
+// Purge old notifications once per day
+setInterval(() => purgeOldNotifications(90), 24 * 60 * 60 * 1000);
 
 // Graceful shutdown
 process.on("SIGINT", () => {

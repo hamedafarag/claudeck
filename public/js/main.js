@@ -22,6 +22,8 @@ import './features/prompts.js';
 import './features/workflows.js';
 import './features/agents.js';
 import './ui/status-bar.js';
+import './ui/notification-bell.js';
+import './ui/notification-history.js';
 import './features/cost-dashboard.js';
 import './features/analytics.js';
 import './features/telegram.js';

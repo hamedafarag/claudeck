@@ -247,6 +247,11 @@ export const $ = {
   mcpFormSave: document.getElementById("mcp-form-save"),
   mcpAddBtn: document.getElementById("mcp-add-btn"),
 
+  // Notification bell
+  notifBellBtn: document.getElementById("notif-bell-btn"),
+  notifBadge: document.getElementById("notif-badge"),
+  notifDropdown: document.getElementById("notif-dropdown"),
+
   // Sidebar toggle (mobile)
   sidebarToggleBtn: document.getElementById("sidebar-toggle-btn"),
   sidebarBackdrop: document.getElementById("sidebar-backdrop"),

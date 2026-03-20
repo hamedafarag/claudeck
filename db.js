@@ -167,6 +167,23 @@ db.exec(`
   END;
 `);
 
+// ── Notifications table ──────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT,
+    metadata TEXT,
+    source_session_id TEXT,
+    source_agent_id TEXT,
+    read_at INTEGER DEFAULT NULL,
+    created_at INTEGER DEFAULT (unixepoch())
+  );
+  CREATE INDEX IF NOT EXISTS idx_notif_created ON notifications(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_notif_unread ON notifications(read_at) WHERE read_at IS NULL;
+`);
+
 // Backfill content_hash for existing rows
 const unhashed = db.prepare(`SELECT id, project_path, content FROM memories WHERE content_hash IS NULL`).all();
 if (unhashed.length > 0) {
@@ -1261,6 +1278,87 @@ export function getAgentRunsByType() {
 
 export function getAgentRunsDaily() {
   return runStmts.dailyRuns.all();
+}
+
+// ── Notifications ────────────────────────────────────────
+const notifStmts = {
+  insert: db.prepare(
+    `INSERT INTO notifications (type, title, body, metadata, source_session_id, source_agent_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ),
+  history: db.prepare(
+    `SELECT * FROM notifications ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ),
+  historyUnread: db.prepare(
+    `SELECT * FROM notifications WHERE read_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ),
+  historyByType: db.prepare(
+    `SELECT * FROM notifications WHERE type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ),
+  historyByTypeUnread: db.prepare(
+    `SELECT * FROM notifications WHERE type = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ),
+  unreadCount: db.prepare(
+    `SELECT COUNT(*) as count FROM notifications WHERE read_at IS NULL`
+  ),
+  markRead: db.prepare(
+    `UPDATE notifications SET read_at = unixepoch() WHERE id = ? AND read_at IS NULL`
+  ),
+  markAllRead: db.prepare(
+    `UPDATE notifications SET read_at = unixepoch() WHERE read_at IS NULL`
+  ),
+  markReadBefore: db.prepare(
+    `UPDATE notifications SET read_at = unixepoch() WHERE read_at IS NULL AND created_at < ?`
+  ),
+  purgeOld: db.prepare(
+    `DELETE FROM notifications WHERE created_at < unixepoch() - (? * 86400)`
+  ),
+  markStaleRead: db.prepare(
+    `UPDATE notifications SET read_at = unixepoch() WHERE read_at IS NULL AND created_at < unixepoch() - (7 * 86400)`
+  ),
+};
+
+export function createNotification(type, title, body = null, metadata = null, sourceSessionId = null, sourceAgentId = null) {
+  const result = notifStmts.insert.run(type, title, body, metadata, sourceSessionId, sourceAgentId);
+  return {
+    id: result.lastInsertRowid,
+    type, title, body, metadata,
+    source_session_id: sourceSessionId,
+    source_agent_id: sourceAgentId,
+    read_at: null,
+    created_at: Math.floor(Date.now() / 1000),
+  };
+}
+
+export function getNotificationHistory(limit = 20, offset = 0, unreadOnly = false, type = null) {
+  if (type && unreadOnly) return notifStmts.historyByTypeUnread.all(type, limit, offset);
+  if (type) return notifStmts.historyByType.all(type, limit, offset);
+  if (unreadOnly) return notifStmts.historyUnread.all(limit, offset);
+  return notifStmts.history.all(limit, offset);
+}
+
+export function getUnreadNotificationCount() {
+  return notifStmts.unreadCount.get().count;
+}
+
+export function markNotificationsRead(ids) {
+  const tx = db.transaction((idList) => {
+    for (const id of idList) notifStmts.markRead.run(id);
+  });
+  tx(ids);
+}
+
+export function markAllNotificationsRead() {
+  notifStmts.markAllRead.run();
+}
+
+export function markNotificationsReadBefore(timestamp) {
+  notifStmts.markReadBefore.run(timestamp);
+}
+
+export function purgeOldNotifications(days = 90) {
+  notifStmts.markStaleRead.run();
+  notifStmts.purgeOld.run(days);
 }
 
 // ── Memories (persistent cross-session context) ──────────

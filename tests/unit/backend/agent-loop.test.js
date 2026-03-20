@@ -41,6 +41,10 @@ vi.mock("../../../server/memory-extractor.js", () => ({
   captureMemories: vi.fn(() => 0),
 }));
 
+vi.mock("../../../server/notification-logger.js", () => ({
+  logNotification: vi.fn(),
+}));
+
 // Default mock: yields init, assistant text, and a success result
 vi.mock("@anthropic-ai/claude-code", () => ({
   query: vi.fn(({ prompt, options }) => {
