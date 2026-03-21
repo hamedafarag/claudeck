@@ -220,6 +220,12 @@ export function finishStreamingHandler(pane) {
     $.sendBtn.disabled = false;
     $.messageInput.focus();
   }
+
+  // Re-render messages from DB so fork buttons appear on the completed turn
+  const sid = getState("sessionId");
+  if (sid) {
+    import('./sessions.js').then(({ loadMessages }) => loadMessages(sid));
+  }
 }
 
 // Register the chat functions with parallel.js to break circular dependency
@@ -633,6 +639,73 @@ $.messageInput.addEventListener("input", () => {
 // Initialize mermaid
 if (typeof mermaid !== "undefined") {
   mermaid.initialize({ startOnLoad: false, theme: "dark" });
+}
+
+// ── Fork button handler (delegated) ──
+$.messagesDiv.addEventListener("click", async (e) => {
+  const forkBtn = e.target.closest(".fork-btn");
+  if (!forkBtn) return;
+
+  // Block fork during active streaming
+  const currentPane = getPane(null);
+  if (currentPane && currentPane.isStreaming) return;
+
+  const messageId = Number(forkBtn.dataset.messageId);
+  const sessionId = getState("sessionId");
+  if (!sessionId || !messageId) return;
+
+  forkBtn.disabled = true;
+  forkBtn.classList.add("fork-loading");
+  try {
+    const forked = await api.forkSession(sessionId, messageId);
+    // Switch to the forked session
+    setState("sessionId", forked.id);
+    $.messagesDiv.innerHTML = "";
+    const { loadMessages } = await import('./sessions.js');
+    await loadMessages(forked.id);
+    await loadSessions();
+    $.messageInput.focus();
+    // Show toast
+    showForkToast(forked.title || "Forked session");
+  } catch (err) {
+    console.error("Fork failed:", err);
+  } finally {
+    forkBtn.disabled = false;
+    forkBtn.classList.remove("fork-loading");
+  }
+});
+
+function showForkToast(title) {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = "bg-toast";
+  const dot = document.createElement("span");
+  dot.className = "bg-toast-dot";
+  const body = document.createElement("div");
+  body.className = "bg-toast-body";
+  const label = document.createElement("div");
+  label.className = "bg-toast-label";
+  label.textContent = "Session forked";
+  const titleEl = document.createElement("div");
+  titleEl.className = "bg-toast-title";
+  titleEl.textContent = title;
+  body.appendChild(label);
+  body.appendChild(titleEl);
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "bg-toast-close";
+  closeBtn.title = "Dismiss";
+  closeBtn.innerHTML = "&times;";
+  toast.appendChild(dot);
+  toast.appendChild(body);
+  toast.appendChild(closeBtn);
+  const dismiss = () => {
+    toast.classList.add("toast-exit");
+    toast.addEventListener("animationend", () => toast.remove());
+  };
+  closeBtn.addEventListener("click", dismiss);
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) dismiss(); }, 3000);
 }
 
 // ── Boot sequence ──

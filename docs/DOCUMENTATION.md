@@ -117,6 +117,8 @@ browser ──────── WebSocket ──────── server.js �
 | title             | TEXT    | Auto-generated or manually edited    |
 | pinned            | INTEGER | 0 or 1, pinned sessions sort to top  |
 | summary           | TEXT    | AI-generated session summary (via Claude Haiku) |
+| parent_session_id | TEXT    | Parent session ID (NULL if not a fork) |
+| fork_message_id   | INTEGER | Message ID at which the fork was created |
 | created_at        | INTEGER | Unix timestamp                       |
 | last_used_at      | INTEGER | Unix timestamp, updated on each use  |
 
@@ -260,6 +262,9 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | PUT    | /api/sessions/:id/title     | Rename session                         |
 | PUT    | /api/sessions/:id/pin       | Toggle pin/unpin                       |
 | POST   | /api/sessions/:id/summary   | Generate/regenerate AI summary         |
+| POST   | /api/sessions/:id/fork      | Fork session at a message (body: `{ messageId }`) |
+| GET    | /api/sessions/:id/branches  | List direct child forks of a session   |
+| GET    | /api/sessions/:id/lineage   | Get ancestor chain + siblings          |
 
 ### Messages
 | Method | Path                              | Description                     |
@@ -559,6 +564,13 @@ Each workflow chains prompts sequentially with context passing and step progress
 - Pin/unpin sessions (pinned sort to top)
 - Delete sessions with cascade (messages, costs, claude mappings)
 - Mode detection badges: single, parallel, both
+- **Session Branching / Forking** — fork a conversation at any assistant message to explore alternative approaches
+  - Fork button (git-branch icon) appears on hover over assistant messages
+  - Deep-copies messages up to the fork point into a new session
+  - Forked sessions show a branch icon in the session list
+  - Context menu: "View Parent Session", "View Forks" with back navigation
+  - Fork of fork supported (unlimited depth)
+  - Deleting a parent orphans its forks (they remain fully functional)
 
 ### 12. Cost Dashboard
 - Click the cost display in the header to open

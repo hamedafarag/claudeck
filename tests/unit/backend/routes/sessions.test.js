@@ -9,6 +9,10 @@ vi.mock("../../../../db.js", () => ({
   updateSessionTitle: vi.fn(),
   toggleSessionPin: vi.fn(),
   searchSessions: vi.fn(() => []),
+  forkSession: vi.fn(),
+  getSession: vi.fn(),
+  getSessionBranches: vi.fn(() => []),
+  getSessionLineage: vi.fn(() => ({ ancestors: [], siblings: [] })),
 }));
 
 vi.mock("../../../../server/ws-handler.js", () => ({
@@ -26,6 +30,10 @@ import {
   updateSessionTitle,
   toggleSessionPin,
   searchSessions,
+  forkSession as dbForkSession,
+  getSession,
+  getSessionBranches,
+  getSessionLineage,
 } from "../../../../db.js";
 import { getActiveSessionIds } from "../../../../server/ws-handler.js";
 import { generateSessionSummary } from "../../../../server/summarizer.js";
@@ -200,6 +208,19 @@ describe("sessions routes", () => {
 
       expect(res.status).toBe(400);
     });
+
+    it("returns 500 when updateSessionTitle throws", async () => {
+      updateSessionTitle.mockImplementation(() => {
+        throw new Error("Title update failed");
+      });
+
+      const res = await request(app)
+        .put("/sessions/s1/title")
+        .send({ title: "Valid" });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Title update failed");
+    });
   });
 
   // ── PUT /:id/pin ──────────────────────────────────────────────────────
@@ -229,8 +250,19 @@ describe("sessions routes", () => {
 
       const res = await request(app).get("/sessions/active");
 
+
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ activeSessionIds: ["s1", "s2"] });
+    });
+
+    it("returns 500 on error", async () => {
+      getActiveSessionIds.mockImplementation(() => {
+        throw new Error("Active error");
+      });
+
+      const res = await request(app).get("/sessions/active");
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Active error");
     });
   });
 
@@ -251,6 +283,182 @@ describe("sessions routes", () => {
 
       const res = await request(app).post("/sessions/s1/summary");
       expect(res.status).toBe(500);
+    });
+  });
+
+  // ── POST /:id/fork ──────────────────────────────────────────────────
+  describe("POST /sessions/:id/fork", () => {
+    it("forks a session and returns the new session", async () => {
+      const forkedSession = { id: "fork-1", title: "Fork of: Test", parent_session_id: "s1" };
+      getSession.mockReturnValue({ id: "s1", title: "Test" });
+      dbForkSession.mockReturnValue(forkedSession);
+
+      const res = await request(app)
+        .post("/sessions/s1/fork")
+        .send({ messageId: 42 });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(forkedSession);
+      expect(dbForkSession).toHaveBeenCalledWith("s1", 42);
+    });
+
+    it("forks without messageId (defaults to null)", async () => {
+      const forkedSession = { id: "fork-1", title: "Fork of: Test", parent_session_id: "s1" };
+      getSession.mockReturnValue({ id: "s1", title: "Test" });
+      dbForkSession.mockReturnValue(forkedSession);
+
+      const res = await request(app)
+        .post("/sessions/s1/fork")
+        .send({});
+
+      expect(res.status).toBe(200);
+      expect(dbForkSession).toHaveBeenCalledWith("s1", null);
+    });
+
+    it("forks with empty body (no JSON)", async () => {
+      const forkedSession = { id: "fork-1", title: "Fork of: Test", parent_session_id: "s1" };
+      getSession.mockReturnValue({ id: "s1", title: "Test" });
+      dbForkSession.mockReturnValue(forkedSession);
+
+      const res = await request(app).post("/sessions/s1/fork");
+
+      expect(res.status).toBe(200);
+      expect(dbForkSession).toHaveBeenCalledWith("s1", null);
+    });
+
+    it("returns 404 when session does not exist", async () => {
+      getSession.mockReturnValue(undefined);
+
+      const res = await request(app)
+        .post("/sessions/nonexistent/fork")
+        .send({ messageId: 1 });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe("Session not found");
+      expect(dbForkSession).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when messageId is invalid (non-number)", async () => {
+      getSession.mockReturnValue({ id: "s1" });
+
+      const res = await request(app)
+        .post("/sessions/s1/fork")
+        .send({ messageId: "abc" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Invalid messageId");
+    });
+
+    it("returns 400 when messageId is zero or negative", async () => {
+      getSession.mockReturnValue({ id: "s1" });
+
+      const res = await request(app)
+        .post("/sessions/s1/fork")
+        .send({ messageId: 0 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Invalid messageId");
+    });
+
+    it("returns 400 when session has no messages", async () => {
+      getSession.mockReturnValue({ id: "s1" });
+      dbForkSession.mockImplementation(() => {
+        throw new Error("No messages to fork");
+      });
+
+      const res = await request(app)
+        .post("/sessions/s1/fork")
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("No messages to fork");
+    });
+
+    it("returns 500 on unexpected error", async () => {
+      getSession.mockReturnValue({ id: "s1" });
+      dbForkSession.mockImplementation(() => {
+        throw new Error("Unexpected DB error");
+      });
+
+      const res = await request(app)
+        .post("/sessions/s1/fork")
+        .send({ messageId: 1 });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Unexpected DB error");
+    });
+  });
+
+  // ── GET /:id/branches ────────────────────────────────────────────────
+  describe("GET /sessions/:id/branches", () => {
+    it("returns branches for a session", async () => {
+      const branches = [
+        { id: "fork-1", title: "Fork of: Test", parent_session_id: "s1" },
+        { id: "fork-2", title: "Fork of: Test", parent_session_id: "s1" },
+      ];
+      getSessionBranches.mockReturnValue(branches);
+
+      const res = await request(app).get("/sessions/s1/branches");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(branches);
+      expect(getSessionBranches).toHaveBeenCalledWith("s1");
+    });
+
+    it("returns empty array when no branches exist", async () => {
+      getSessionBranches.mockReturnValue([]);
+
+      const res = await request(app).get("/sessions/s1/branches");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([]);
+    });
+
+    it("returns 500 on error", async () => {
+      getSessionBranches.mockImplementation(() => {
+        throw new Error("DB failure");
+      });
+
+      const res = await request(app).get("/sessions/s1/branches");
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("DB failure");
+    });
+  });
+
+  // ── GET /:id/lineage ─────────────────────────────────────────────────
+  describe("GET /sessions/:id/lineage", () => {
+    it("returns ancestors and siblings", async () => {
+      const lineage = {
+        ancestors: [{ id: "root", title: "Root" }],
+        siblings: [{ id: "sibling-1", title: "Fork of: Root" }],
+      };
+      getSessionLineage.mockReturnValue(lineage);
+
+      const res = await request(app).get("/sessions/fork-1/lineage");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(lineage);
+      expect(getSessionLineage).toHaveBeenCalledWith("fork-1");
+    });
+
+    it("returns empty arrays for root session", async () => {
+      getSessionLineage.mockReturnValue({ ancestors: [], siblings: [] });
+
+      const res = await request(app).get("/sessions/s1/lineage");
+
+      expect(res.status).toBe(200);
+      expect(res.body.ancestors).toEqual([]);
+      expect(res.body.siblings).toEqual([]);
+    });
+
+    it("returns 500 on error", async () => {
+      getSessionLineage.mockImplementation(() => {
+        throw new Error("Lineage error");
+      });
+
+      const res = await request(app).get("/sessions/fork-1/lineage");
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Lineage error");
     });
   });
 });

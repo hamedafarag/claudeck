@@ -97,6 +97,11 @@ import {
   markAllNotificationsRead,
   markNotificationsReadBefore,
   purgeOldNotifications,
+  // Session Branching
+  forkSession,
+  getSessionBranches,
+  getSessionBranchCount,
+  getSessionLineage,
   // DB access
   getDb,
 } from "../../../db.js";
@@ -288,6 +293,251 @@ describe("Sessions", () => {
     updateSessionTitle("s1", "something");
     const results = searchSessions("something");
     expect(results[0]).toHaveProperty("mode");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// 1b. Session Branching / Forking
+// ─────────────────────────────────────────────────────────────
+describe("Session Branching", () => {
+  beforeEach(clearAll);
+
+  function seedSessionWithMessages(id, messageCount = 4) {
+    createSession(id, null, "TestProject", "/tmp/test");
+    for (let i = 0; i < messageCount; i++) {
+      const role = i % 2 === 0 ? "user" : "assistant";
+      addMessage(id, role, JSON.stringify({ text: `Message ${i}` }));
+    }
+    return getMessages(id);
+  }
+
+  it("forkSession creates a new session with parent reference", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const forked = forkSession("s1", msgs[1].id);
+
+    expect(forked).toBeTruthy();
+    expect(forked.id).not.toBe("s1");
+    expect(forked.parent_session_id).toBe("s1");
+    expect(forked.fork_message_id).toBe(msgs[1].id);
+    expect(forked.project_name).toBe("TestProject");
+    expect(forked.project_path).toBe("/tmp/test");
+  });
+
+  it("forkSession auto-titles as 'Fork of: <parent title>'", () => {
+    seedSessionWithMessages("s1");
+    updateSessionTitle("s1", "My Session");
+    const msgs = getMessages("s1");
+    const forked = forkSession("s1", msgs[1].id);
+
+    expect(forked.title).toBe("Fork of: My Session");
+  });
+
+  it("forkSession uses project_name when parent has no title", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const forked = forkSession("s1", msgs[1].id);
+
+    expect(forked.title).toBe("Fork of: TestProject");
+  });
+
+  it("forkSession deep-copies messages up to fork point", () => {
+    const msgs = seedSessionWithMessages("s1");
+    // Fork at message index 1 (2nd message) — should copy messages 0 and 1
+    const forked = forkSession("s1", msgs[1].id);
+    const forkedMsgs = getMessages(forked.id);
+
+    expect(forkedMsgs).toHaveLength(2);
+    expect(JSON.parse(forkedMsgs[0].content).text).toBe("Message 0");
+    expect(JSON.parse(forkedMsgs[1].content).text).toBe("Message 1");
+    expect(forkedMsgs[0].role).toBe("user");
+    expect(forkedMsgs[1].role).toBe("assistant");
+  });
+
+  it("forkSession copies all messages when forking at last message", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const forked = forkSession("s1", msgs[3].id);
+    const forkedMsgs = getMessages(forked.id);
+
+    expect(forkedMsgs).toHaveLength(4);
+  });
+
+  it("forkSession defaults to last message when no messageId provided", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const forked = forkSession("s1", null);
+    const forkedMsgs = getMessages(forked.id);
+
+    expect(forkedMsgs).toHaveLength(4);
+    expect(forked.fork_message_id).toBe(msgs[3].id);
+  });
+
+  it("forkSession only copies messages with chat_id IS NULL", () => {
+    createSession("s1", null, "P", "/p");
+    addMessage("s1", "user", JSON.stringify({ text: "single mode" }));
+    addMessage("s1", "assistant", JSON.stringify({ text: "reply" }));
+    addMessage("s1", "user", JSON.stringify({ text: "parallel" }), "chat-0");
+    addMessage("s1", "assistant", JSON.stringify({ text: "parallel reply" }), "chat-0");
+
+    const msgs = getMessagesNoChatId("s1");
+    const forked = forkSession("s1", msgs[1].id);
+    const forkedMsgs = getMessages(forked.id);
+
+    // Should only have the 2 single-mode messages
+    expect(forkedMsgs).toHaveLength(2);
+    expect(forkedMsgs[0].chat_id).toBeNull();
+  });
+
+  it("forkSession does NOT copy costs", () => {
+    seedSessionWithMessages("s1");
+    addCost("s1", 0.50, 1000, 1);
+    const msgs = getMessages("s1");
+    const forked = forkSession("s1", msgs[1].id);
+
+    const db = getDb();
+    const forkedCosts = db.prepare("SELECT * FROM costs WHERE session_id = ?").all(forked.id);
+    expect(forkedCosts).toHaveLength(0);
+  });
+
+  it("forkSession does NOT copy claude_sessions mapping", () => {
+    seedSessionWithMessages("s1");
+    setClaudeSession("s1", "", "claude-123");
+    const msgs = getMessages("s1");
+    const forked = forkSession("s1", msgs[1].id);
+
+    expect(getClaudeSessionId(forked.id, "")).toBeNull();
+  });
+
+  it("forkSession throws when parent session does not exist", () => {
+    expect(() => forkSession("nonexistent", 1)).toThrow("Session not found");
+  });
+
+  it("forkSession throws when session has no messages", () => {
+    createSession("s1", null, "P", "/p");
+    expect(() => forkSession("s1", null)).toThrow("No messages to fork");
+  });
+
+  it("forkSession gives each fork a unique id", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const fork1 = forkSession("s1", msgs[1].id);
+    const fork2 = forkSession("s1", msgs[1].id);
+
+    expect(fork1.id).not.toBe(fork2.id);
+  });
+
+  // ── Fork of fork ──
+  it("fork of fork creates a self-contained session", () => {
+    const msgs = seedSessionWithMessages("s1", 6);
+    const fork1 = forkSession("s1", msgs[3].id); // copies 4 messages
+    const fork1Msgs = getMessages(fork1.id);
+
+    const fork2 = forkSession(fork1.id, fork1Msgs[1].id); // copies 2 messages from fork1
+    const fork2Msgs = getMessages(fork2.id);
+
+    expect(fork2.parent_session_id).toBe(fork1.id);
+    expect(fork2Msgs).toHaveLength(2);
+    expect(fork2.title).toBe("Fork of: Fork of: TestProject");
+  });
+
+  // ── getSessionBranches ──
+  it("getSessionBranches returns direct child forks", () => {
+    const msgs = seedSessionWithMessages("s1");
+    forkSession("s1", msgs[1].id);
+    forkSession("s1", msgs[3].id);
+
+    const branches = getSessionBranches("s1");
+    expect(branches).toHaveLength(2);
+    branches.forEach(b => expect(b.parent_session_id).toBe("s1"));
+  });
+
+  it("getSessionBranches returns empty array when no forks exist", () => {
+    seedSessionWithMessages("s1");
+    expect(getSessionBranches("s1")).toHaveLength(0);
+  });
+
+  it("getSessionBranches does not include grandchild forks", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const fork1 = forkSession("s1", msgs[1].id);
+    const fork1Msgs = getMessages(fork1.id);
+    forkSession(fork1.id, fork1Msgs[0].id); // grandchild
+
+    expect(getSessionBranches("s1")).toHaveLength(1); // only direct child
+  });
+
+  // ── getSessionBranchCount ──
+  it("getSessionBranchCount returns correct count", () => {
+    const msgs = seedSessionWithMessages("s1");
+    expect(getSessionBranchCount("s1")).toBe(0);
+    forkSession("s1", msgs[1].id);
+    expect(getSessionBranchCount("s1")).toBe(1);
+    forkSession("s1", msgs[3].id);
+    expect(getSessionBranchCount("s1")).toBe(2);
+  });
+
+  // ── getSessionLineage ──
+  it("getSessionLineage returns ancestors and siblings", () => {
+    const msgs = seedSessionWithMessages("s1", 6);
+    const fork1 = forkSession("s1", msgs[3].id);
+    const fork1Msgs = getMessages(fork1.id);
+    const fork2 = forkSession(fork1.id, fork1Msgs[1].id);
+
+    const lineage = getSessionLineage(fork2.id);
+    expect(lineage.ancestors).toHaveLength(2); // s1 → fork1
+    expect(lineage.ancestors[0].id).toBe("s1");
+    expect(lineage.ancestors[1].id).toBe(fork1.id);
+    expect(lineage.siblings).toHaveLength(0);
+  });
+
+  it("getSessionLineage returns siblings (other forks of same parent)", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const fork1 = forkSession("s1", msgs[1].id);
+    const fork2 = forkSession("s1", msgs[3].id);
+
+    const lineage = getSessionLineage(fork1.id);
+    expect(lineage.ancestors).toHaveLength(1);
+    expect(lineage.siblings).toHaveLength(1);
+    expect(lineage.siblings[0].id).toBe(fork2.id);
+  });
+
+  it("getSessionLineage returns empty arrays for root session", () => {
+    seedSessionWithMessages("s1");
+    const lineage = getSessionLineage("s1");
+    expect(lineage.ancestors).toHaveLength(0);
+    expect(lineage.siblings).toHaveLength(0);
+  });
+
+  // ── Orphaning on delete ──
+  it("deleteSession orphans child forks (sets parent_session_id to NULL)", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const fork = forkSession("s1", msgs[1].id);
+
+    deleteSession("s1");
+
+    const orphaned = getSession(fork.id);
+    expect(orphaned).toBeTruthy();
+    expect(orphaned.parent_session_id).toBeNull();
+  });
+
+  it("orphaned fork retains all its messages after parent deletion", () => {
+    const msgs = seedSessionWithMessages("s1");
+    const fork = forkSession("s1", msgs[1].id);
+    const forkMsgCount = getMessages(fork.id).length;
+
+    deleteSession("s1");
+
+    expect(getMessages(fork.id)).toHaveLength(forkMsgCount);
+  });
+
+  // ── listSessions includes fork fields ──
+  it("listSessions includes parent_session_id and fork_message_id", () => {
+    const msgs = seedSessionWithMessages("s1");
+    forkSession("s1", msgs[1].id);
+
+    const list = listSessions(10);
+    const forked = list.find(s => s.parent_session_id === "s1");
+    expect(forked).toBeTruthy();
+    expect(forked.fork_message_id).toBe(msgs[1].id);
+
+    const parent = list.find(s => s.id === "s1");
+    expect(parent.parent_session_id).toBeNull();
+    expect(parent.fork_message_id).toBeNull();
   });
 });
 

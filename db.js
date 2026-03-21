@@ -81,6 +81,9 @@ try { db.exec(`ALTER TABLE sessions ADD COLUMN summary TEXT DEFAULT NULL`); } ca
 try { db.exec(`ALTER TABLE todos ADD COLUMN archived INTEGER DEFAULT 0`); } catch { /* exists */ }
 // Todo priority (0=none, 1=low, 2=medium, 3=high)
 try { db.exec(`ALTER TABLE todos ADD COLUMN priority INTEGER DEFAULT 0`); } catch { /* exists */ }
+// Session branching / conversation forking
+try { db.exec(`ALTER TABLE sessions ADD COLUMN parent_session_id TEXT DEFAULT NULL`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE sessions ADD COLUMN fork_message_id INTEGER DEFAULT NULL`); } catch { /* exists */ }
 
 // Agent context (shared memory between agents in a chain/orchestration run)
 db.exec(`
@@ -225,6 +228,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_costs_created_at ON costs(created_at);
   CREATE INDEX IF NOT EXISTS idx_sessions_project_path ON sessions(project_path);
   CREATE INDEX IF NOT EXISTS idx_sessions_pinned_last_used ON sessions(pinned DESC, last_used_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_sessions_parent ON sessions(parent_session_id) WHERE parent_session_id IS NOT NULL;
 `);
 
 // Deduplicated mode CASE subquery — used in 4 session listing queries
@@ -305,6 +309,22 @@ const stmts = {
   searchSessionsAll: db.prepare(
     `SELECT s.*, ${MODE_CASE}
      FROM sessions s WHERE (s.title LIKE ? OR s.project_name LIKE ?) ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
+  ),
+  // Session branching
+  getMessagesByIdRange: db.prepare(
+    `SELECT role, content, created_at FROM messages WHERE session_id = ? AND id <= ? AND chat_id IS NULL ORDER BY id ASC`
+  ),
+  getLastMessageId: db.prepare(
+    `SELECT MAX(id) as maxId FROM messages WHERE session_id = ? AND chat_id IS NULL`
+  ),
+  getBranches: db.prepare(
+    `SELECT s.*, ${MODE_CASE} FROM sessions s WHERE s.parent_session_id = ? ORDER BY s.created_at DESC`
+  ),
+  getBranchCount: db.prepare(
+    `SELECT COUNT(*) as count FROM sessions WHERE parent_session_id = ?`
+  ),
+  orphanChildren: db.prepare(
+    `UPDATE sessions SET parent_session_id = NULL WHERE parent_session_id = ?`
   ),
   getSessionCosts: db.prepare(
     `SELECT s.id, s.title, s.project_name, s.last_used_at,
@@ -477,11 +497,73 @@ export function searchSessions(query, limit = 20, projectPath) {
 }
 
 export const deleteSession = db.transaction((id) => {
+  // Orphan child forks before deleting parent
+  stmts.orphanChildren.run(id);
   db.prepare("DELETE FROM claude_sessions WHERE session_id = ?").run(id);
   db.prepare("DELETE FROM costs WHERE session_id = ?").run(id);
   db.prepare("DELETE FROM messages WHERE session_id = ?").run(id);
   db.prepare("DELETE FROM sessions WHERE id = ?").run(id);
 });
+
+// ── Session Branching / Forking ─────────────────────────
+export const forkSession = db.transaction((parentSessionId, forkMessageId) => {
+  const parent = stmts.getSession.get(parentSessionId);
+  if (!parent) throw new Error("Session not found");
+
+  if (!forkMessageId) {
+    const last = stmts.getLastMessageId.get(parentSessionId);
+    forkMessageId = last?.maxId;
+    if (!forkMessageId) throw new Error("No messages to fork");
+  }
+
+  const newId = createHash("sha256")
+    .update(parentSessionId + Date.now() + Math.random())
+    .digest("hex")
+    .slice(0, 36);
+  const title = `Fork of: ${parent.title || parent.project_name || "Untitled"}`;
+
+  db.prepare(
+    `INSERT INTO sessions (id, project_name, project_path, title, parent_session_id, fork_message_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(newId, parent.project_name, parent.project_path, title, parentSessionId, forkMessageId);
+
+  const messages = stmts.getMessagesByIdRange.all(parentSessionId, forkMessageId);
+  const insertMsg = db.prepare(
+    "INSERT INTO messages (session_id, role, content, created_at) VALUES (?, ?, ?, ?)"
+  );
+  for (const msg of messages) {
+    insertMsg.run(newId, msg.role, msg.content, msg.created_at);
+  }
+
+  return stmts.getSession.get(newId);
+});
+
+export function getSessionBranches(sessionId) {
+  return stmts.getBranches.all(sessionId);
+}
+
+export function getSessionBranchCount(sessionId) {
+  return stmts.getBranchCount.get(sessionId).count;
+}
+
+export function getSessionLineage(sessionId) {
+  const ancestors = [];
+  let current = stmts.getSession.get(sessionId);
+  while (current && current.parent_session_id) {
+    const parent = stmts.getSession.get(current.parent_session_id);
+    if (!parent) break;
+    ancestors.unshift(parent);
+    current = parent;
+  }
+  // Get siblings (other forks of the same parent)
+  const session = stmts.getSession.get(sessionId);
+  let siblings = [];
+  if (session?.parent_session_id) {
+    siblings = stmts.getBranches.all(session.parent_session_id)
+      .filter(s => s.id !== sessionId);
+  }
+  return { ancestors, siblings };
+}
 
 export function getSessionCosts(projectPath) {
   if (projectPath) {

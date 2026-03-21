@@ -407,6 +407,29 @@ export async function generateSummary(sessionId) {
   return res.json();
 }
 
+export async function forkSession(sessionId, messageId) {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/fork`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messageId }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Fork failed");
+  }
+  return res.json();
+}
+
+export async function fetchBranches(sessionId) {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/branches`);
+  return res.json();
+}
+
+export async function fetchLineage(sessionId) {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/lineage`);
+  return res.json();
+}
+
 export async function saveSystemPromptApi(path, systemPrompt) {
   await fetch("/api/projects/system-prompt", {
     method: "PUT",

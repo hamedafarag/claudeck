@@ -59,6 +59,7 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 - **Parallel mode** — 2x2 grid of 4 independent conversations
 - Background sessions that keep running when you switch away
 - Session search, pinning, auto-generated titles
+- **Session branching** — fork any conversation at an assistant message to explore alternatives
 - Voice input via Web Speech API (Chrome/Safari)
 
 ### Autonomous Agents

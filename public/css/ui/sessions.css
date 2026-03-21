@@ -687,3 +687,44 @@
   opacity: 0.5;
   line-height: 1.5;
 }
+
+/* ── Fork Badge ──────────────────────────────────────── */
+.session-fork-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+  color: var(--accent);
+  vertical-align: middle;
+  opacity: 0.8;
+}
+
+/* ── View Forks — back header ────────────────────────── */
+.session-forks-back {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.session-forks-back-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+
+.session-forks-back-btn:hover {
+  text-decoration: underline;
+}
+
+.session-forks-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+}

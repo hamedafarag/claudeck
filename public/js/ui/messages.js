@@ -334,10 +334,20 @@ export function renderMessagesIntoPane(messages, pane) {
     showWhalyPlaceholder(pane);
     return;
   }
+  // Track last assistant message ID for fork button placement
+  let lastAssistantMsgEl = null;
+  let lastAssistantMsgId = null;
+
   for (const msg of messages) {
     const data = JSON.parse(msg.content);
     switch (msg.role) {
       case "user": {
+        // Finalize previous assistant block with fork button
+        if (lastAssistantMsgEl && lastAssistantMsgId) {
+          addForkButton(lastAssistantMsgEl, lastAssistantMsgId);
+          lastAssistantMsgEl = null;
+          lastAssistantMsgId = null;
+        }
         // Extract file paths from saved <file path="..."> blocks
         const filePathMatches = (data.text || "").match(/<file path="([^"]+)">/g);
         const savedFilePaths = filePathMatches
@@ -352,15 +362,31 @@ export function renderMessagesIntoPane(messages, pane) {
       }
       case "assistant":
         appendAssistantText(data.text, pane);
+        // Track this assistant message element for fork button
+        if (pane.currentAssistantMsg) {
+          lastAssistantMsgEl = pane.currentAssistantMsg.closest(".msg-assistant");
+          lastAssistantMsgId = msg.id;
+        }
         break;
       case "tool":
         appendToolIndicator(data.name, data.input, pane, data.id, false);
+        // Tools are part of assistant turn — update the tracking ID
+        if (!lastAssistantMsgEl) lastAssistantMsgEl = pane.messagesDiv.lastElementChild;
+        lastAssistantMsgId = msg.id;
         break;
       case "tool_result":
         appendToolResult(data.toolUseId, data.content, data.isError, pane);
+        if (!lastAssistantMsgEl) lastAssistantMsgEl = pane.messagesDiv.lastElementChild;
+        lastAssistantMsgId = msg.id;
         break;
       case "result":
         addResultSummary(data, pane);
+        // Result marks end of an assistant turn — add fork button on the assistant msg element
+        if (lastAssistantMsgEl && lastAssistantMsgId) {
+          addForkButton(lastAssistantMsgEl, lastAssistantMsgId);
+        }
+        lastAssistantMsgEl = null;
+        lastAssistantMsgId = null;
         break;
       case "error": {
         const errorParts = [];
@@ -376,6 +402,12 @@ export function renderMessagesIntoPane(messages, pane) {
         break;
     }
   }
+
+  // Add fork button to last assistant message if conversation ends with one
+  if (lastAssistantMsgEl && lastAssistantMsgId) {
+    addForkButton(lastAssistantMsgEl, lastAssistantMsgId);
+  }
+
   pane.currentAssistantMsg = null;
   // Hide token counter and reset — loading saved messages shouldn't show streaming stats
   setState("streamingCharCount", 0);
@@ -384,4 +416,14 @@ export function renderMessagesIntoPane(messages, pane) {
   highlightCodeBlocks(pane.messagesDiv);
   addCopyButtons(pane.messagesDiv);
   renderMermaidBlocks(pane.messagesDiv);
+}
+
+function addForkButton(msgEl, messageId) {
+  if (!msgEl || msgEl.querySelector(".fork-btn")) return;
+  const btn = document.createElement("button");
+  btn.className = "fork-btn";
+  btn.dataset.messageId = messageId;
+  btn.title = "Fork conversation from here";
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>`;
+  msgEl.appendChild(btn);
 }
