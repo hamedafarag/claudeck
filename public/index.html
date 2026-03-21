@@ -421,16 +421,24 @@
               </span>
             </div>
           </div>
-          <button id="send-btn" title="Send">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M3 10l7-7m0 0l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90, 10, 10)"/>
-            </svg>
-          </button>
-          <button id="stop-btn" title="Stop" class="hidden">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="4" y="4" width="12" height="12" rx="2" fill="currentColor"/>
-            </svg>
-          </button>
+          <div class="send-history-group">
+            <button id="send-btn" title="Send">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M3 10l7-7m0 0l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90, 10, 10)"/>
+              </svg>
+            </button>
+            <button id="stop-btn" title="Stop" class="hidden">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <rect x="4" y="4" width="12" height="12" rx="2" fill="currentColor"/>
+              </svg>
+            </button>
+            <button id="history-btn" class="hidden" data-tooltip="Message History" title="Message history" aria-label="Message history">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+          </div>
+          <div id="history-popover" class="history-popover hidden"></div>
           <div id="slash-autocomplete" class="slash-autocomplete hidden"></div>
         </div>
         <div id="toolbox-panel" class="toolbox-panel hidden"></div>
@@ -846,6 +854,9 @@
         <tr><td><span class="kbd">Enter</span></td><td>Send message</td></tr>
         <tr><td><span class="kbd">Shift+Enter</span></td><td>New line in input</td></tr>
         <tr><td><span class="kbd">/</span></td><td>Slash commands autocomplete</td></tr>
+        <tr><td><span class="kbd">&uarr;</span></td><td>Recall previous message (empty input)</td></tr>
+        <tr><td><span class="kbd">&darr;</span></td><td>Recall next message (in history)</td></tr>
+        <tr><td><span class="kbd">Esc</span></td><td>Cancel history navigation</td></tr>
       </table>
     </div>
   </div>

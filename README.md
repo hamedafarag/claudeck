@@ -60,6 +60,7 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 - Background sessions that keep running when you switch away
 - Session search, pinning, auto-generated titles
 - **Session branching** — fork any conversation at an assistant message to explore alternatives
+- **Message recall** — press `↑` on empty input to cycle through previous messages, or click the history button to browse and re-use
 - Voice input via Web Speech API (Chrome/Safari)
 
 ### Autonomous Agents
@@ -190,6 +191,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 | `Cmd+/` | Show all shortcuts |
 | `Cmd+Shift+E/G/R/V/T` | Files / Git / Repos / Events / Tips |
 | `Cmd+1`-`4` | Focus parallel pane |
+| `↑` / `↓` | Recall previous/next message (empty input) |
 
 ---
 

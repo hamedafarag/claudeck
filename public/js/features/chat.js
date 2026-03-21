@@ -5,7 +5,7 @@ import { CHAT_IDS, BOT_CHAT_ID } from '../core/constants.js';
 import { on } from '../core/events.js';
 import { commandRegistry, dismissAutocomplete, handleAutocompleteKeydown, handleSlashAutocomplete, registerCommand } from '../ui/commands.js';
 import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder } from '../ui/messages.js';
-import { getPane, panes, _setChatFns } from '../ui/parallel.js';
+import { getPane, panes, _setChatFns, _setInputHistoryGetter } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats, loadAccountInfo } from './cost-dashboard.js';
 import { loadProjects } from './projects.js';
@@ -24,9 +24,31 @@ import { getSelectedModel } from '../ui/model-selector.js';
 import { getMaxTurns } from '../ui/max-turns.js';
 import { getDisabledTools } from '../ui/disabled-tools.js';
 import { updateContextGauge, resetContextGauge, loadContextGauge } from '../ui/context-gauge.js';
+import { InputHistory, handleHistoryKeydown } from './input-history.js';
 
 // ── "Waiting for input" indicator ──
 const inputWaitingEl = document.getElementById("input-waiting");
+
+// ── Input history (message recall) ──
+function historyKey() {
+  return "claudeck-input-history-" + ($.projectSelect?.value || "default");
+}
+let inputHistory = new InputHistory(historyKey());
+
+$.projectSelect?.addEventListener("change", () => {
+  inputHistory = new InputHistory(historyKey());
+  // Defer visibility update — updateHistoryButtonVisibility is defined later in this file
+  queueMicrotask(() => updateHistoryButtonVisibility());
+});
+
+export function getInputHistory() {
+  // Re-sync key if it drifted (e.g. project loaded after module init)
+  const expected = historyKey();
+  if (inputHistory.storageKey !== expected) {
+    inputHistory = new InputHistory(expected);
+  }
+  return inputHistory;
+}
 
 function isQuestionText(text) {
   if (!text) return false;
@@ -63,6 +85,9 @@ function hideWaitingForInput(pane) {
 
 export function sendMessage(pane) {
   pane = pane || getPane(null);
+  // Re-sync history key in case project loaded after module init
+  const ek = historyKey();
+  if (inputHistory.storageKey !== ek) inputHistory = new InputHistory(ek);
   const text = pane.messageInput.value.trim();
   const cwd = $.projectSelect.value;
 
@@ -76,6 +101,9 @@ export function sendMessage(pane) {
           if (cmdName === "run" && !cwd) {
             // /run needs a project, fall through
           } else {
+            inputHistory.add(text);
+            inputHistory.reset();
+            updateHistoryButtonVisibility();
             pane.messageInput.value = "";
             pane.messageInput.style.height = "auto";
             dismissAutocomplete(pane);
@@ -107,6 +135,8 @@ export function sendMessage(pane) {
       const [, cmdName, args] = match;
       const cmd = commandRegistry[cmdName];
       if (cmd) {
+        inputHistory.add(text);
+        inputHistory.reset();
         pane.messageInput.value = "";
         pane.messageInput.style.height = "auto";
         dismissAutocomplete(pane);
@@ -129,6 +159,9 @@ export function sendMessage(pane) {
   const images = getImageAttachments();
   const filePaths = attachedFiles.map(f => f.path);
   addUserMessage(text, pane, images, filePaths);
+  inputHistory.add(text);
+  inputHistory.reset();
+  updateHistoryButtonVisibility();
   pane.messageInput.value = "";
   pane.messageInput.style.height = "auto";
   setState("streamingCharCount", 0);
@@ -230,6 +263,7 @@ export function finishStreamingHandler(pane) {
 
 // Register the chat functions with parallel.js to break circular dependency
 _setChatFns({ sendMessage, stopGeneration });
+_setInputHistoryGetter(() => inputHistory);
 
 // Render a collapsible memory indicator in the chat
 function appendMemoryIndicator(memories, pane) {
@@ -624,6 +658,7 @@ $.stopBtn.addEventListener("click", () => stopGeneration(getPane(null)));
 
 $.messageInput.addEventListener("keydown", (e) => {
   if (handleAutocompleteKeydown(e, getPane(null))) return;
+  if (handleHistoryKeydown(e, getPane(null), inputHistory)) return;
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage(getPane(null));
@@ -631,9 +666,86 @@ $.messageInput.addEventListener("keydown", (e) => {
 });
 
 $.messageInput.addEventListener("input", () => {
+  if (inputHistory.isNavigating) inputHistory.reset();
   $.messageInput.style.height = "auto";
   $.messageInput.style.height = Math.min($.messageInput.scrollHeight, 200) + "px";
   handleSlashAutocomplete(getPane(null));
+});
+
+// ── History button + popover ──
+export function updateHistoryButtonVisibility() {
+  // Re-sync key in case project loaded after module init
+  const ek = historyKey();
+  if (inputHistory.storageKey !== ek) inputHistory = new InputHistory(ek);
+  if ($.historyBtn) {
+    $.historyBtn.classList.toggle("hidden", inputHistory.entries.length === 0);
+  }
+}
+
+function renderHistoryPopover() {
+  const el = $.historyPopover;
+  if (!el) return;
+  const entries = inputHistory.getAll();
+
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="history-popover-empty">No messages yet</div>';
+    return;
+  }
+
+  el.innerHTML = `<div class="history-popover-header"><span>Recent messages</span><button class="history-popover-clear">Clear</button></div>`;
+  const clearBtn = el.querySelector(".history-popover-clear");
+  clearBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    inputHistory.entries.length = 0;
+    inputHistory._save();
+    closeHistoryPopover();
+    updateHistoryButtonVisibility();
+  });
+
+  entries.forEach((text) => {
+    const item = document.createElement("div");
+    item.className = "history-popover-item";
+    const truncated = text.length > 80 ? text.slice(0, 80) + "\u2026" : text;
+    const span = document.createElement("span");
+    span.className = "history-popover-item-text" + (text.startsWith("/") ? " is-slash" : "");
+    span.textContent = truncated;
+    item.appendChild(span);
+    item.addEventListener("click", () => {
+      const pane = getPane(null);
+      pane.messageInput.value = text;
+      pane.messageInput.style.height = "auto";
+      pane.messageInput.style.height = Math.min(pane.messageInput.scrollHeight, 200) + "px";
+      closeHistoryPopover();
+      pane.messageInput.focus();
+    });
+    el.appendChild(item);
+  });
+}
+
+function closeHistoryPopover() {
+  if ($.historyPopover) $.historyPopover.classList.add("hidden");
+}
+
+if ($.historyBtn) {
+  $.historyBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const el = $.historyPopover;
+    if (!el) return;
+    if (el.classList.contains("hidden")) {
+      renderHistoryPopover();
+      el.classList.remove("hidden");
+    } else {
+      closeHistoryPopover();
+    }
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if ($.historyPopover && !$.historyPopover.classList.contains("hidden")) {
+    if (!$.historyPopover.contains(e.target) && e.target !== $.historyBtn) {
+      closeHistoryPopover();
+    }
+  }
 });
 
 // Initialize mermaid
@@ -710,7 +822,12 @@ function showForkToast(title) {
 
 // ── Boot sequence ──
 showWhalyPlaceholder();
-loadProjects(); // loadSessions() is called inside loadProjects() after dropdown is populated
+updateHistoryButtonVisibility();
+loadProjects().then(() => {
+  // Re-sync history after projects load (programmatic .value= doesn't fire change event)
+  inputHistory = new InputHistory(historyKey());
+  updateHistoryButtonVisibility();
+}); // loadSessions() is called inside loadProjects() after dropdown is populated
 loadAccountInfo();
 loadStats();
 loadPrompts();

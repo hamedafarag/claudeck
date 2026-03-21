@@ -252,6 +252,10 @@ export const $ = {
   notifBadge: document.getElementById("notif-badge"),
   notifDropdown: document.getElementById("notif-dropdown"),
 
+  // Input history
+  historyBtn: document.getElementById("history-btn"),
+  historyPopover: document.getElementById("history-popover"),
+
   // Sidebar toggle (mobile)
   sidebarToggleBtn: document.getElementById("sidebar-toggle-btn"),
   sidebarBackdrop: document.getElementById("sidebar-backdrop"),

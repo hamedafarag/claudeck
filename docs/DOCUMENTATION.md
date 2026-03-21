@@ -604,9 +604,11 @@ Open via **Tools > Analytics** or `/analytics` slash command. Full analytics wit
 | `Cmd+Shift+V`  | Open Events tab           |
 | `Cmd+Shift+T`  | Toggle tips feed          |
 | `Cmd+1`–`4`    | Focus parallel pane 1–4   |
-| `Escape`       | Close any open modal      |
+| `Escape`       | Close any open modal / cancel history navigation |
 | `Enter`        | Send message              |
 | `Shift+Enter`  | New line in input         |
+| `↑` (ArrowUp)  | Recall previous message (empty input) |
+| `↓` (ArrowDown)| Recall next message (while navigating history) |
 
 ### 15. Response Formatting
 - Syntax highlighting via highlight.js (language auto-detection for all code blocks)
@@ -1210,6 +1212,14 @@ Loaded from the selected project's `.claude/` directory:
 
 Autocomplete triggers on `/` with keyboard navigation (arrow keys, Tab, Enter). Project commands and skills sort first.
 
+### Message Recall (Input History)
+Two complementary mechanisms for recalling previously sent messages:
+- **Up-arrow recall** — press `↑` on an empty input to cycle through previous messages; `↓` to move forward; `Escape` to cancel
+- **History button** — clock icon below the Send button opens a popover listing all recent messages (newest first); click to insert into input
+- Per-project localStorage persistence (`claudeck-input-history-<projectPath>`, max 100 entries)
+- Slash commands are included in history; messages with attachments store text only
+- Consecutive duplicate messages are deduplicated
+
 ---
 
 ## Configuration
@@ -1413,7 +1423,7 @@ Claudeck/
     ├── style.css          CSS entry point (@import hub)
     ├── css/
     │   ├── core/          variables.css, reset.css, responsive.css
-    │   ├── ui/            layout, sessions, messages, parallel, modals, etc.
+    │   ├── ui/            layout, sessions, messages, parallel, modals, input-history, etc.
     │   ├── features/      welcome.css, tour.css, voice-input.css, retro-terminal.css
     │   └── panels/        assistant-bot, tips-feed, dev-docs, telegram, mcp-manager
     ├── data/
@@ -1422,7 +1432,7 @@ Claudeck/
         ├── main.js        Entry point — imports all modules
         ├── core/          store, dom, constants, events, utils, api, ws, plugin-loader
         ├── ui/            messages, formatting, diff, export, theme, commands, parallel, etc.
-        ├── features/      chat, sessions, projects, home, welcome, tour, attachments, voice-input, easter-egg, etc.
+        ├── features/      chat, sessions, projects, input-history, home, welcome, tour, attachments, voice-input, easter-egg, etc.
         └── panels/        assistant-bot, tips-feed, dev-docs, file-explorer, git-panel, mcp-manager
 plugins/                   Full-stack plugins (client.js, server.js, config.json)
     ├── linear/            Issues + settings with server-side API routes
