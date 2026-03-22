@@ -14,10 +14,15 @@ import {
   updateSessionTitle,
   getTopMemories,
   touchMemory,
+  createWorktreeRecord,
+  updateWorktreeStatus,
+  updateWorktreeSession,
 } from "../db.js";
 import { getProjectSystemPrompt } from "./routes/projects.js";
 import { buildMemoryPrompt, parseRememberCommand, saveExplicitMemories } from "./memory-injector.js";
 import { captureMemories, runMaintenance } from "./memory-extractor.js";
+import { createWorktree, generateBranchName, getCurrentBranch, autoCommitWorktree, getWorktreeDiffStats } from "./utils/git-worktree.js";
+import { logNotification } from "./notification-logger.js";
 
 // Map short model names to current model IDs
 export const MODEL_MAP = {
@@ -644,7 +649,7 @@ export async function handleOrchestrate(msg, { ws, sessionIds, activeQueries, pe
 
 // ── Extracted handler: chat ───────────────────────────────────────────────
 export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingApprovals }) {
-  const { message, cwd, sessionId: clientSid, projectName, chatId, permissionMode: clientPermMode, model: chatModel, maxTurns: clientMaxTurns, images, systemPrompt, disabledTools } = msg;
+  const { message, cwd, sessionId: clientSid, projectName, chatId, permissionMode: clientPermMode, model: chatModel, maxTurns: clientMaxTurns, images, systemPrompt, disabledTools, worktree } = msg;
 
   // Handle /remember command — save memory and respond without calling Claude
   if (message && message.trim().toLowerCase().startsWith('/remember ') && cwd) {
@@ -680,10 +685,47 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
   const useBypass = effectivePermMode === "bypass";
   const usePlan = effectivePermMode === "plan";
   const resolvedCwd = (cwd && existsSync(cwd)) ? cwd : homedir();
+
+  // ── Worktree mode: create isolated worktree before SDK query ──
+  let worktreeRecord = null;
+  let effectiveCwd = resolvedCwd;
+
+  console.log(`[worktree] flag=${worktree}, cwd=${cwd}, exists=${cwd ? existsSync(cwd) : 'n/a'}`);
+
+  if (worktree && cwd && existsSync(cwd)) {
+    try {
+      const branchName = generateBranchName(message);
+      console.log(`[worktree] Creating worktree: branch=${branchName}, project=${cwd}`);
+      const baseBranch = await getCurrentBranch(cwd);
+      const wtResult = await createWorktree(cwd, branchName);
+      const wtId = crypto.randomUUID();
+
+      createWorktreeRecord(wtId, clientSid || null, cwd, wtResult.worktreePath, branchName, baseBranch, (message || "").slice(0, 200));
+      worktreeRecord = { id: wtId, worktreePath: wtResult.worktreePath, branchName, baseBranch };
+      effectiveCwd = wtResult.worktreePath;
+
+      // Notify client of worktree creation
+      if (ws.readyState === 1) {
+        const wtPayload = { type: "worktree_created", worktreeId: wtId, branchName, baseBranch, worktreePath: wtResult.worktreePath };
+        if (chatId) wtPayload.chatId = chatId;
+        ws.send(JSON.stringify(wtPayload));
+      }
+    } catch (err) {
+      console.error("Worktree creation failed:", err.message, err.stack);
+      // Notify client of failure so they know it fell back to normal mode
+      if (ws.readyState === 1) {
+        const errPayload = { type: "worktree_error", error: err.message };
+        if (chatId) errPayload.chatId = chatId;
+        ws.send(JSON.stringify(errPayload));
+      }
+      // Fall back to normal cwd — don't block the query
+    }
+  }
+
   const stderrChunks = [];
   const effectiveMaxTurns = clientMaxTurns > 0 ? clientMaxTurns : undefined;
   const opts = {
-    cwd: resolvedCwd,
+    cwd: effectiveCwd,
     permissionMode: usePlan ? "plan" : (useBypass ? "bypassPermissions" : "default"),
     abortController,
     executable: execPath,
@@ -697,6 +739,10 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
   if (chatModel) opts.model = resolveModel(chatModel);
   if (Array.isArray(disabledTools) && disabledTools.length > 0) {
     opts.disallowedTools = disabledTools;
+  }
+  // Prevent SDK from creating nested worktrees when Claudeck manages them
+  if (worktreeRecord) {
+    opts.disallowedTools = [...(opts.disallowedTools || []), "EnterWorktree"];
   }
 
   const projectPrompt = getProjectSystemPrompt(cwd);
@@ -976,6 +1022,41 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           }
         }
       } catch (e) { console.error("Memory capture error:", e.message); }
+    }
+
+    // Worktree post-completion: auto-commit, diff stats, notify
+    if (worktreeRecord) {
+      try {
+        if (state.resolvedSid) updateWorktreeSession(worktreeRecord.id, state.resolvedSid);
+
+        const commitMsg = `claudeck: ${(message || "worktree changes").slice(0, 72)}`;
+        await autoCommitWorktree(worktreeRecord.worktreePath, commitMsg);
+
+        const stats = await getWorktreeDiffStats(worktreeRecord.worktreePath, worktreeRecord.baseBranch);
+        updateWorktreeStatus(worktreeRecord.id, "completed");
+
+        if (ws.readyState === 1) {
+          const wtPayload = {
+            type: "worktree_completed",
+            worktreeId: worktreeRecord.id,
+            branchName: worktreeRecord.branchName,
+            stats,
+          };
+          if (chatId) wtPayload.chatId = chatId;
+          ws.send(JSON.stringify(wtPayload));
+        }
+
+        logNotification(
+          "worktree",
+          `Worktree "${worktreeRecord.branchName}" ready`,
+          `+${stats.insertions} -${stats.deletions} lines in ${stats.files} file(s)`,
+          JSON.stringify({ worktreeId: worktreeRecord.id, branchName: worktreeRecord.branchName }),
+          state.resolvedSid,
+          null
+        );
+      } catch (e) {
+        console.error("Worktree post-completion error:", e.message);
+      }
     }
   }
 }

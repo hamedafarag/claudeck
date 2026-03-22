@@ -236,6 +236,7 @@ The SQLite database lives at `~/.claudeck/data.db`. It stores:
 - Persistent memories (cross-session project knowledge with FTS5 search)
 - Agent runs and agent context (shared memory between agents)
 - Notifications (in-app notification bell history with read/unread tracking)
+- Worktrees (git worktree tracking with branch, status, and session association)
 
 The database is created automatically on first run with WAL mode enabled. Schema migrations run on startup via try/catch `ADD COLUMN` statements.
 

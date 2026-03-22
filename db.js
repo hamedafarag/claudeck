@@ -187,6 +187,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notif_unread ON notifications(read_at) WHERE read_at IS NULL;
 `);
 
+// ── Worktrees table ──────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS worktrees (
+    id TEXT PRIMARY KEY,
+    session_id TEXT,
+    project_path TEXT NOT NULL,
+    worktree_path TEXT NOT NULL,
+    branch_name TEXT NOT NULL,
+    base_branch TEXT NOT NULL,
+    status TEXT DEFAULT 'active',
+    user_prompt TEXT,
+    created_at INTEGER DEFAULT (unixepoch()),
+    completed_at INTEGER DEFAULT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_wt_project ON worktrees(project_path);
+  CREATE INDEX IF NOT EXISTS idx_wt_status ON worktrees(status);
+`);
+
 // Backfill content_hash for existing rows
 const unhashed = db.prepare(`SELECT id, project_path, content FROM memories WHERE content_hash IS NULL`).all();
 if (unhashed.length > 0) {
@@ -1441,6 +1459,56 @@ export function markNotificationsReadBefore(timestamp) {
 export function purgeOldNotifications(days = 90) {
   notifStmts.markStaleRead.run();
   notifStmts.purgeOld.run(days);
+}
+
+// ── Worktrees ─────────────────────────────────────────────
+const wtStmts = {
+  create: db.prepare(
+    `INSERT INTO worktrees (id, session_id, project_path, worktree_path, branch_name, base_branch, status, user_prompt)
+     VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`
+  ),
+  get: db.prepare(`SELECT * FROM worktrees WHERE id = ?`),
+  listByProject: db.prepare(
+    `SELECT * FROM worktrees WHERE project_path = ? ORDER BY created_at DESC`
+  ),
+  listActive: db.prepare(
+    `SELECT * FROM worktrees WHERE status IN ('active', 'completed') ORDER BY created_at DESC`
+  ),
+  updateStatus: db.prepare(
+    `UPDATE worktrees SET status = ?, completed_at = unixepoch() WHERE id = ?`
+  ),
+  updateSession: db.prepare(
+    `UPDATE worktrees SET session_id = ? WHERE id = ?`
+  ),
+  delete: db.prepare(`DELETE FROM worktrees WHERE id = ?`),
+};
+
+export function createWorktreeRecord(id, sessionId, projectPath, worktreePath, branchName, baseBranch, userPrompt) {
+  wtStmts.create.run(id, sessionId, projectPath, worktreePath, branchName, baseBranch, userPrompt);
+}
+
+export function getWorktreeRecord(id) {
+  return wtStmts.get.get(id);
+}
+
+export function listWorktreesByProject(projectPath) {
+  return wtStmts.listByProject.all(projectPath);
+}
+
+export function listActiveWorktrees() {
+  return wtStmts.listActive.all();
+}
+
+export function updateWorktreeStatus(id, status) {
+  wtStmts.updateStatus.run(status, id);
+}
+
+export function updateWorktreeSession(id, sessionId) {
+  wtStmts.updateSession.run(sessionId, id);
+}
+
+export function deleteWorktreeRecord(id) {
+  wtStmts.delete.run(id);
 }
 
 // ── Memories (persistent cross-session context) ──────────

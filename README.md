@@ -80,7 +80,8 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 ### Code & Files
 
 - **File Explorer** — Lazy tree, syntax-highlighted preview, drag-to-chat
-- **Git Panel** — Branch switching, staging, commit, log
+- **Git Panel** — Branch switching, staging, commit, log, inline diff viewer
+- **Git Worktrees** — Run any chat/agent task in an isolated worktree; merge, diff, or discard results
 - **Repos Manager** — Organize repos in nested groups with GitHub links
 - Code diff viewer with LCS-based line highlighting
 
@@ -150,6 +151,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
                           server/orchestrator.js   ├── plugins/    (user plugins)
                           server/dag-executor.js   ├── data.db     (SQLite + memories)
                           server/notification-logger.js
+                          server/utils/git-worktree.js
                           server/memory-optimizer.js └── .env      (VAPID keys)
                           plugins/
 ```
@@ -189,7 +191,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 | `Cmd+N` | New session |
 | `Cmd+B` | Toggle right panel |
 | `Cmd+/` | Show all shortcuts |
-| `Cmd+Shift+E/G/R/V/T` | Files / Git / Repos / Events / Tips |
+| `Cmd+Shift+E/G/R/V/T` | Files / Git / Repos / Events / Tips  |
 | `Cmd+1`-`4` | Focus parallel pane |
 | `↑` / `↓` | Recall previous/next message (empty input) |
 

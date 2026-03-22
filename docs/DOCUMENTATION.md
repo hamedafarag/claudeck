@@ -246,6 +246,22 @@ browser ──────── WebSocket ──────── server.js �
 
 **Indexes:** `idx_notif_created` (created_at DESC), `idx_notif_unread` (partial index on read_at WHERE read_at IS NULL).
 
+### worktrees
+| Column        | Type    | Description                                    |
+| ------------- | ------- | ---------------------------------------------- |
+| id            | TEXT PK | Worktree UUID                                  |
+| session_id    | TEXT    | Session that spawned this worktree             |
+| project_path  | TEXT    | Original project path                          |
+| worktree_path | TEXT    | Path to the worktree directory                 |
+| branch_name   | TEXT    | Git branch created for this worktree           |
+| base_branch   | TEXT    | Branch the worktree was created from           |
+| status        | TEXT    | active, completed, merged, or discarded        |
+| user_prompt   | TEXT    | Original user prompt that triggered worktree   |
+| created_at    | INTEGER | Unix timestamp                                 |
+| completed_at  | INTEGER | Unix timestamp (set on merge/discard)          |
+
+**Indexes:** `idx_wt_project` (project_path), `idx_wt_status` (status).
+
 Migrations run automatically on startup (ADD COLUMN with try/catch).
 
 ---
@@ -427,6 +443,16 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 | POST   | /api/memory/optimize    | AI-powered optimization preview (Claude Haiku consolidation) |
 | POST   | /api/memory/optimize/apply | Apply optimization results              |
 
+### Worktrees
+| Method | Path                        | Description                              |
+| ------ | --------------------------- | ---------------------------------------- |
+| POST   | /api/worktrees              | Create a new worktree (`{ projectPath, baseBranch?, branchName?, sessionId?, userPrompt? }`) |
+| GET    | /api/worktrees              | List worktrees for a project (`?project=`) |
+| GET    | /api/worktrees/active       | List all active worktrees                |
+| POST   | /api/worktrees/:id/merge    | Merge worktree branch back and clean up  |
+| GET    | /api/worktrees/:id/diff     | Show diff between worktree and base branch |
+| DELETE | /api/worktrees/:id          | Discard worktree (remove + delete branch)|
+
 ### Version
 | Method | Path                    | Description                              |
 | ------ | ----------------------- | ---------------------------------------- |
@@ -435,7 +461,7 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 ### WebSocket (`/ws`)
 
 **Outgoing** (client to server):
-- `{ type: "chat", message, cwd, sessionId, projectName, chatId, permissionMode, model, maxTurns, images?, systemPrompt? }` — send a message (images: `[{ name, data, mimeType }]` base64-encoded; systemPrompt appended to project prompt)
+- `{ type: "chat", message, cwd, sessionId, projectName, chatId, permissionMode, model, maxTurns, images?, systemPrompt?, worktree? }` — send a message (images: `[{ name, data, mimeType }]` base64-encoded; systemPrompt appended to project prompt; worktree: `{ enabled, branchName? }` for worktree isolation)
 - `{ type: "workflow", workflow, cwd, sessionId, projectName, permissionMode, model }` — run a workflow
 - `{ type: "agent", agentDef, cwd, sessionId, projectName, permissionMode, model, userContext? }` — run an autonomous agent
 - `{ type: "agent_chain", chain, agents, cwd, sessionId, projectName, permissionMode, model }` — run an agent chain
@@ -456,6 +482,8 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 - `agent_chain_started` / `agent_chain_step` / `agent_chain_completed` — chain progress
 - `dag_started` / `dag_level` / `dag_node` / `dag_completed` / `dag_error` — DAG execution
 - `orchestrator_started` / `orchestrator_phase` / `orchestrator_dispatching` / `orchestrator_dispatch` / `orchestrator_completed` / `orchestrator_error` — orchestrator lifecycle
+- `worktree_created` — worktree created for this session (id, branchName, worktreePath)
+- `worktree_completed` — worktree task finished (id, branchName, diff summary)
 - `permission_request` — tool approval needed (id, toolName, input). Also sent to Telegram with inline Approve/Deny buttons if configured.
 - `permission_response_external` — approval/denial from an external source (Telegram). Includes `id`, `behavior`, `source`. Frontend auto-dismisses the permission modal.
 
@@ -765,6 +793,10 @@ Git panel in the Git tab — all operations via `POST /api/exec`:
 - **Stage/unstage** — click +/- buttons to `git add` or `git reset HEAD` individual files
 - **Commit** — textarea + button, shows error feedback, clears on success
 - **Log** — last 10 commits with hash (accent), subject, and relative time
+- **Inline diff** — click any file name to view a colored diff modal (per-file collapsible sections with +/- stats)
+- **Branch info bar** — shows current branch, ahead/behind tracking, bulk stage/unstage actions
+- **Discard changes** — per-file discard button with confirmation
+- **Worktrees** — list active worktrees with status badges (running/ready), merge/diff/discard actions per worktree
 - **Refresh** — spinning refresh button reloads branches, status, and log
 - Auto-refreshes on tab switch and project switch
 
@@ -1126,6 +1158,20 @@ Cross-session project knowledge that survives server restarts and upgrades:
 - Centralizes project-select change handling in the Tab SDK
 - Plugins use `ctx.on('projectChanged', fn)` and `ctx.getProjectPath()` instead of accessing the DOM element directly
 - Updated plugin scaffold and claude-editor plugin follow the new pattern
+
+### 53. Git Worktree Support
+Run any chat or agent task in an isolated git worktree without touching the working branch:
+- **Worktree toggle** — tree icon button in the chat input bar; when active, the next message runs in a new worktree
+- **Confirmation card** — before sending, shows the branch name and base branch with "Run in Worktree" / "Run in Current" buttons
+- **Worktree creation** — creates a git worktree at `<project>/../.claudeck-worktrees/<branch>` with branch `claudeck/wt-<shortid>`
+- **Active banner** — while running, shows a banner with branch name, base branch, and worktree status
+- **Completion card** — on task completion, shows merge/diff/discard action buttons
+- **Merge** — merges worktree branch back into the base branch, removes worktree and branch
+- **Diff** — shows a colored diff modal between worktree changes and base branch
+- **Discard** — removes worktree and deletes branch without merging
+- **Git panel section** — "Worktrees" section in the Git tab listing active worktrees with status badges (running/ready) and per-worktree merge/diff/discard actions
+- **Database tracking** — `worktrees` table tracks id, session, paths, branch, status, and user prompt
+- **WebSocket integration** — `worktree_created` and `worktree_completed` messages for real-time UI updates
 
 ---
 

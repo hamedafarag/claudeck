@@ -102,6 +102,14 @@ import {
   getSessionBranches,
   getSessionBranchCount,
   getSessionLineage,
+  // Worktrees
+  createWorktreeRecord,
+  getWorktreeRecord,
+  listWorktreesByProject,
+  listActiveWorktrees,
+  updateWorktreeStatus,
+  updateWorktreeSession,
+  deleteWorktreeRecord,
   // DB access
   getDb,
 } from "../../../db.js";
@@ -110,6 +118,7 @@ import {
 function clearAll() {
   const db = getDb();
   db.exec(`
+    DELETE FROM worktrees;
     DELETE FROM notifications;
     DELETE FROM agent_context;
     DELETE FROM agent_runs;
@@ -2030,6 +2039,108 @@ describe("Notifications", () => {
 // ─────────────────────────────────────────────────────────────
 // 13. getDb helper
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Worktrees
+// ─────────────────────────────────────────────────────────────
+describe("Worktrees", () => {
+  beforeEach(clearAll);
+
+  it("createWorktreeRecord + getWorktreeRecord returns the created worktree", () => {
+    createWorktreeRecord("wt1", "s1", "/project", "/project/.wt/feat", "claudeck/feat", "main", "add feature");
+    const wt = getWorktreeRecord("wt1");
+    expect(wt).toBeTruthy();
+    expect(wt.id).toBe("wt1");
+    expect(wt.session_id).toBe("s1");
+    expect(wt.project_path).toBe("/project");
+    expect(wt.worktree_path).toBe("/project/.wt/feat");
+    expect(wt.branch_name).toBe("claudeck/feat");
+    expect(wt.base_branch).toBe("main");
+    expect(wt.status).toBe("active");
+    expect(wt.user_prompt).toBe("add feature");
+    expect(wt.created_at).toBeTypeOf("number");
+    expect(wt.completed_at).toBeNull();
+  });
+
+  it("getWorktreeRecord returns undefined for nonexistent id", () => {
+    expect(getWorktreeRecord("nope")).toBeUndefined();
+  });
+
+  it("listWorktreesByProject returns worktrees for a project", () => {
+    createWorktreeRecord("wt1", null, "/project", "/wt/1", "b1", "main", "p1");
+    createWorktreeRecord("wt2", null, "/project", "/wt/2", "b2", "main", "p2");
+    createWorktreeRecord("wt3", null, "/other", "/wt/3", "b3", "main", "p3");
+
+    const list = listWorktreesByProject("/project");
+    expect(list).toHaveLength(2);
+    expect(list.map((w) => w.id).sort()).toEqual(["wt1", "wt2"]);
+  });
+
+  it("listWorktreesByProject returns results ordered by created_at DESC", () => {
+    createWorktreeRecord("wt1", null, "/project", "/wt/1", "b1", "main", "first");
+    createWorktreeRecord("wt2", null, "/project", "/wt/2", "b2", "main", "second");
+
+    const list = listWorktreesByProject("/project");
+    expect(list).toHaveLength(2);
+    // Both created in the same second, so just verify both are returned
+    const ids = list.map((w) => w.id).sort();
+    expect(ids).toEqual(["wt1", "wt2"]);
+  });
+
+  it("listActiveWorktrees returns only active and completed worktrees", () => {
+    createWorktreeRecord("wt1", null, "/p", "/wt/1", "b1", "main", "active");
+    createWorktreeRecord("wt2", null, "/p", "/wt/2", "b2", "main", "completed");
+    createWorktreeRecord("wt3", null, "/p", "/wt/3", "b3", "main", "discarded");
+
+    updateWorktreeStatus("wt2", "completed");
+    updateWorktreeStatus("wt3", "discarded");
+
+    const list = listActiveWorktrees();
+    const ids = list.map((w) => w.id);
+    expect(ids).toContain("wt1"); // active
+    expect(ids).toContain("wt2"); // completed
+    expect(ids).not.toContain("wt3"); // discarded — excluded
+  });
+
+  it("updateWorktreeStatus changes status and sets completed_at", () => {
+    createWorktreeRecord("wt1", null, "/p", "/wt/1", "b1", "main", "test");
+
+    updateWorktreeStatus("wt1", "merged");
+
+    const wt = getWorktreeRecord("wt1");
+    expect(wt.status).toBe("merged");
+    expect(wt.completed_at).toBeTypeOf("number");
+  });
+
+  it("updateWorktreeSession updates the session_id", () => {
+    createWorktreeRecord("wt1", null, "/p", "/wt/1", "b1", "main", "test");
+
+    updateWorktreeSession("wt1", "new-session");
+
+    const wt = getWorktreeRecord("wt1");
+    expect(wt.session_id).toBe("new-session");
+  });
+
+  it("deleteWorktreeRecord removes the row", () => {
+    createWorktreeRecord("wt1", null, "/p", "/wt/1", "b1", "main", "test");
+    expect(getWorktreeRecord("wt1")).toBeTruthy();
+
+    deleteWorktreeRecord("wt1");
+    expect(getWorktreeRecord("wt1")).toBeUndefined();
+  });
+
+  it("allows null session_id", () => {
+    createWorktreeRecord("wt1", null, "/p", "/wt/1", "b1", "main", "test");
+    const wt = getWorktreeRecord("wt1");
+    expect(wt.session_id).toBeNull();
+  });
+
+  it("allows null user_prompt", () => {
+    createWorktreeRecord("wt1", null, "/p", "/wt/1", "b1", "main", null);
+    const wt = getWorktreeRecord("wt1");
+    expect(wt.user_prompt).toBeNull();
+  });
+});
+
 describe("getDb", () => {
   it("returns a Database instance", () => {
     const db = getDb();

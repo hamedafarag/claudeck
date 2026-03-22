@@ -242,6 +242,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | Live file editing in UI | No | No | **Yes** | No | No | No |
 | File preview | **Yes** | No | No | **Yes** | No | No |
 | Git integration (stage/commit) | **Yes** | No | **Yes** | No | No | No |
+| Git worktree isolation | **Yes** | No | No | No | Partial | No |
 | Repos management (groups, URLs) | **Yes** | No | No | No | No | No |
 | **Monitoring & Cost** |
 | Cost dashboard with charts | **Yes** | **Yes** | No | No | No | No |
@@ -316,6 +317,10 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | 33 | Linear plugin | Done | Full-stack plugin for Linear issue tracking with team management and GraphQL API |
 | 34 | Full-stack plugin system | Done | Plugins can have `server.js` with Express routes, auto-mounted at `/api/plugins/<name>/*` |
 | 35 | CI/CD pipeline | Done | GitHub Actions workflow — auto-publish to npm with provenance on GitHub Release |
+| 36 | Notification bell | Done | Persistent history, unread badge, background session events, type/status filters, bulk actions |
+| 37 | Session branching | Done | Fork conversations at any assistant message, branch navigation, lineage tracking |
+| 38 | Message recall | Done | Up-arrow history cycling, history button popover, per-project localStorage persistence |
+| 39 | Git worktree support | Done | Worktree toggle in chat, isolated task execution, merge/diff/discard, git panel worktree section |
 
 ### Tier 1 — High Impact (address next)
 
@@ -439,13 +444,14 @@ These features are **not found in any competitor** (or found in very few):
 | **Whaly mascot + easter egg** | Pixel whale mascot with hidden comic-book speech bubble | No |
 | **Voice input (Web Speech API)** | Zero-dependency browser-native speech-to-text with real-time transcription | CUI uses Gemini Flash |
 | **Persistent memory system** | Cross-session project knowledge with FTS5 search, auto-capture, AI optimization, relevance scoring | Pilot Shell has basic memory |
+| **Git worktree isolation** | Run chat/agent tasks in isolated worktrees; merge, diff, or discard results without touching the working branch | Pilot Shell has worktree isolation |
 
 ---
 
 ## Implementation Progress
 
-**Last updated**: March 19, 2026
-**Completed**: 14 / 14 (Phase 1-3) + 1 / 4 (Phase 4) + 17 / 17 (Phase 5-6) + 3 / 3 (Phase 7)
+**Last updated**: March 22, 2026
+**Completed**: 14 / 14 (Phase 1-3) + 1 / 4 (Phase 4) + 17 / 17 (Phase 5-6) + 3 / 3 (Phase 7) + 5 / 9 (Phase 8 — v1.2)
 
 ### Phase 1 — Quick Wins (Low Effort, High Impact)
 - [x] 1. Model switching (dropdown in header)
@@ -493,6 +499,17 @@ These features are **not found in any competitor** (or found in very few):
 - [x] 29. **Persistent memory system** — SQLite FTS5, auto-capture, /remember command, memory panel with search/filter/optimize, Claude Haiku consolidation, content-hash dedup
 - [x] 30. **Tab SDK `projectChanged` event** — `ctx.on('projectChanged', fn)` and `ctx.getProjectPath()` for plugin project awareness
 - [x] 31. **Version in status bar** — `/api/version` endpoint, accent-colored version badge in status bar
+
+### Phase 8 — v1.2 Features
+- [x] 32. **Notification bell** — Persistent notification history with unread badge, background session events, type/status filters, bulk actions, pagination
+- [x] 33. **Session branching** — Fork any conversation at an assistant message to explore alternatives, branch navigation
+- [x] 34. **Message recall** — Up-arrow history cycling, history button popover for browsing and re-using previous messages
+- [x] 35. **Git worktree support** — Run chat/agent tasks in isolated worktrees, merge/diff/discard, worktree toggle in chat, worktree section in git panel
+- [ ] 36. Skills.sh registry integration
+- [ ] 37. Prompt optimizer (reformat button)
+- [ ] 38. Landing page newsletter subscription
+- [ ] 39. Workspace (future)
+- [ ] 40. Multi-model support (future)
 
 ---
 
@@ -548,6 +565,6 @@ Claudeck is the most feature-rich Claude Code web UI, with 23+ unique features n
 
 **Remaining gaps**: Authentication (#4) for remote/team usage, auto-update notifications (#12), rate limiting (#13), and HTTPS support (#14).
 
-The multi-agent system is now fully built out with agent chains, DAGs, orchestrator, shared context, and monitoring dashboard. NPX publishing is complete. v1.1.0 added persistent memory (FTS5, auto-capture, AI optimization), Tab SDK enhancements, a landing page for GitHub Pages, and multiple Windows compatibility fixes.
+The multi-agent system is now fully built out with agent chains, DAGs, orchestrator, shared context, and monitoring dashboard. NPX publishing is complete. v1.1.0 added persistent memory (FTS5, auto-capture, AI optimization), Tab SDK enhancements, a landing page for GitHub Pages, and multiple Windows compatibility fixes. v1.2 added notification bell, session branching, message recall, and git worktree isolation.
 
 The biggest strategic question is whether to go deeper on unique AI features (workflows, analytics, agents) or broader on platform coverage (multi-CLI, desktop app). Given Claudeck's strong moat in AI features and zero-framework architecture, **authentication** is the last major blocker for remote/team adoption.

@@ -1,0 +1,442 @@
+/* ── Worktree toggle button ────────────────────────────── */
+#worktree-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: var(--glow);
+}
+
+/* ── Worktree active banner ────────────────────────────── */
+.worktree-banner {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin: 8px 0;
+  animation: fadeInUp 0.2s var(--ease-out-expo);
+}
+
+.worktree-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.worktree-banner-content svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.worktree-banner-label {
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+
+.worktree-banner-branch {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.worktree-banner-base {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.worktree-banner-base strong {
+  color: var(--text);
+}
+
+/* ── Worktree confirmation card (pre-send) ────────────── */
+.worktree-confirm-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin: 8px 0;
+  animation: fadeInUp 0.2s var(--ease-out-expo);
+}
+
+.worktree-confirm-card .wt-confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.worktree-confirm-card .wt-confirm-header svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.worktree-confirm-card .wt-confirm-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.wt-confirm-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.wt-confirm-btns button {
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-smooth);
+}
+
+.wt-confirm-btns .wt-btn-worktree {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: 1px solid var(--accent);
+}
+.wt-confirm-btns .wt-btn-worktree:hover {
+  box-shadow: var(--glow-strong);
+}
+
+.wt-confirm-btns .wt-btn-current {
+  background: var(--bg-primary);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.wt-confirm-btns .wt-btn-current:hover {
+  border-color: var(--text-dim);
+}
+
+/* ── Worktree action card (post-completion) ───────────── */
+.worktree-action-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin: 8px 0;
+  animation: fadeInUp 0.2s var(--ease-out-expo);
+}
+
+.worktree-action-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.worktree-action-header svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.worktree-action-header strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.worktree-stats {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.worktree-action-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.worktree-action-btns button {
+  padding: 5px 12px;
+  font-size: 11px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-smooth);
+}
+
+.worktree-action-btns .wt-merge-btn:hover {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border-color: var(--accent);
+}
+
+.worktree-action-btns .wt-discard-btn:hover {
+  background: var(--error);
+  color: #fff;
+  border-color: var(--error);
+}
+
+.worktree-action-btns .wt-diff-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.worktree-action-btns button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.worktree-merged {
+  opacity: 0.6;
+  border-color: var(--accent);
+}
+
+.worktree-discarded {
+  opacity: 0.4;
+}
+
+/* ── Diff modal ───────────────────────────────────────── */
+.worktree-diff-content {
+  max-height: 60vh;
+  overflow: auto;
+  padding: 16px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  white-space: pre;
+  line-height: 1.5;
+  color: var(--text);
+  tab-size: 4;
+}
+
+/* ── Git panel worktree section ───────────────────────── */
+.git-worktree-list {
+  padding: 4px 0;
+}
+
+.git-worktree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.git-worktree-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.git-worktree-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.git-worktree-badge.running {
+  background: var(--warning);
+  color: #000;
+}
+
+.git-worktree-badge.ready {
+  background: var(--accent);
+  color: #fff;
+}
+
+.git-worktree-name {
+  flex: 1;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.git-worktree-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.git-worktree-actions button {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px 5px;
+  font-size: 11px;
+  border-radius: 3px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.git-worktree-actions button:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* Worktree button tooltips */
+.git-worktree-actions button[data-tooltip] {
+  position: relative;
+}
+
+.git-worktree-actions button[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  padding: 4px 10px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.15s var(--ease-out-expo);
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.git-worktree-actions button[data-tooltip]::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--border);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+
+.git-worktree-actions button[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.git-worktree-actions button[data-tooltip]:hover::before {
+  opacity: 1;
+}
+
+.git-worktree-actions .wt-discard:hover {
+  color: var(--error);
+  background: rgba(255, 80, 80, 0.1);
+}
+
+/* Worktree delete confirmation — git panel */
+.git-wt-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.git-wt-confirm-label {
+  font-size: 10px;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.git-wt-confirm-yes,
+.git-wt-confirm-no {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.git-wt-confirm-yes {
+  background: var(--error);
+  color: #fff;
+  border-color: var(--error);
+}
+
+.git-wt-confirm-yes:hover {
+  opacity: 0.85;
+}
+
+.git-wt-confirm-no {
+  background: var(--bg-primary);
+  color: var(--text);
+}
+
+.git-wt-confirm-no:hover {
+  border-color: var(--text-dim);
+}
+
+.git-wt-confirm-yes:disabled,
+.git-wt-confirm-no:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Worktree delete confirmation — chat inline card */
+.wt-confirm-label {
+  font-size: 11px;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.wt-confirm-yes,
+.wt-confirm-no {
+  padding: 5px 12px;
+  font-size: 11px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.wt-confirm-yes {
+  background: var(--error);
+  color: #fff;
+  border-color: var(--error);
+}
+
+.wt-confirm-yes:hover {
+  opacity: 0.85;
+}
+
+.wt-confirm-no {
+  background: var(--bg-primary);
+  color: var(--text);
+}
+
+.wt-confirm-no:hover {
+  border-color: var(--text-dim);
+}
+
+.wt-confirm-yes:disabled,
+.wt-confirm-no:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

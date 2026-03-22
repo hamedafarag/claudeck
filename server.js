@@ -30,6 +30,7 @@ import tipsRouter from "./server/routes/tips.js";
 import botRouter from "./server/routes/bot.js";
 import notificationsRouter, { setVapidPublicKey } from "./server/routes/notifications.js";
 import memoryRouter from "./server/routes/memory.js";
+import worktreesRouter from "./server/routes/worktrees.js";
 import { setupWebSocket } from "./server/ws-handler.js";
 import { setWss } from "./server/notification-logger.js";
 
@@ -86,6 +87,13 @@ const sessionIds = new Map();
 // Share sessionIds with sessions router
 setSessionIds(sessionIds);
 
+// Reconcile orphaned worktrees (fire-and-forget)
+import { listActiveWorktrees, updateWorktreeStatus } from "./db.js";
+import { reconcileOrphanedWorktrees } from "./server/utils/git-worktree.js";
+reconcileOrphanedWorktrees(listActiveWorktrees, updateWorktreeStatus)
+  .then(() => console.log("Worktree reconciliation complete"))
+  .catch((e) => console.error("Worktree reconciliation error:", e.message));
+
 // Mount routes
 app.use("/api/projects", projectsRouter);
 app.use("/api/sessions", sessionsRouter);
@@ -107,6 +115,7 @@ app.use("/api/tips", tipsRouter);
 app.use("/api/bot", botRouter);
 app.use("/api/telegram", telegramRouter);
 app.use("/api/memory", memoryRouter);
+app.use("/api/worktrees", worktreesRouter);
 
 // Version endpoint
 import { readFileSync } from "fs";

@@ -50,6 +50,15 @@ export function getInputHistory() {
   return inputHistory;
 }
 
+// ── Worktree mode toggle ──
+let worktreeMode = false;
+if ($.worktreeBtn) {
+  $.worktreeBtn.addEventListener("click", () => {
+    worktreeMode = !worktreeMode;
+    $.worktreeBtn.classList.toggle("active", worktreeMode);
+  });
+}
+
 function isQuestionText(text) {
   if (!text) return false;
   // Get the last meaningful line (skip empty lines, code blocks, lists)
@@ -210,6 +219,14 @@ export function sendMessage(pane) {
 
   if (parallelMode && pane.chatId) {
     payload.chatId = pane.chatId;
+  }
+
+  // Worktree confirmation: show approve/reject before sending
+  if (worktreeMode) {
+    worktreeMode = false;
+    $.worktreeBtn?.classList.remove("active");
+    showWorktreeConfirmation(ws, payload, pane);
+    return;
   }
 
   ws.send(JSON.stringify(payload));
@@ -496,7 +513,291 @@ function handleServerMessage(msg) {
     case "memory_saved":
       // /remember command response — already handled by "text" message
       break;
+
+    case "worktree_created":
+      showWorktreeBanner(msg.branchName, msg.baseBranch, pane);
+      showThinking(`Working in worktree: ${msg.branchName}...`, pane);
+      break;
+
+    case "worktree_completed":
+      removeThinking(pane);
+      showWorktreeActions(msg.worktreeId, msg.branchName, msg.stats, pane);
+      break;
+
+    case "worktree_error":
+      addStatus(`Worktree failed: ${msg.error} — running on current branch instead`, true, pane);
+      break;
   }
+}
+
+// ── Worktree UI functions ──────────────────────────────────────────────────
+
+const BRANCH_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>`;
+
+/**
+ * Show a persistent banner indicating the agent is working in a worktree.
+ * This is clearly visible so the user knows they're NOT on the main branch.
+ */
+function showWorktreeBanner(branchName, baseBranch, pane) {
+  const container = pane.messagesDiv || $.messagesDiv;
+  const banner = document.createElement("div");
+  banner.className = "worktree-banner";
+  banner.innerHTML = `
+    <div class="worktree-banner-content">
+      ${BRANCH_SVG}
+      <span class="worktree-banner-label">Worktree active</span>
+      <code class="worktree-banner-branch">${escapeHtml(branchName)}</code>
+      <span class="worktree-banner-base">branched from <strong>${escapeHtml(baseBranch)}</strong></span>
+    </div>
+  `;
+  container.appendChild(banner);
+  banner.scrollIntoView({ behavior: "smooth" });
+}
+
+/**
+ * Show inline confirmation card: "Run in Worktree" or "Use Current Branch".
+ * The user's message is already displayed — this card appears below it.
+ */
+function showWorktreeConfirmation(ws, payload, pane) {
+  const container = pane.messagesDiv || $.messagesDiv;
+  const card = document.createElement("div");
+  card.className = "worktree-confirm-card";
+  card.innerHTML = `
+    <div class="wt-confirm-header">
+      ${BRANCH_SVG}
+      <span>Run this task in an isolated worktree?</span>
+    </div>
+    <div class="wt-confirm-desc">
+      Your working branch stays untouched. You can merge or discard the result after completion.
+    </div>
+    <div class="wt-confirm-btns">
+      <button class="wt-btn-worktree">Run in Worktree</button>
+      <button class="wt-btn-current">Use Current Branch</button>
+    </div>
+  `;
+
+  function send(useWorktree) {
+    if (useWorktree) payload.worktree = true;
+    console.log("[worktree] Sending payload with worktree:", payload.worktree, "cwd:", payload.cwd);
+    card.remove();
+    ws.send(JSON.stringify(payload));
+    showThinking(useWorktree ? "Creating worktree..." : "Connecting to Claude...", pane);
+  }
+
+  card.querySelector(".wt-btn-worktree").addEventListener("click", () => send(true));
+  card.querySelector(".wt-btn-current").addEventListener("click", () => send(false));
+
+  container.appendChild(card);
+  card.scrollIntoView({ behavior: "smooth" });
+}
+
+/**
+ * Show inline action card after worktree completes: View Diff / Merge / Discard.
+ */
+function showWorktreeActions(worktreeId, branchName, stats, pane) {
+  const container = pane.messagesDiv || $.messagesDiv;
+  const card = document.createElement("div");
+  card.className = "worktree-action-card";
+  const statsText = stats ? `+${stats.insertions} -${stats.deletions} in ${stats.files} file(s)` : "";
+  card.innerHTML = `
+    <div class="worktree-action-header">
+      ${BRANCH_SVG}
+      <span>Branch: <strong>${escapeHtml(branchName)}</strong></span>
+      <span class="worktree-stats">${statsText}</span>
+    </div>
+    <div class="worktree-action-btns">
+      <button class="wt-diff-btn">View Diff</button>
+      <button class="wt-merge-btn">Squash Merge</button>
+      <button class="wt-discard-btn">Discard</button>
+    </div>
+  `;
+
+  const diffBtn = card.querySelector(".wt-diff-btn");
+  const mergeBtn = card.querySelector(".wt-merge-btn");
+  const discardBtn = card.querySelector(".wt-discard-btn");
+
+  diffBtn.addEventListener("click", async () => {
+    diffBtn.disabled = true;
+    diffBtn.textContent = "Loading...";
+    try {
+      const res = await fetch(`/api/worktrees/${encodeURIComponent(worktreeId)}/diff`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      showWorktreeDiffModal(data.diff, branchName);
+    } catch (err) {
+      addStatus("Diff error: " + err.message, true, pane);
+    } finally {
+      diffBtn.disabled = false;
+      diffBtn.textContent = "View Diff";
+    }
+  });
+
+  mergeBtn.addEventListener("click", async () => {
+    mergeBtn.disabled = true;
+    mergeBtn.textContent = "Merging...";
+    discardBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/worktrees/${encodeURIComponent(worktreeId)}/merge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      card.innerHTML = `<div class="worktree-action-header">${BRANCH_SVG}<span>Merged <strong>${escapeHtml(branchName)}</strong> into current branch</span></div>`;
+      card.classList.add("worktree-merged");
+    } catch (err) {
+      addStatus("Merge error: " + err.message, true, pane);
+      mergeBtn.disabled = false;
+      mergeBtn.textContent = "Squash Merge";
+      discardBtn.disabled = false;
+    }
+  });
+
+  discardBtn.addEventListener("click", () => {
+    // Replace buttons with confirmation
+    const btnsDiv = card.querySelector(".worktree-action-btns");
+    btnsDiv.innerHTML = `
+      <span class="wt-confirm-label">Discard this worktree? This cannot be undone.</span>
+      <button class="wt-confirm-yes">Yes, Discard</button>
+      <button class="wt-confirm-no">Cancel</button>
+    `;
+
+    btnsDiv.querySelector(".wt-confirm-no").addEventListener("click", () => {
+      btnsDiv.innerHTML = "";
+      btnsDiv.appendChild(diffBtn);
+      btnsDiv.appendChild(mergeBtn);
+      btnsDiv.appendChild(discardBtn);
+    });
+
+    btnsDiv.querySelector(".wt-confirm-yes").addEventListener("click", async () => {
+      const yesBtn = btnsDiv.querySelector(".wt-confirm-yes");
+      yesBtn.disabled = true;
+      yesBtn.textContent = "Discarding...";
+      btnsDiv.querySelector(".wt-confirm-no").disabled = true;
+      try {
+        const res = await fetch(`/api/worktrees/${encodeURIComponent(worktreeId)}`, { method: "DELETE" });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        card.innerHTML = `<div class="worktree-action-header">${BRANCH_SVG}<span>Discarded <strong>${escapeHtml(branchName)}</strong></span></div>`;
+        card.classList.add("worktree-discarded");
+      } catch (err) {
+        addStatus("Discard error: " + err.message, true, pane);
+        btnsDiv.innerHTML = "";
+        btnsDiv.appendChild(diffBtn);
+        btnsDiv.appendChild(mergeBtn);
+        btnsDiv.appendChild(discardBtn);
+      }
+    });
+  });
+
+  container.appendChild(card);
+  card.scrollIntoView({ behavior: "smooth" });
+}
+
+/**
+ * Show a modal with the raw unified diff.
+ */
+function showWorktreeDiffModal(diffText, branchName) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal git-diff-modal">
+      <div class="modal-header">
+        <h3>Diff: ${escapeHtml(branchName)}</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="git-diff-body"></div>
+    </div>
+  `;
+
+  const body = overlay.querySelector(".git-diff-body");
+
+  if (!diffText || !diffText.trim()) {
+    body.innerHTML = '<div class="git-diff-empty">(no changes)</div>';
+  } else {
+    // Parse into per-file sections
+    const sections = [];
+    let current = null;
+    for (const line of diffText.split("\n")) {
+      if (line.startsWith("diff --git ")) {
+        if (current) sections.push(current);
+        const match = line.match(/diff --git a\/(.+?) b\/(.+)/);
+        current = { fileName: match ? match[2] : line, lines: [] };
+      } else if (current) {
+        current.lines.push(line);
+      } else {
+        if (!current) current = { fileName: "", lines: [] };
+        current.lines.push(line);
+      }
+    }
+    if (current) sections.push(current);
+
+    if (sections.length <= 1 && (!sections[0]?.fileName || sections[0].fileName === "")) {
+      // Single file — plain view
+      const pre = document.createElement("pre");
+      pre.className = "git-diff-content";
+      renderColoredDiff(pre, sections[0]?.lines || diffText.split("\n"));
+      body.appendChild(pre);
+    } else {
+      // Multi-file — per-file collapsible sections
+      for (const section of sections) {
+        let add = 0, del = 0;
+        for (const l of section.lines) {
+          if (l.startsWith("+") && !l.startsWith("+++")) add++;
+          else if (l.startsWith("-") && !l.startsWith("---")) del++;
+        }
+
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "git-diff-file";
+
+        const header = document.createElement("div");
+        header.className = "git-diff-file-header";
+        header.innerHTML = `
+          <svg class="git-diff-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <span class="git-diff-file-name">${escapeHtml(section.fileName)}</span>
+          <span class="git-diff-file-stats">
+            ${add ? `<span class="diff-stat-add">+${add}</span>` : ""}
+            ${del ? `<span class="diff-stat-del">-${del}</span>` : ""}
+          </span>
+        `;
+        header.addEventListener("click", () => fileDiv.classList.toggle("collapsed"));
+
+        const content = document.createElement("pre");
+        content.className = "git-diff-content git-diff-file-content";
+        renderColoredDiff(content, section.lines);
+
+        fileDiv.appendChild(header);
+        fileDiv.appendChild(content);
+        body.appendChild(fileDiv);
+      }
+    }
+  }
+
+  overlay.querySelector(".modal-close").addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+  document.addEventListener("keydown", function esc(e) {
+    if (e.key === "Escape") { overlay.remove(); document.removeEventListener("keydown", esc); }
+  });
+  document.body.appendChild(overlay);
+}
+
+function renderColoredDiff(container, lines) {
+  for (const line of lines) {
+    const span = document.createElement("span");
+    span.textContent = line + "\n";
+    if (line.startsWith("+++") || line.startsWith("---")) span.className = "diff-line-meta";
+    else if (line.startsWith("+")) span.className = "diff-line-added";
+    else if (line.startsWith("-")) span.className = "diff-line-removed";
+    else if (line.startsWith("@@")) span.className = "diff-line-hunk";
+    container.appendChild(span);
+  }
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
 }
 
 // Listen for WebSocket messages via event bus
