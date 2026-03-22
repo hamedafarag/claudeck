@@ -365,6 +365,20 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | PUT    | /api/repos/groups/:id  | Rename or reparent group (circular ref protection)|
 | DELETE | /api/repos/groups/:id  | Delete group (children reparented to parent)     |
 
+### Skills Marketplace (SkillsMP)
+| Method | Path                        | Description                                      |
+| ------ | --------------------------- | ------------------------------------------------ |
+| GET    | /api/skills/config          | Get marketplace config (activated status, masked key, defaults) |
+| PUT    | /api/skills/config          | Save config (apiKey, defaultScope, searchMode) — validates key with SkillsMP |
+| GET    | /api/skills/search          | Proxy keyword search to SkillsMP (`q`, `page`, `limit`, `sortBy`) |
+| GET    | /api/skills/ai-search       | Proxy AI semantic search to SkillsMP (`q`) |
+| GET    | /api/skills/installed       | List installed skills from global + project scopes |
+| POST   | /api/skills/install         | Install skill from GitHub (`githubUrl`, `name`, `scope`, `projectPath`, `description`) |
+| DELETE | /api/skills/:name           | Uninstall skill (`scope`, `projectPath` query params) |
+| PUT    | /api/skills/:name/toggle    | Enable/disable skill by renaming SKILL.md ↔ SKILL.md.disabled |
+
+All endpoints except `GET /config` and `PUT /config` are gated behind a valid SkillsMP API key (`requireApiKey` middleware — returns 403 with `NO_API_KEY` code if not activated).
+
 ### MCP Server Management
 | Method | Path                    | Description                            |
 | ------ | ----------------------- | -------------------------------------- |
@@ -1173,6 +1187,26 @@ Run any chat or agent task in an isolated git worktree without touching the work
 - **Database tracking** — `worktrees` table tracks id, session, paths, branch, status, and user prompt
 - **WebSocket integration** — `worktree_created` and `worktree_completed` messages for real-time UI updates
 
+### 54. Skills Marketplace (SkillsMP)
+Browse, search, install, and manage agent skills from the [SkillsMP](https://skillsmp.com/) registry directly within Claudeck:
+- **Token-gated activation** — panel shows an activation form until user enters a valid SkillsMP API key (free from skillsmp.com). All marketplace features unlock after activation
+- **Browse tab** — keyword search (~200ms) and AI semantic search (~2.5s) with mode toggle; sort by stars or recency; paginated results; clickable skill cards with detail expansion (GitHub link, SkillsMP page, last updated)
+- **Initial state** — "Discover agent skills" with clickable example tags (code-review, commit-message, testing) that pre-fill the search
+- **Search hint** — contextual hint below the search bar that updates based on the selected mode
+- **Install flow** — one-click install with scope selector (Global / Project); downloads SKILL.md + assets from GitHub; normalizes names to valid directory format; injects YAML frontmatter (name + description) if missing; toast notification on success/failure
+- **Duplicate detection** — if installing a skill that already exists in the same scope, shows a custom confirm dialog to overwrite or cancel
+- **Installed tab** — lists installed skills grouped by scope (Project / Global); toggle switch to enable/disable; trash icon to uninstall with custom confirm dialog
+- **Settings tab** — view/change/remove API key, daily quota display, default scope and search mode selectors
+- **Deactivation flow** — remove key from Settings reverts panel to activation form
+- **Skill used messages** — system info messages in chat area when a skill is triggered:
+  - **User-invoked** — detected when user executes a skill slash command (`category: "skill"`)
+  - **Model-invoked** — detected via WebSocket `{ type: "tool", name: "Skill" }` with skill lookup map
+  - **Persistence** — model-invoked skill events render on session reload via `renderMessagesIntoPane`
+- **Post-install integration** — re-triggers `loadProjectCommands()` so new skills appear in `/` autocomplete immediately
+- **Keyboard navigation** — ArrowDown from search to results, ArrowUp/Down between cards, Enter to expand
+- **Error handling** — banners for invalid/expired API key (with re-enter button), quota exceeded, network errors (with retry button)
+- **Files**: `server/routes/skills.js`, `public/js/panels/skills-manager.js`, `public/css/panels/skills-manager.css`, `config/skillsmp-config.json`
+
 ---
 
 ## Slash Commands
@@ -1198,6 +1232,7 @@ Run any chat or agent task in an isolated git worktree without touching the work
 | /mcp             | Open MCP server manager modal  |
 | /notifications   | Toggle browser notifications   |
 | /tips            | Toggle tips feed panel         |
+| /skills          | Open Skills Marketplace panel  |
 | /remember        | Save a memory from chat        |
 
 ### CLI
@@ -1285,7 +1320,8 @@ On first run, Claudeck creates `~/.claudeck/` and copies default config files th
 │   ├── agent-chains.json 2 agent chains (sequential pipelines)
 │   ├── agent-dags.json  1 agent DAG (dependency graph)
 │   ├── bot-prompt.json  Assistant bot system prompt
-│   └── telegram-config.json  Telegram bot config + notification preferences
+│   ├── telegram-config.json  Telegram bot config + notification preferences
+│   └── skillsmp-config.json  SkillsMP marketplace config (apiKey, defaultScope, searchMode)
 ├── plugins/             User-installed tab-sdk plugins
 ├── data.db              SQLite database
 └── .env                 Environment variables
@@ -1446,7 +1482,8 @@ Claudeck/
 │       ├── agents.js      Agents listing API
 │       ├── todos.js       Todo + brag CRUD
 │       ├── telegram.js    Telegram notification config + test
-│       └── memory.js      Memory CRUD, search, stats, optimize
+│       ├── memory.js      Memory CRUD, search, stats, optimize
+│       └── skills.js      SkillsMP marketplace (search, install, uninstall, toggle, config)
 ├── config/                Default JSON configs (copied to ~/.claudeck/ on first run)
 │   ├── folders.json       Project configurations
 │   ├── repos.json         Repository groups + repos
@@ -1454,7 +1491,8 @@ Claudeck/
 │   ├── workflows.json     4 multi-step workflows
 │   ├── agents.json        4 autonomous agent definitions
 │   ├── bot-prompt.json    Assistant bot system prompt
-│   └── telegram-config.json Telegram bot config + notification preferences
+│   ├── telegram-config.json Telegram bot config + notification preferences
+│   └── skillsmp-config.json SkillsMP marketplace config
 ├── package.json           6 runtime dependencies
 ├── cli.js                 CLI entry point (npx/global install)
 ├── .github/
@@ -1471,7 +1509,7 @@ Claudeck/
     │   ├── core/          variables.css, reset.css, responsive.css
     │   ├── ui/            layout, sessions, messages, parallel, modals, input-history, etc.
     │   ├── features/      welcome.css, tour.css, voice-input.css, retro-terminal.css
-    │   └── panels/        assistant-bot, tips-feed, dev-docs, telegram, mcp-manager
+    │   └── panels/        assistant-bot, tips-feed, dev-docs, telegram, mcp-manager, skills-manager
     ├── data/
     │   └── tips.json      20 curated tips + RSS feed definitions
     └── js/
@@ -1479,7 +1517,7 @@ Claudeck/
         ├── core/          store, dom, constants, events, utils, api, ws, plugin-loader
         ├── ui/            messages, formatting, diff, export, theme, commands, parallel, etc.
         ├── features/      chat, sessions, projects, input-history, home, welcome, tour, attachments, voice-input, easter-egg, etc.
-        └── panels/        assistant-bot, tips-feed, dev-docs, file-explorer, git-panel, mcp-manager
+        └── panels/        assistant-bot, tips-feed, dev-docs, file-explorer, git-panel, mcp-manager, skills-manager
 plugins/                   Full-stack plugins (client.js, server.js, config.json)
     ├── linear/            Issues + settings with server-side API routes
     ├── repos/             Repository management with server-side routes

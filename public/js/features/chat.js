@@ -4,7 +4,7 @@ import { getState, setState } from '../core/store.js';
 import { CHAT_IDS, BOT_CHAT_ID } from '../core/constants.js';
 import { on } from '../core/events.js';
 import { commandRegistry, dismissAutocomplete, handleAutocompleteKeydown, handleSlashAutocomplete, registerCommand } from '../ui/commands.js';
-import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder } from '../ui/messages.js';
+import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder, addSkillUsedMessage } from '../ui/messages.js';
 import { getPane, panes, _setChatFns, _setInputHistoryGetter } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats, loadAccountInfo } from './cost-dashboard.js';
@@ -404,6 +404,13 @@ function handleServerMessage(msg) {
       break;
 
     case "tool":
+      // Detect model-invoked skill usage
+      if (msg.name === "Skill" && msg.input?.skill) {
+        import('./projects.js').then(({ skillLookup }) => {
+          const info = skillLookup.get(msg.input.skill);
+          addSkillUsedMessage(msg.input.skill, info?.description || "", pane);
+        });
+      }
       appendToolIndicator(msg.name, msg.input, pane, msg.id);
       showThinking(`Running ${msg.name}...`, pane);
       break;

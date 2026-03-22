@@ -31,6 +31,7 @@ import botRouter from "./server/routes/bot.js";
 import notificationsRouter, { setVapidPublicKey } from "./server/routes/notifications.js";
 import memoryRouter from "./server/routes/memory.js";
 import worktreesRouter from "./server/routes/worktrees.js";
+import skillsRouter from "./server/routes/skills.js";
 import { setupWebSocket } from "./server/ws-handler.js";
 import { setWss } from "./server/notification-logger.js";
 
@@ -116,6 +117,7 @@ app.use("/api/bot", botRouter);
 app.use("/api/telegram", telegramRouter);
 app.use("/api/memory", memoryRouter);
 app.use("/api/worktrees", worktreesRouter);
+app.use("/api/skills", skillsRouter);
 
 // Version endpoint
 import { readFileSync } from "fs";

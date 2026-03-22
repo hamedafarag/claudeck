@@ -297,6 +297,15 @@ export function addStatus(text, isError, pane) {
   scrollToBottom(pane);
 }
 
+export function addSkillUsedMessage(skillName, skillDescription, pane) {
+  pane = pane || getPane(null);
+  const div = document.createElement("div");
+  div.className = "skill-used-message";
+  div.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span><span class="skill-used-name">Skill used: ${escapeHtml(skillName)}</span>${skillDescription ? `<span class="skill-used-desc"> — ${escapeHtml(skillDescription)}</span>` : ""}</span>`;
+  pane.messagesDiv.appendChild(div);
+  scrollToBottom(pane);
+}
+
 export function appendCliOutput(data, pane) {
   pane = pane || getPane(null);
   const div = document.createElement("div");
@@ -369,6 +378,10 @@ export function renderMessagesIntoPane(messages, pane) {
         }
         break;
       case "tool":
+        // Render "Skill used" indicator for Skill tool_use messages
+        if (data.name === "Skill" && data.input?.skill) {
+          addSkillUsedMessage(data.input.skill, data.input.description || "", pane);
+        }
         appendToolIndicator(data.name, data.input, pane, data.id, false);
         // Tools are part of assistant turn — update the tracking ID
         if (!lastAssistantMsgEl) lastAssistantMsgEl = pane.messagesDiv.lastElementChild;
@@ -397,6 +410,9 @@ export function renderMessagesIntoPane(messages, pane) {
         addStatus(errorParts.join(" \u00b7 ") || "Error", true, pane);
         break;
       }
+      case "skill":
+        addSkillUsedMessage(data.skill || data.name || "", data.description || "", pane);
+        break;
       case "aborted":
         addStatus("Aborted", true, pane);
         break;

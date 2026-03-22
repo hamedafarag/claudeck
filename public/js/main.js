@@ -48,6 +48,7 @@ import './panels/tips-feed.js';
 import './panels/assistant-bot.js';
 import './panels/memory.js';
 import './panels/dev-docs.js';
+import './panels/skills-manager.js';
 
 // Auto-discover and load tab-sdk plugins from /js/plugins/
 import { loadPlugins } from './core/plugin-loader.js';

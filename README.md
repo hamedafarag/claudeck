@@ -109,6 +109,16 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 - 4 read strategies: explicit click, mark all, auto-read on view, click-through to session
 - Real-time cross-tab sync via WebSocket broadcasts
 
+### Skills Marketplace
+
+- **SkillsMP Integration** — Browse and install agent skills from the [SkillsMP](https://skillsmp.com/) registry
+- Keyword search and AI semantic search with mode toggle
+- Install skills globally (`~/.claude/skills/`) or per-project (`.claude/skills/`)
+- Enable/disable skills via toggle (renames `SKILL.md` ↔ `SKILL.md.disabled`)
+- Installed skills auto-register as `/` slash commands
+- "Skill used" system messages in chat for both user-invoked and model-invoked skills
+- Token-gated — enter your free SkillsMP API key to activate
+
 ### Integrations
 
 - **MCP Manager** — Add/edit/remove MCP servers (global + per-project)
@@ -172,7 +182,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 ```
 /clear /new /parallel /export /theme /shortcuts       App
 /costs /analytics                                      Dashboards
-/files /git /repos /events /mcp /tips                  Panels
+/files /git /repos /events /mcp /tips /skills           Panels
 /remember                                              Memory
 /review-pr /onboard-repo /migration-plan /code-health  Workflows
 /agent-pr-reviewer /agent-bug-hunter /agent-test-writer Agents
@@ -212,7 +222,8 @@ All user data lives in `~/.claudeck/` (override with `CLAUDECK_HOME`):
 │   ├── agent-dags.json       Dependency graphs
 │   ├── repos.json            Repository groups
 │   ├── bot-prompt.json       Assistant bot prompt
-│   └── telegram-config.json  Telegram config
+│   ├── telegram-config.json  Telegram config
+│   └── skillsmp-config.json  Skills Marketplace config
 ├── plugins/                  User-installed plugins
 ├── data.db                   SQLite database
 └── .env                      VAPID keys, port config
