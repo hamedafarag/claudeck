@@ -5,6 +5,10 @@ import {
   updateSessionTitle,
   toggleSessionPin,
   searchSessions,
+  forkSession as dbForkSession,
+  getSession,
+  getSessionBranches,
+  getSessionLineage,
 } from "../../db.js";
 import { getActiveSessionIds } from "../ws-handler.js";
 import { generateSessionSummary } from "../summarizer.js";
@@ -95,6 +99,43 @@ router.post("/:id/summary", async (req, res) => {
   try {
     const summary = await generateSessionSummary(req.params.id);
     res.json({ ok: true, summary });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Session Branching / Forking ─────────────────────────
+
+// Fork a session at a given message
+router.post("/:id/fork", (req, res) => {
+  try {
+    const { messageId } = req.body || {};
+    const session = getSession(req.params.id);
+    if (!session) return res.status(404).json({ error: "Session not found" });
+    if (messageId != null && (typeof messageId !== "number" || messageId < 1)) {
+      return res.status(400).json({ error: "Invalid messageId" });
+    }
+    const forked = dbForkSession(req.params.id, messageId || null);
+    res.json(forked);
+  } catch (err) {
+    const status = err.message === "No messages to fork" || err.message === "Session not found" ? 400 : 500;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// List direct child forks of a session
+router.get("/:id/branches", (req, res) => {
+  try {
+    res.json(getSessionBranches(req.params.id));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get full ancestor chain + siblings
+router.get("/:id/lineage", (req, res) => {
+  try {
+    res.json(getSessionLineage(req.params.id));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

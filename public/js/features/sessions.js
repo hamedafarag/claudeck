@@ -46,37 +46,39 @@ export async function loadSessions(searchTerm) {
   }
 }
 
-function renderSessions(sessions) {
+function renderSessions(sessions, append = false) {
   const sessionId = getState("sessionId");
-  $.sessionList.innerHTML = "";
+  if (!append) $.sessionList.innerHTML = "";
 
-  // Empty state: no project selected
-  const cwd = $.projectSelect.value;
-  if (!cwd) {
-    $.sessionList.innerHTML = `
-      <div class="session-empty">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span>Select a project to view sessions</span>
-      </div>`;
-    return;
-  }
+  if (!append) {
+    // Empty state: no project selected
+    const cwd = $.projectSelect.value;
+    if (!cwd) {
+      $.sessionList.innerHTML = `
+        <div class="session-empty">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>Select a project to view sessions</span>
+        </div>`;
+      return;
+    }
 
-  // Empty state: no sessions found
-  if (sessions.length === 0) {
-    const isSearch = $.sessionSearchInput.value.trim();
-    $.sessionList.innerHTML = `
-      <div class="session-empty">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          ${isSearch
-            ? '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'
-            : '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'}
-        </svg>
-        <span>${isSearch ? 'No matching sessions' : 'No sessions yet'}</span>
-        ${!isSearch ? '<span class="session-empty-hint">Start a new conversation to create one</span>' : ''}
-      </div>`;
-    return;
+    // Empty state: no sessions found
+    if (sessions.length === 0) {
+      const isSearch = $.sessionSearchInput.value.trim();
+      $.sessionList.innerHTML = `
+        <div class="session-empty">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            ${isSearch
+              ? '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'
+              : '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'}
+          </svg>
+          <span>${isSearch ? 'No matching sessions' : 'No sessions yet'}</span>
+          ${!isSearch ? '<span class="session-empty-hint">Start a new conversation to create one</span>' : ''}
+        </div>`;
+      return;
+    }
   }
 
   for (const s of sessions) {
@@ -91,9 +93,12 @@ function renderSessions(sessions) {
     const displayTitle = s.title || s.project_name || "Session";
     const isPinned = s.pinned === 1;
     const summaryTooltip = s.summary ? escapeHtml(s.summary) : "";
+    const forkIndicator = s.parent_session_id
+      ? `<span class="session-fork-badge" title="Forked session"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></span>`
+      : "";
     li.innerHTML = `
       <div class="session-card-header">
-        <span class="session-title" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</span>
+        <span class="session-title" title="${escapeHtml(displayTitle)}">${forkIndicator}${escapeHtml(displayTitle)}</span>
         ${modeBadge}
         <span class="session-card-actions">
           <button class="session-pin${isPinned ? " pinned" : ""}" title="${isPinned ? "Unpin" : "Pin"} session">
@@ -304,6 +309,48 @@ function showSessionContextMenu(e, session) {
     if (result.summary) loadSessions($.sessionSearchInput.value.trim() || undefined);
   });
   sessionCtxMenu.appendChild(summaryBtn);
+
+  // View Parent (only for forked sessions)
+  if (session.parent_session_id) {
+    const parentBtn = document.createElement("button");
+    parentBtn.innerHTML = `<span class="ctx-label">View Parent Session</span><span class="ctx-value">Switch to parent</span>`;
+    parentBtn.addEventListener("click", async () => {
+      hideSessionContextMenu();
+      setState("sessionId", session.parent_session_id);
+      $.messagesDiv.innerHTML = "";
+      await loadMessages(session.parent_session_id);
+      loadSessions();
+    });
+    sessionCtxMenu.appendChild(parentBtn);
+  }
+
+  // View Forks
+  const forksBtn = document.createElement("button");
+  forksBtn.innerHTML = `<span class="ctx-label">View Forks</span><span class="ctx-value">Loading...</span>`;
+  forksBtn.addEventListener("click", async () => {
+    const branches = await api.fetchBranches(session.id);
+    if (branches.length === 0) {
+      forksBtn.querySelector(".ctx-value").textContent = "No forks";
+      return;
+    }
+    hideSessionContextMenu();
+    // Show back header + filtered fork list
+    $.sessionList.innerHTML = "";
+    const backHeader = document.createElement("div");
+    backHeader.className = "session-forks-back";
+    backHeader.innerHTML = `<button class="session-forks-back-btn">&larr; All Sessions</button><span class="session-forks-label">Forks of "${escapeHtml((session.title || session.project_name || "Session").slice(0, 30))}"</span>`;
+    backHeader.querySelector(".session-forks-back-btn").addEventListener("click", () => {
+      loadSessions($.sessionSearchInput.value.trim() || undefined);
+    });
+    $.sessionList.appendChild(backHeader);
+    renderSessions(branches, true);
+  });
+  sessionCtxMenu.appendChild(forksBtn);
+  // Eagerly load fork count
+  api.fetchBranches(session.id).then(branches => {
+    const val = forksBtn.querySelector(".ctx-value");
+    if (val) val.textContent = branches.length > 0 ? `${branches.length} fork${branches.length > 1 ? "s" : ""}` : "No forks";
+  });
 
   sessionCtxMenu.style.left = e.clientX + "px";
   sessionCtxMenu.style.top = e.clientY + "px";

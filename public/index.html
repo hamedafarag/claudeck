@@ -97,6 +97,18 @@
     <span class="term-project-name" id="header-project-name"></span>
 
     <div class="header-right">
+      <!-- Notification Bell -->
+      <div class="notif-bell" id="notif-bell">
+        <button class="notif-bell-btn" id="notif-bell-btn" aria-label="Notifications">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="notif-badge hidden" id="notif-badge">0</span>
+        </button>
+        <div class="notif-dropdown hidden" id="notif-dropdown"></div>
+      </div>
+
       <!-- Session Settings Dropdown -->
       <div class="header-dropdown">
         <button class="header-dropdown-trigger">
@@ -387,6 +399,11 @@
               <line x1="8" y1="23" x2="16" y2="23"/>
             </svg>
           </button>
+          <button id="worktree-btn" data-tooltip="Worktree Mode" class="toolbox-toggle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
+            </svg>
+          </button>
           <button id="toolbox-btn" data-tooltip="Saved Prompts" class="toolbox-toggle">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
@@ -409,16 +426,24 @@
               </span>
             </div>
           </div>
-          <button id="send-btn" title="Send">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M3 10l7-7m0 0l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90, 10, 10)"/>
-            </svg>
-          </button>
-          <button id="stop-btn" title="Stop" class="hidden">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="4" y="4" width="12" height="12" rx="2" fill="currentColor"/>
-            </svg>
-          </button>
+          <div class="send-history-group">
+            <button id="send-btn" title="Send">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M3 10l7-7m0 0l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90, 10, 10)"/>
+              </svg>
+            </button>
+            <button id="stop-btn" title="Stop" class="hidden">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <rect x="4" y="4" width="12" height="12" rx="2" fill="currentColor"/>
+              </svg>
+            </button>
+            <button id="history-btn" class="hidden" data-tooltip="Message History" title="Message history" aria-label="Message history">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+          </div>
+          <div id="history-popover" class="history-popover hidden"></div>
           <div id="slash-autocomplete" class="slash-autocomplete hidden"></div>
         </div>
         <div id="toolbox-panel" class="toolbox-panel hidden"></div>
@@ -483,6 +508,7 @@
               </svg>
             </button>
           </div>
+          <div id="git-branch-info" class="git-branch-info hidden"></div>
           <div id="git-status-list" class="git-status-list"></div>
           <div class="git-commit-section">
             <textarea id="git-commit-msg" class="git-commit-msg" placeholder="Commit message..." rows="2"></textarea>
@@ -491,6 +517,10 @@
           <div class="git-log-section">
             <h4 class="git-log-title">Recent Commits</h4>
             <div id="git-log-list" class="git-log-list"></div>
+          </div>
+          <div id="git-worktree-section" class="git-section hidden">
+            <h4 class="git-log-title">Worktrees</h4>
+            <div id="git-worktree-list" class="git-worktree-list"></div>
           </div>
         </div>
 
@@ -834,6 +864,9 @@
         <tr><td><span class="kbd">Enter</span></td><td>Send message</td></tr>
         <tr><td><span class="kbd">Shift+Enter</span></td><td>New line in input</td></tr>
         <tr><td><span class="kbd">/</span></td><td>Slash commands autocomplete</td></tr>
+        <tr><td><span class="kbd">&uarr;</span></td><td>Recall previous message (empty input)</td></tr>
+        <tr><td><span class="kbd">&darr;</span></td><td>Recall next message (in history)</td></tr>
+        <tr><td><span class="kbd">Esc</span></td><td>Cancel history navigation</td></tr>
       </table>
     </div>
   </div>

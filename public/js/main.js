@@ -22,6 +22,8 @@ import './features/prompts.js';
 import './features/workflows.js';
 import './features/agents.js';
 import './ui/status-bar.js';
+import './ui/notification-bell.js';
+import './ui/notification-history.js';
 import './features/cost-dashboard.js';
 import './features/analytics.js';
 import './features/telegram.js';
@@ -46,6 +48,7 @@ import './panels/tips-feed.js';
 import './panels/assistant-bot.js';
 import './panels/memory.js';
 import './panels/dev-docs.js';
+import './panels/skills-manager.js';
 
 // Auto-discover and load tab-sdk plugins from /js/plugins/
 import { loadPlugins } from './core/plugin-loader.js';

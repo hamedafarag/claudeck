@@ -951,3 +951,54 @@ html[data-theme="light"] .msg-user {
 .shortcuts-table td:last-child {
   color: var(--text-secondary);
 }
+
+/* ── Fork Button ─────────────────────────────────────── */
+.fork-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  opacity: 0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  padding: 4px 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  z-index: 2;
+}
+
+.msg-assistant,
+.msg:has(.fork-btn) {
+  position: relative;
+}
+
+.msg-assistant:hover > .fork-btn,
+.msg:hover > .fork-btn {
+  opacity: 1;
+}
+
+.fork-btn:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.fork-btn.fork-loading {
+  opacity: 1;
+  pointer-events: none;
+  color: var(--text-secondary);
+}
+
+.fork-btn.fork-loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

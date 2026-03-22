@@ -17,7 +17,8 @@ Claudeck separates **package defaults** (read-only, ships with npm) from **user 
 │   ├── agent-chains.json             Agent chains — sequential pipelines (2 defaults)
 │   ├── agent-dags.json               Agent DAGs — dependency graphs (1 default)
 │   ├── bot-prompt.json               Assistant bot system prompt
-│   └── telegram-config.json          Telegram notification settings
+│   ├── telegram-config.json          Telegram notification settings
+│   └── skillsmp-config.json          SkillsMP marketplace (API key, defaults)
 ├── plugins/                          User-installed plugins
 │   └── my-plugin/                    Plugin directory
 │       ├── client.js                 Plugin JS module (required)
@@ -37,7 +38,8 @@ Claudeck separates **package defaults** (read-only, ships with npm) from **user 
 ├── agent-chains.json                 2 built-in chains
 ├── agent-dags.json                   1 built-in DAG
 ├── bot-prompt.json                   Default bot system prompt
-└── telegram-config.json              Telegram bot + notification preferences
+├── telegram-config.json              Telegram bot + notification preferences
+└── skillsmp-config.json              SkillsMP marketplace defaults
 ```
 
 ---
@@ -235,6 +237,8 @@ The SQLite database lives at `~/.claudeck/data.db`. It stores:
 - Todos and brags
 - Persistent memories (cross-session project knowledge with FTS5 search)
 - Agent runs and agent context (shared memory between agents)
+- Notifications (in-app notification bell history with read/unread tracking)
+- Worktrees (git worktree tracking with branch, status, and session association)
 
 The database is created automatically on first run with WAL mode enabled. Schema migrations run on startup via try/catch `ADD COLUMN` statements.
 
@@ -449,3 +453,19 @@ Configure via **Tools > Telegram** in the UI. Requires a bot token from [@BotFat
 - **AFK timeout** — Configurable approval timeout (default 15 minutes, vs 5 minutes for web-only).
 - **Per-event toggles** — Enable/disable notifications per event type via the `notify` object.
 - **Poller** — `server/telegram-poller.js` long-polls the Telegram Bot API for callback queries. Starts automatically on server boot.
+
+### skillsmp-config.json — Skills Marketplace
+```json
+{
+  "apiKey": "",
+  "defaultScope": "project",
+  "searchMode": "keyword"
+}
+```
+Configure via the **Skills** tab in the right panel. Get a free API key from [skillsmp.com](https://skillsmp.com/docs/api).
+
+| Field | Description |
+|-------|-------------|
+| `apiKey` | SkillsMP API key (must start with `sk_live_skillsmp_`). Empty = feature disabled |
+| `defaultScope` | Default install scope: `"project"` (`.claude/skills/`) or `"global"` (`~/.claude/skills/`) |
+| `searchMode` | Default search mode: `"keyword"` (fast, exact) or `"ai"` (semantic, slower) |

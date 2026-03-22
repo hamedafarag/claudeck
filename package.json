@@ -1,6 +1,6 @@
 {
   "name": "claudeck",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "type": "module",
   "description": "A browser-based UI for Claude Code — chat, run workflows, manage MCP servers, track costs, and orchestrate autonomous agents from a local web interface. Installable as a PWA.",
   "main": "server.js",
@@ -42,7 +42,10 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.128",
@@ -51,5 +54,11 @@
     "express": "^4",
     "web-push": "^3.6.7",
     "ws": "^8"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.0",
+    "happy-dom": "^20.8.4",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.0"
   }
 }

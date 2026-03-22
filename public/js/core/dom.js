@@ -226,6 +226,9 @@ export const $ = {
   gitCommitMsg: document.getElementById("git-commit-msg"),
   gitCommitBtn: document.getElementById("git-commit-btn"),
   gitLogList: document.getElementById("git-log-list"),
+  gitBranchInfo: document.getElementById("git-branch-info"),
+  gitWorktreeSection: document.getElementById("git-worktree-section"),
+  gitWorktreeList: document.getElementById("git-worktree-list"),
 
   // MCP manager
   mcpToggleBtn: document.getElementById("mcp-toggle-btn"),
@@ -246,6 +249,18 @@ export const $ = {
   mcpFormCancel: document.getElementById("mcp-form-cancel"),
   mcpFormSave: document.getElementById("mcp-form-save"),
   mcpAddBtn: document.getElementById("mcp-add-btn"),
+
+  // Notification bell
+  notifBellBtn: document.getElementById("notif-bell-btn"),
+  notifBadge: document.getElementById("notif-badge"),
+  notifDropdown: document.getElementById("notif-dropdown"),
+
+  // Input history
+  historyBtn: document.getElementById("history-btn"),
+  historyPopover: document.getElementById("history-popover"),
+
+  // Worktree toggle
+  worktreeBtn: document.getElementById("worktree-btn"),
 
   // Sidebar toggle (mobile)
   sidebarToggleBtn: document.getElementById("sidebar-toggle-btn"),

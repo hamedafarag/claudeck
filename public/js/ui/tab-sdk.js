@@ -651,7 +651,7 @@ function reorderPluginTabs(enabledNames) {
 }
 
 /** Built-in (hardcoded) tab IDs that are never managed by the marketplace */
-const BUILTIN_TABS = new Set(['files', 'git', 'memory', 'mcp', 'tips', 'assistant', 'tab-sdk', 'architecture', 'adding-features']);
+const BUILTIN_TABS = new Set(['files', 'git', 'memory', 'mcp', 'tips', 'assistant', 'skills', 'tab-sdk', 'architecture', 'adding-features']);
 
 function isPluginTab(tabId) {
   return !BUILTIN_TABS.has(tabId);

@@ -9,6 +9,14 @@ import { sendNotification } from '../ui/notifications.js';
 
 const BG_STORAGE_KEY = "claudeck-bg-sessions";
 
+function createBellNotification(type, title, body, sourceSessionId) {
+  fetch('/api/notifications/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, title, body, sourceSessionId }),
+  }).catch(() => {});
+}
+
 // ── localStorage helpers ──
 
 function persistBgSessions() {
@@ -99,6 +107,7 @@ export function reconcileBackgroundSessions(activeSessionIds) {
 
 export function showErrorToast(sessionId, title, error) {
   sendNotification('Session Error', `${title}: ${error}`, `error-${sessionId}`);
+  createBellNotification('error', `Session "${title}" failed`, error?.slice(0, 200), sessionId);
 
   const container = document.getElementById("toast-container");
   if (!container) return;
@@ -124,6 +133,7 @@ export function showErrorToast(sessionId, title, error) {
 
 export function showCompletionToast(sessionId, title, projectPath) {
   sendNotification('Session Completed', title, `done-${sessionId}`);
+  createBellNotification('session', `Session "${title}" completed`, null, sessionId);
 
   const container = document.getElementById("toast-container");
   if (!container) return;
@@ -154,6 +164,7 @@ export function showCompletionToast(sessionId, title, projectPath) {
 
 export function showInputNeededToast(sessionId, title, projectPath) {
   sendNotification('Input Needed', `${title} is waiting for your response`, `input-${sessionId}`);
+  createBellNotification('approval', `"${title}" needs your input`, 'Waiting for your response', sessionId);
 
   const container = document.getElementById("toast-container");
   if (!container) return;

@@ -7,7 +7,7 @@ import { commandRegistry, registerCommand } from '../ui/commands.js';
 import { panes } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats } from './cost-dashboard.js';
-import { showWhalyPlaceholder } from '../ui/messages.js';
+import { showWhalyPlaceholder, addSkillUsedMessage } from '../ui/messages.js';
 
 export async function loadProjects() {
   try {
@@ -91,11 +91,15 @@ export function updateHeaderProjectName() {
   $.headerProjectName.textContent = opt && opt.value ? opt.textContent : "";
 }
 
+// Skill lookup map — exported so chat.js can look up model-invoked skills
+export const skillLookup = new Map();
+
 export async function loadProjectCommands() {
   // Remove old project commands and skills
   for (const [name, cmd] of Object.entries(commandRegistry)) {
     if (cmd.category === "project" || cmd.category === "skill") delete commandRegistry[name];
   }
+  skillLookup.clear();
 
   const cwd = $.projectSelect.value;
   if (!cwd) return;
@@ -109,12 +113,23 @@ export async function loadProjectCommands() {
       if (!slug || commandRegistry[slug]) continue;
       const hasArgs = c.prompt.includes("$ARGUMENTS");
       const label = c.source === "skill" ? `${c.description}` : (c.description || c.command);
+
+      // Build skill lookup map
+      if (c.source === "skill") {
+        skillLookup.set(slug, { description: label, scope: "project" });
+      }
+
       registerCommand(slug, {
         category: c.source === "skill" ? "skill" : "project",
         description: label,
         needsArgs: hasArgs,
         argumentHint: c.argumentHint || "",
         execute(args, pane) {
+          // Show "Skill used" message for skills
+          if (c.source === "skill") {
+            addSkillUsedMessage(slug, c.description, pane);
+          }
+
           let prompt = c.prompt;
           if (hasArgs) {
             prompt = prompt.replace(/\$ARGUMENTS/g, args || "");

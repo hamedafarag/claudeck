@@ -3,6 +3,7 @@ import { $ } from '../core/dom.js';
 import { getState, setState } from '../core/store.js';
 import { CHAT_IDS } from '../core/constants.js';
 import { handleAutocompleteKeydown, handleSlashAutocomplete } from './commands.js';
+import { handleHistoryKeydown } from '../features/input-history.js';
 
 // Panes map — chatId -> pane state object
 export const panes = new Map();
@@ -94,6 +95,9 @@ export function createChatPane(chatId, index) {
 
   textarea.addEventListener("keydown", (e) => {
     if (handleAutocompleteKeydown(e, state)) return;
+    // Lazy import to avoid circular dependency — getInputHistory is set by chat.js
+    const history = _getInputHistory();
+    if (history && handleHistoryKeydown(e, state, history)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage(state);
@@ -101,6 +105,8 @@ export function createChatPane(chatId, index) {
   });
 
   textarea.addEventListener("input", () => {
+    const history = _getInputHistory();
+    if (history && history.isNavigating) history.reset();
     textarea.style.height = "auto";
     textarea.style.height = Math.min(textarea.scrollHeight, 80) + "px";
     handleSlashAutocomplete(state);
@@ -160,6 +166,11 @@ export function exitParallelMode() {
     });
   }
 }
+
+// Lazy getter for input history to avoid circular dependency
+let _inputHistoryGetter = null;
+export function _setInputHistoryGetter(fn) { _inputHistoryGetter = fn; }
+function _getInputHistory() { return _inputHistoryGetter ? _inputHistoryGetter() : null; }
 
 // Lazy getter for chat.js functions to avoid circular dependency
 let _chatFns = null;

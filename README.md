@@ -59,6 +59,8 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 - **Parallel mode** — 2x2 grid of 4 independent conversations
 - Background sessions that keep running when you switch away
 - Session search, pinning, auto-generated titles
+- **Session branching** — fork any conversation at an assistant message to explore alternatives
+- **Message recall** — press `↑` on empty input to cycle through previous messages, or click the history button to browse and re-use
 - Voice input via Web Speech API (Chrome/Safari)
 
 ### Autonomous Agents
@@ -78,7 +80,8 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 ### Code & Files
 
 - **File Explorer** — Lazy tree, syntax-highlighted preview, drag-to-chat
-- **Git Panel** — Branch switching, staging, commit, log
+- **Git Panel** — Branch switching, staging, commit, log, inline diff viewer
+- **Git Worktrees** — Run any chat/agent task in an isolated worktree; merge, diff, or discard results
 - **Repos Manager** — Organize repos in nested groups with GitHub links
 - Code diff viewer with LCS-based line highlighting
 
@@ -96,6 +99,25 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 - FTS5 full-text search with relevance scoring and time-decay
 - AI-powered optimization (consolidation via Claude Haiku)
 - Memory panel in right sidebar with search, filtering, and inline editing
+
+### Notifications
+
+- **Notification Bell** — Persistent notification history with unread badge in the header
+- Background session events (completed, errored, input needed) logged automatically
+- Agent completion/error notifications with cost and duration metrics
+- Full history modal with type/status filters, bulk actions, and pagination
+- 4 read strategies: explicit click, mark all, auto-read on view, click-through to session
+- Real-time cross-tab sync via WebSocket broadcasts
+
+### Skills Marketplace
+
+- **SkillsMP Integration** — Browse and install agent skills from the [SkillsMP](https://skillsmp.com/) registry
+- Keyword search and AI semantic search with mode toggle
+- Install skills globally (`~/.claude/skills/`) or per-project (`.claude/skills/`)
+- Enable/disable skills via toggle (renames `SKILL.md` ↔ `SKILL.md.disabled`)
+- Installed skills auto-register as `/` slash commands
+- "Skill used" system messages in chat for both user-invoked and model-invoked skills
+- Token-gated — enter your free SkillsMP API key to activate
 
 ### Integrations
 
@@ -138,6 +160,8 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
                           server/agent-loop.js     ├── config/     (JSON configs)
                           server/orchestrator.js   ├── plugins/    (user plugins)
                           server/dag-executor.js   ├── data.db     (SQLite + memories)
+                          server/notification-logger.js
+                          server/utils/git-worktree.js
                           server/memory-optimizer.js └── .env      (VAPID keys)
                           plugins/
 ```
@@ -158,7 +182,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 ```
 /clear /new /parallel /export /theme /shortcuts       App
 /costs /analytics                                      Dashboards
-/files /git /repos /events /mcp /tips                  Panels
+/files /git /repos /events /mcp /tips /skills           Panels
 /remember                                              Memory
 /review-pr /onboard-repo /migration-plan /code-health  Workflows
 /agent-pr-reviewer /agent-bug-hunter /agent-test-writer Agents
@@ -177,8 +201,9 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 | `Cmd+N` | New session |
 | `Cmd+B` | Toggle right panel |
 | `Cmd+/` | Show all shortcuts |
-| `Cmd+Shift+E/G/R/V/T` | Files / Git / Repos / Events / Tips |
+| `Cmd+Shift+E/G/R/V/T` | Files / Git / Repos / Events / Tips  |
 | `Cmd+1`-`4` | Focus parallel pane |
+| `↑` / `↓` | Recall previous/next message (empty input) |
 
 ---
 
@@ -197,7 +222,8 @@ All user data lives in `~/.claudeck/` (override with `CLAUDECK_HOME`):
 │   ├── agent-dags.json       Dependency graphs
 │   ├── repos.json            Repository groups
 │   ├── bot-prompt.json       Assistant bot prompt
-│   └── telegram-config.json  Telegram config
+│   ├── telegram-config.json  Telegram config
+│   └── skillsmp-config.json  Skills Marketplace config
 ├── plugins/                  User-installed plugins
 ├── data.db                   SQLite database
 └── .env                      VAPID keys, port config

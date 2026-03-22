@@ -24,7 +24,7 @@
 <meta name="twitter:title" content="Claudeck — The Browser UI for Claude Code">
 <meta name="twitter:description" content="Chat, agents, DAG workflows, cost tracking, persistent memory, and plugins — all from your browser. Zero framework, no build step.">
 <meta name="twitter:image" content="https://hamedafarag.github.io/claudeck/images/whaly.png">
-<meta name="twitter:creator" content="@hamedmfarag">
+<meta name="twitter:creator" content="@CloudeckAI">
 
 <link rel="icon" href="images/whaly.png">
 <link rel="apple-touch-icon" href="images/whaly.png">
@@ -1238,7 +1238,7 @@ body::after {
     <div class="bento-card span-2x2 reveal reveal-delay-1">
       <div class="bento-icon green">&#9671;</div>
       <h3>Real-time Chat</h3>
-      <p>WebSocket streaming with session persistence. Parallel 2&times;2 mode for running 4 conversations at once. Background sessions that keep running when you switch away.</p>
+      <p>WebSocket streaming with session persistence. Parallel 2&times;2 mode for running 4 conversations at once. Background sessions that keep running when you switch away. Fork any conversation to explore alternatives. Recall previous messages with &uarr; or the history button.</p>
       <div class="bento-terminal">
         <div class="bento-terminal-bar">
           <span class="bento-terminal-dot r"></span>
@@ -1273,10 +1273,11 @@ body::after {
     <div class="bento-card reveal reveal-delay-3">
       <div class="bento-icon cyan">&#128194;</div>
       <h3>Files &amp; Git</h3>
-      <p>Lazy-loaded file explorer with syntax preview. Git panel with branch switching, staging, commit, and log.</p>
+      <p>Lazy-loaded file explorer with syntax preview. Git panel with branch switching, staging, commit, log, and worktree isolation.</p>
       <div class="bento-tags">
         <span class="bento-tag">tree view</span>
         <span class="bento-tag">git panel</span>
+        <span class="bento-tag">worktrees</span>
       </div>
     </div>
 
@@ -1301,6 +1302,33 @@ body::after {
         <span class="bento-tag">auto-capture</span>
         <span class="bento-tag">FTS5 search</span>
         <span class="bento-tag">AI optimize</span>
+      </div>
+    </div>
+
+    <div class="bento-card span-2x1 reveal reveal-delay-5" style="border-color: rgba(198,159,245,.2);">
+      <div class="bento-icon purple">&#9889;</div>
+      <h3>Skills Marketplace <span style="font-size:11px;font-weight:400;color:var(--purple);background:var(--purple-dim);padding:2px 8px;border-radius:4px;margin-left:8px;vertical-align:middle;">NEW</span></h3>
+      <p>Browse and install agent skills from <a href="https://skillsmp.com" target="_blank" rel="noopener" style="color:var(--purple);">SkillsMP</a> — the registry with 500K+ skills. Keyword and AI semantic search. One-click install to global or project scope. Skills auto-register as <code style="font-family:var(--ff-mono);font-size:12px;color:var(--purple);background:var(--purple-dim);padding:1px 5px;border-radius:3px;">/</code> slash commands. "Skill used" indicators in chat so you always know what's active.</p>
+      <div class="bento-terminal">
+        <div class="bento-terminal-bar">
+          <span class="bento-terminal-dot r"></span>
+          <span class="bento-terminal-dot y"></span>
+          <span class="bento-terminal-dot g"></span>
+        </div>
+        <div class="bento-terminal-body">
+          <div><span class="t-prompt">search</span> <span class="t-cmd">code review</span></div>
+          <div><span class="t-out">&#x25B8; code-review by imvanzen &mdash; 97% match</span></div>
+          <div><span class="t-out">&#x25B8; pr-reviewer by whyashthakker &mdash; 94% match</span></div>
+          <div><span class="t-accent">&#10003; Installed code-review to .claude/skills/</span></div>
+          <div style="margin-top:4px;"><span style="color:var(--purple);">&#9889; Skill used:</span> <span class="t-cmd">code-review</span></div>
+        </div>
+      </div>
+      <div class="bento-tags">
+        <span class="bento-tag">SkillsMP registry</span>
+        <span class="bento-tag">AI search</span>
+        <span class="bento-tag">one-click install</span>
+        <span class="bento-tag">global &amp; project scope</span>
+        <span class="bento-tag">enable / disable</span>
       </div>
     </div>
 
@@ -1412,7 +1440,7 @@ body::after {
 <div class="section-alt" id="allfeatures">
 <section class="section">
   <div class="section-header reveal">
-    <div class="section-label">56 Features</div>
+    <div class="section-label">70 Features</div>
     <h2 class="section-title">Batteries included.</h2>
     <p class="section-desc">Everything a developer needs, organized by what you're doing.</p>
   </div>
@@ -1429,6 +1457,7 @@ body::after {
         <div class="feature-item">Parallel mode (2&times;2 grid)</div>
         <div class="feature-item">Background sessions</div>
         <div class="feature-item">Session search, pin, rename</div>
+        <div class="feature-item">Session branching (fork conversations)</div>
         <div class="feature-item">Voice input (Web Speech API)</div>
         <div class="feature-item">Image &amp; file attachments</div>
         <div class="feature-item">AI-generated session summaries</div>
@@ -1460,17 +1489,37 @@ body::after {
       <div class="feature-cat-header">
         <div class="feature-cat-icon" style="background:var(--cyan-dim);font-size:13px;">&#128194;</div>
         <span class="feature-cat-name">Code &amp; Files</span>
-        <span class="feature-cat-count">8</span>
+        <span class="feature-cat-count">9</span>
       </div>
       <div class="feature-list">
         <div class="feature-item">Lazy-loaded file explorer</div>
         <div class="feature-item">Syntax-highlighted preview</div>
         <div class="feature-item">Git branch, stage, commit, log</div>
+        <div class="feature-item">Git worktree isolation</div>
         <div class="feature-item">Repos manager with groups</div>
         <div class="feature-item">Drag-to-chat file attachment</div>
         <div class="feature-item">MCP server management</div>
         <div class="feature-item">Project commands &amp; skills</div>
         <div class="feature-item">Per-project system prompts</div>
+      </div>
+    </div>
+
+    <div class="feature-cat reveal reveal-delay-4">
+      <div class="feature-cat-header">
+        <div class="feature-cat-icon" style="background:var(--purple-dim);font-size:13px;">&#9889;</div>
+        <span class="feature-cat-name">Skills Marketplace</span>
+        <span class="feature-cat-count">9</span>
+      </div>
+      <div class="feature-list">
+        <div class="feature-item">SkillsMP registry integration</div>
+        <div class="feature-item">Keyword &amp; AI semantic search</div>
+        <div class="feature-item">One-click install from GitHub</div>
+        <div class="feature-item">Global &amp; project scope</div>
+        <div class="feature-item">Enable / disable toggle</div>
+        <div class="feature-item">"Skill used" chat indicators</div>
+        <div class="feature-item">Token-gated activation</div>
+        <div class="feature-item">Duplicate detection</div>
+        <div class="feature-item">Toast notifications</div>
       </div>
     </div>
 
@@ -1495,14 +1544,15 @@ body::after {
       <div class="feature-cat-header">
         <div class="feature-cat-icon" style="background:var(--user-dim);font-size:13px;">&#128268;</div>
         <span class="feature-cat-name">Integrations</span>
-        <span class="feature-cat-count">6</span>
+        <span class="feature-cat-count">7</span>
       </div>
       <div class="feature-list">
+        <div class="feature-item">Notification bell with history</div>
         <div class="feature-item">Telegram (two-way AFK approval)</div>
         <div class="feature-item">Linear issue tracking</div>
         <div class="feature-item">Push notifications (web-push)</div>
         <div class="feature-item">16 prompt templates</div>
-        <div class="feature-item">40+ slash commands</div>
+        <div class="feature-item">40+ slash commands (incl. /skills)</div>
         <div class="feature-item">Notification sound chime</div>
       </div>
     </div>
@@ -1537,6 +1587,7 @@ body::after {
         <div class="feature-item">Plugin marketplace</div>
         <div class="feature-item">Welcome screen + guided tour</div>
         <div class="feature-item">Keyboard shortcuts</div>
+        <div class="feature-item">Message recall (input history)</div>
         <div class="feature-item">VS Code-style status bar</div>
         <div class="feature-item">Tab SDK for extensions</div>
         <div class="feature-item">4 permission modes</div>
@@ -1699,8 +1750,8 @@ body::after {
       <a href="https://github.com/hamedafarag/claudeck/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
       <a href="https://github.com/hamedafarag/claudeck/blob/main/docs/DOCUMENTATION.md" target="_blank" rel="noopener">Docs</a>
       <a href="https://ko-fi.com/hamedfarag" target="_blank" rel="noopener">Ko-fi</a>
-      <a href="https://www.linkedin.com/in/hamedmfarag" target="_blank" rel="noopener">LinkedIn</a>
-      <a href="https://x.com/hamedmfarag" target="_blank" rel="noopener">X</a>
+
+      <a href="https://x.com/CloudeckAI" target="_blank" rel="noopener">X</a>
     </div>
     <div class="footer-copy">
       By <a href="https://github.com/hamedafarag" target="_blank" rel="noopener">Hamed Farag</a>

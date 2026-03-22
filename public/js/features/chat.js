@@ -4,8 +4,8 @@ import { getState, setState } from '../core/store.js';
 import { CHAT_IDS, BOT_CHAT_ID } from '../core/constants.js';
 import { on } from '../core/events.js';
 import { commandRegistry, dismissAutocomplete, handleAutocompleteKeydown, handleSlashAutocomplete, registerCommand } from '../ui/commands.js';
-import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder } from '../ui/messages.js';
-import { getPane, panes, _setChatFns } from '../ui/parallel.js';
+import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder, addSkillUsedMessage } from '../ui/messages.js';
+import { getPane, panes, _setChatFns, _setInputHistoryGetter } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats, loadAccountInfo } from './cost-dashboard.js';
 import { loadProjects } from './projects.js';
@@ -24,9 +24,40 @@ import { getSelectedModel } from '../ui/model-selector.js';
 import { getMaxTurns } from '../ui/max-turns.js';
 import { getDisabledTools } from '../ui/disabled-tools.js';
 import { updateContextGauge, resetContextGauge, loadContextGauge } from '../ui/context-gauge.js';
+import { InputHistory, handleHistoryKeydown } from './input-history.js';
 
 // ── "Waiting for input" indicator ──
 const inputWaitingEl = document.getElementById("input-waiting");
+
+// ── Input history (message recall) ──
+function historyKey() {
+  return "claudeck-input-history-" + ($.projectSelect?.value || "default");
+}
+let inputHistory = new InputHistory(historyKey());
+
+$.projectSelect?.addEventListener("change", () => {
+  inputHistory = new InputHistory(historyKey());
+  // Defer visibility update — updateHistoryButtonVisibility is defined later in this file
+  queueMicrotask(() => updateHistoryButtonVisibility());
+});
+
+export function getInputHistory() {
+  // Re-sync key if it drifted (e.g. project loaded after module init)
+  const expected = historyKey();
+  if (inputHistory.storageKey !== expected) {
+    inputHistory = new InputHistory(expected);
+  }
+  return inputHistory;
+}
+
+// ── Worktree mode toggle ──
+let worktreeMode = false;
+if ($.worktreeBtn) {
+  $.worktreeBtn.addEventListener("click", () => {
+    worktreeMode = !worktreeMode;
+    $.worktreeBtn.classList.toggle("active", worktreeMode);
+  });
+}
 
 function isQuestionText(text) {
   if (!text) return false;
@@ -63,6 +94,9 @@ function hideWaitingForInput(pane) {
 
 export function sendMessage(pane) {
   pane = pane || getPane(null);
+  // Re-sync history key in case project loaded after module init
+  const ek = historyKey();
+  if (inputHistory.storageKey !== ek) inputHistory = new InputHistory(ek);
   const text = pane.messageInput.value.trim();
   const cwd = $.projectSelect.value;
 
@@ -76,6 +110,9 @@ export function sendMessage(pane) {
           if (cmdName === "run" && !cwd) {
             // /run needs a project, fall through
           } else {
+            inputHistory.add(text);
+            inputHistory.reset();
+            updateHistoryButtonVisibility();
             pane.messageInput.value = "";
             pane.messageInput.style.height = "auto";
             dismissAutocomplete(pane);
@@ -107,6 +144,8 @@ export function sendMessage(pane) {
       const [, cmdName, args] = match;
       const cmd = commandRegistry[cmdName];
       if (cmd) {
+        inputHistory.add(text);
+        inputHistory.reset();
         pane.messageInput.value = "";
         pane.messageInput.style.height = "auto";
         dismissAutocomplete(pane);
@@ -129,6 +168,9 @@ export function sendMessage(pane) {
   const images = getImageAttachments();
   const filePaths = attachedFiles.map(f => f.path);
   addUserMessage(text, pane, images, filePaths);
+  inputHistory.add(text);
+  inputHistory.reset();
+  updateHistoryButtonVisibility();
   pane.messageInput.value = "";
   pane.messageInput.style.height = "auto";
   setState("streamingCharCount", 0);
@@ -179,6 +221,14 @@ export function sendMessage(pane) {
     payload.chatId = pane.chatId;
   }
 
+  // Worktree confirmation: show approve/reject before sending
+  if (worktreeMode) {
+    worktreeMode = false;
+    $.worktreeBtn?.classList.remove("active");
+    showWorktreeConfirmation(ws, payload, pane);
+    return;
+  }
+
   ws.send(JSON.stringify(payload));
   showThinking("Connecting to Claude...", pane);
 }
@@ -220,10 +270,17 @@ export function finishStreamingHandler(pane) {
     $.sendBtn.disabled = false;
     $.messageInput.focus();
   }
+
+  // Re-render messages from DB so fork buttons appear on the completed turn
+  const sid = getState("sessionId");
+  if (sid) {
+    import('./sessions.js').then(({ loadMessages }) => loadMessages(sid));
+  }
 }
 
 // Register the chat functions with parallel.js to break circular dependency
 _setChatFns({ sendMessage, stopGeneration });
+_setInputHistoryGetter(() => inputHistory);
 
 // Render a collapsible memory indicator in the chat
 function appendMemoryIndicator(memories, pane) {
@@ -347,6 +404,13 @@ function handleServerMessage(msg) {
       break;
 
     case "tool":
+      // Detect model-invoked skill usage
+      if (msg.name === "Skill" && msg.input?.skill) {
+        import('./projects.js').then(({ skillLookup }) => {
+          const info = skillLookup.get(msg.input.skill);
+          addSkillUsedMessage(msg.input.skill, info?.description || "", pane);
+        });
+      }
       appendToolIndicator(msg.name, msg.input, pane, msg.id);
       showThinking(`Running ${msg.name}...`, pane);
       break;
@@ -456,7 +520,291 @@ function handleServerMessage(msg) {
     case "memory_saved":
       // /remember command response — already handled by "text" message
       break;
+
+    case "worktree_created":
+      showWorktreeBanner(msg.branchName, msg.baseBranch, pane);
+      showThinking(`Working in worktree: ${msg.branchName}...`, pane);
+      break;
+
+    case "worktree_completed":
+      removeThinking(pane);
+      showWorktreeActions(msg.worktreeId, msg.branchName, msg.stats, pane);
+      break;
+
+    case "worktree_error":
+      addStatus(`Worktree failed: ${msg.error} — running on current branch instead`, true, pane);
+      break;
   }
+}
+
+// ── Worktree UI functions ──────────────────────────────────────────────────
+
+const BRANCH_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>`;
+
+/**
+ * Show a persistent banner indicating the agent is working in a worktree.
+ * This is clearly visible so the user knows they're NOT on the main branch.
+ */
+function showWorktreeBanner(branchName, baseBranch, pane) {
+  const container = pane.messagesDiv || $.messagesDiv;
+  const banner = document.createElement("div");
+  banner.className = "worktree-banner";
+  banner.innerHTML = `
+    <div class="worktree-banner-content">
+      ${BRANCH_SVG}
+      <span class="worktree-banner-label">Worktree active</span>
+      <code class="worktree-banner-branch">${escapeHtml(branchName)}</code>
+      <span class="worktree-banner-base">branched from <strong>${escapeHtml(baseBranch)}</strong></span>
+    </div>
+  `;
+  container.appendChild(banner);
+  banner.scrollIntoView({ behavior: "smooth" });
+}
+
+/**
+ * Show inline confirmation card: "Run in Worktree" or "Use Current Branch".
+ * The user's message is already displayed — this card appears below it.
+ */
+function showWorktreeConfirmation(ws, payload, pane) {
+  const container = pane.messagesDiv || $.messagesDiv;
+  const card = document.createElement("div");
+  card.className = "worktree-confirm-card";
+  card.innerHTML = `
+    <div class="wt-confirm-header">
+      ${BRANCH_SVG}
+      <span>Run this task in an isolated worktree?</span>
+    </div>
+    <div class="wt-confirm-desc">
+      Your working branch stays untouched. You can merge or discard the result after completion.
+    </div>
+    <div class="wt-confirm-btns">
+      <button class="wt-btn-worktree">Run in Worktree</button>
+      <button class="wt-btn-current">Use Current Branch</button>
+    </div>
+  `;
+
+  function send(useWorktree) {
+    if (useWorktree) payload.worktree = true;
+    console.log("[worktree] Sending payload with worktree:", payload.worktree, "cwd:", payload.cwd);
+    card.remove();
+    ws.send(JSON.stringify(payload));
+    showThinking(useWorktree ? "Creating worktree..." : "Connecting to Claude...", pane);
+  }
+
+  card.querySelector(".wt-btn-worktree").addEventListener("click", () => send(true));
+  card.querySelector(".wt-btn-current").addEventListener("click", () => send(false));
+
+  container.appendChild(card);
+  card.scrollIntoView({ behavior: "smooth" });
+}
+
+/**
+ * Show inline action card after worktree completes: View Diff / Merge / Discard.
+ */
+function showWorktreeActions(worktreeId, branchName, stats, pane) {
+  const container = pane.messagesDiv || $.messagesDiv;
+  const card = document.createElement("div");
+  card.className = "worktree-action-card";
+  const statsText = stats ? `+${stats.insertions} -${stats.deletions} in ${stats.files} file(s)` : "";
+  card.innerHTML = `
+    <div class="worktree-action-header">
+      ${BRANCH_SVG}
+      <span>Branch: <strong>${escapeHtml(branchName)}</strong></span>
+      <span class="worktree-stats">${statsText}</span>
+    </div>
+    <div class="worktree-action-btns">
+      <button class="wt-diff-btn">View Diff</button>
+      <button class="wt-merge-btn">Squash Merge</button>
+      <button class="wt-discard-btn">Discard</button>
+    </div>
+  `;
+
+  const diffBtn = card.querySelector(".wt-diff-btn");
+  const mergeBtn = card.querySelector(".wt-merge-btn");
+  const discardBtn = card.querySelector(".wt-discard-btn");
+
+  diffBtn.addEventListener("click", async () => {
+    diffBtn.disabled = true;
+    diffBtn.textContent = "Loading...";
+    try {
+      const res = await fetch(`/api/worktrees/${encodeURIComponent(worktreeId)}/diff`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      showWorktreeDiffModal(data.diff, branchName);
+    } catch (err) {
+      addStatus("Diff error: " + err.message, true, pane);
+    } finally {
+      diffBtn.disabled = false;
+      diffBtn.textContent = "View Diff";
+    }
+  });
+
+  mergeBtn.addEventListener("click", async () => {
+    mergeBtn.disabled = true;
+    mergeBtn.textContent = "Merging...";
+    discardBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/worktrees/${encodeURIComponent(worktreeId)}/merge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      card.innerHTML = `<div class="worktree-action-header">${BRANCH_SVG}<span>Merged <strong>${escapeHtml(branchName)}</strong> into current branch</span></div>`;
+      card.classList.add("worktree-merged");
+    } catch (err) {
+      addStatus("Merge error: " + err.message, true, pane);
+      mergeBtn.disabled = false;
+      mergeBtn.textContent = "Squash Merge";
+      discardBtn.disabled = false;
+    }
+  });
+
+  discardBtn.addEventListener("click", () => {
+    // Replace buttons with confirmation
+    const btnsDiv = card.querySelector(".worktree-action-btns");
+    btnsDiv.innerHTML = `
+      <span class="wt-confirm-label">Discard this worktree? This cannot be undone.</span>
+      <button class="wt-confirm-yes">Yes, Discard</button>
+      <button class="wt-confirm-no">Cancel</button>
+    `;
+
+    btnsDiv.querySelector(".wt-confirm-no").addEventListener("click", () => {
+      btnsDiv.innerHTML = "";
+      btnsDiv.appendChild(diffBtn);
+      btnsDiv.appendChild(mergeBtn);
+      btnsDiv.appendChild(discardBtn);
+    });
+
+    btnsDiv.querySelector(".wt-confirm-yes").addEventListener("click", async () => {
+      const yesBtn = btnsDiv.querySelector(".wt-confirm-yes");
+      yesBtn.disabled = true;
+      yesBtn.textContent = "Discarding...";
+      btnsDiv.querySelector(".wt-confirm-no").disabled = true;
+      try {
+        const res = await fetch(`/api/worktrees/${encodeURIComponent(worktreeId)}`, { method: "DELETE" });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        card.innerHTML = `<div class="worktree-action-header">${BRANCH_SVG}<span>Discarded <strong>${escapeHtml(branchName)}</strong></span></div>`;
+        card.classList.add("worktree-discarded");
+      } catch (err) {
+        addStatus("Discard error: " + err.message, true, pane);
+        btnsDiv.innerHTML = "";
+        btnsDiv.appendChild(diffBtn);
+        btnsDiv.appendChild(mergeBtn);
+        btnsDiv.appendChild(discardBtn);
+      }
+    });
+  });
+
+  container.appendChild(card);
+  card.scrollIntoView({ behavior: "smooth" });
+}
+
+/**
+ * Show a modal with the raw unified diff.
+ */
+function showWorktreeDiffModal(diffText, branchName) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal git-diff-modal">
+      <div class="modal-header">
+        <h3>Diff: ${escapeHtml(branchName)}</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="git-diff-body"></div>
+    </div>
+  `;
+
+  const body = overlay.querySelector(".git-diff-body");
+
+  if (!diffText || !diffText.trim()) {
+    body.innerHTML = '<div class="git-diff-empty">(no changes)</div>';
+  } else {
+    // Parse into per-file sections
+    const sections = [];
+    let current = null;
+    for (const line of diffText.split("\n")) {
+      if (line.startsWith("diff --git ")) {
+        if (current) sections.push(current);
+        const match = line.match(/diff --git a\/(.+?) b\/(.+)/);
+        current = { fileName: match ? match[2] : line, lines: [] };
+      } else if (current) {
+        current.lines.push(line);
+      } else {
+        if (!current) current = { fileName: "", lines: [] };
+        current.lines.push(line);
+      }
+    }
+    if (current) sections.push(current);
+
+    if (sections.length <= 1 && (!sections[0]?.fileName || sections[0].fileName === "")) {
+      // Single file — plain view
+      const pre = document.createElement("pre");
+      pre.className = "git-diff-content";
+      renderColoredDiff(pre, sections[0]?.lines || diffText.split("\n"));
+      body.appendChild(pre);
+    } else {
+      // Multi-file — per-file collapsible sections
+      for (const section of sections) {
+        let add = 0, del = 0;
+        for (const l of section.lines) {
+          if (l.startsWith("+") && !l.startsWith("+++")) add++;
+          else if (l.startsWith("-") && !l.startsWith("---")) del++;
+        }
+
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "git-diff-file";
+
+        const header = document.createElement("div");
+        header.className = "git-diff-file-header";
+        header.innerHTML = `
+          <svg class="git-diff-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <span class="git-diff-file-name">${escapeHtml(section.fileName)}</span>
+          <span class="git-diff-file-stats">
+            ${add ? `<span class="diff-stat-add">+${add}</span>` : ""}
+            ${del ? `<span class="diff-stat-del">-${del}</span>` : ""}
+          </span>
+        `;
+        header.addEventListener("click", () => fileDiv.classList.toggle("collapsed"));
+
+        const content = document.createElement("pre");
+        content.className = "git-diff-content git-diff-file-content";
+        renderColoredDiff(content, section.lines);
+
+        fileDiv.appendChild(header);
+        fileDiv.appendChild(content);
+        body.appendChild(fileDiv);
+      }
+    }
+  }
+
+  overlay.querySelector(".modal-close").addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+  document.addEventListener("keydown", function esc(e) {
+    if (e.key === "Escape") { overlay.remove(); document.removeEventListener("keydown", esc); }
+  });
+  document.body.appendChild(overlay);
+}
+
+function renderColoredDiff(container, lines) {
+  for (const line of lines) {
+    const span = document.createElement("span");
+    span.textContent = line + "\n";
+    if (line.startsWith("+++") || line.startsWith("---")) span.className = "diff-line-meta";
+    else if (line.startsWith("+")) span.className = "diff-line-added";
+    else if (line.startsWith("-")) span.className = "diff-line-removed";
+    else if (line.startsWith("@@")) span.className = "diff-line-hunk";
+    container.appendChild(span);
+  }
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
 }
 
 // Listen for WebSocket messages via event bus
@@ -618,6 +966,7 @@ $.stopBtn.addEventListener("click", () => stopGeneration(getPane(null)));
 
 $.messageInput.addEventListener("keydown", (e) => {
   if (handleAutocompleteKeydown(e, getPane(null))) return;
+  if (handleHistoryKeydown(e, getPane(null), inputHistory)) return;
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage(getPane(null));
@@ -625,9 +974,86 @@ $.messageInput.addEventListener("keydown", (e) => {
 });
 
 $.messageInput.addEventListener("input", () => {
+  if (inputHistory.isNavigating) inputHistory.reset();
   $.messageInput.style.height = "auto";
   $.messageInput.style.height = Math.min($.messageInput.scrollHeight, 200) + "px";
   handleSlashAutocomplete(getPane(null));
+});
+
+// ── History button + popover ──
+export function updateHistoryButtonVisibility() {
+  // Re-sync key in case project loaded after module init
+  const ek = historyKey();
+  if (inputHistory.storageKey !== ek) inputHistory = new InputHistory(ek);
+  if ($.historyBtn) {
+    $.historyBtn.classList.toggle("hidden", inputHistory.entries.length === 0);
+  }
+}
+
+function renderHistoryPopover() {
+  const el = $.historyPopover;
+  if (!el) return;
+  const entries = inputHistory.getAll();
+
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="history-popover-empty">No messages yet</div>';
+    return;
+  }
+
+  el.innerHTML = `<div class="history-popover-header"><span>Recent messages</span><button class="history-popover-clear">Clear</button></div>`;
+  const clearBtn = el.querySelector(".history-popover-clear");
+  clearBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    inputHistory.entries.length = 0;
+    inputHistory._save();
+    closeHistoryPopover();
+    updateHistoryButtonVisibility();
+  });
+
+  entries.forEach((text) => {
+    const item = document.createElement("div");
+    item.className = "history-popover-item";
+    const truncated = text.length > 80 ? text.slice(0, 80) + "\u2026" : text;
+    const span = document.createElement("span");
+    span.className = "history-popover-item-text" + (text.startsWith("/") ? " is-slash" : "");
+    span.textContent = truncated;
+    item.appendChild(span);
+    item.addEventListener("click", () => {
+      const pane = getPane(null);
+      pane.messageInput.value = text;
+      pane.messageInput.style.height = "auto";
+      pane.messageInput.style.height = Math.min(pane.messageInput.scrollHeight, 200) + "px";
+      closeHistoryPopover();
+      pane.messageInput.focus();
+    });
+    el.appendChild(item);
+  });
+}
+
+function closeHistoryPopover() {
+  if ($.historyPopover) $.historyPopover.classList.add("hidden");
+}
+
+if ($.historyBtn) {
+  $.historyBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const el = $.historyPopover;
+    if (!el) return;
+    if (el.classList.contains("hidden")) {
+      renderHistoryPopover();
+      el.classList.remove("hidden");
+    } else {
+      closeHistoryPopover();
+    }
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if ($.historyPopover && !$.historyPopover.classList.contains("hidden")) {
+    if (!$.historyPopover.contains(e.target) && e.target !== $.historyBtn) {
+      closeHistoryPopover();
+    }
+  }
 });
 
 // Initialize mermaid
@@ -635,9 +1061,81 @@ if (typeof mermaid !== "undefined") {
   mermaid.initialize({ startOnLoad: false, theme: "dark" });
 }
 
+// ── Fork button handler (delegated) ──
+$.messagesDiv.addEventListener("click", async (e) => {
+  const forkBtn = e.target.closest(".fork-btn");
+  if (!forkBtn) return;
+
+  // Block fork during active streaming
+  const currentPane = getPane(null);
+  if (currentPane && currentPane.isStreaming) return;
+
+  const messageId = Number(forkBtn.dataset.messageId);
+  const sessionId = getState("sessionId");
+  if (!sessionId || !messageId) return;
+
+  forkBtn.disabled = true;
+  forkBtn.classList.add("fork-loading");
+  try {
+    const forked = await api.forkSession(sessionId, messageId);
+    // Switch to the forked session
+    setState("sessionId", forked.id);
+    $.messagesDiv.innerHTML = "";
+    const { loadMessages } = await import('./sessions.js');
+    await loadMessages(forked.id);
+    await loadSessions();
+    $.messageInput.focus();
+    // Show toast
+    showForkToast(forked.title || "Forked session");
+  } catch (err) {
+    console.error("Fork failed:", err);
+  } finally {
+    forkBtn.disabled = false;
+    forkBtn.classList.remove("fork-loading");
+  }
+});
+
+function showForkToast(title) {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = "bg-toast";
+  const dot = document.createElement("span");
+  dot.className = "bg-toast-dot";
+  const body = document.createElement("div");
+  body.className = "bg-toast-body";
+  const label = document.createElement("div");
+  label.className = "bg-toast-label";
+  label.textContent = "Session forked";
+  const titleEl = document.createElement("div");
+  titleEl.className = "bg-toast-title";
+  titleEl.textContent = title;
+  body.appendChild(label);
+  body.appendChild(titleEl);
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "bg-toast-close";
+  closeBtn.title = "Dismiss";
+  closeBtn.innerHTML = "&times;";
+  toast.appendChild(dot);
+  toast.appendChild(body);
+  toast.appendChild(closeBtn);
+  const dismiss = () => {
+    toast.classList.add("toast-exit");
+    toast.addEventListener("animationend", () => toast.remove());
+  };
+  closeBtn.addEventListener("click", dismiss);
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) dismiss(); }, 3000);
+}
+
 // ── Boot sequence ──
 showWhalyPlaceholder();
-loadProjects(); // loadSessions() is called inside loadProjects() after dropdown is populated
+updateHistoryButtonVisibility();
+loadProjects().then(() => {
+  // Re-sync history after projects load (programmatic .value= doesn't fire change event)
+  inputHistory = new InputHistory(historyKey());
+  updateHistoryButtonVisibility();
+}); // loadSessions() is called inside loadProjects() after dropdown is populated
 loadAccountInfo();
 loadStats();
 loadPrompts();

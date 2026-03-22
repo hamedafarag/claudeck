@@ -33,8 +33,12 @@
 @import url("css/features/agent-monitor.css");
 @import url("css/features/agent-sidebar.css");
 @import url("css/ui/status-bar.css");
+@import url("css/ui/notification-bell.css");
+@import url("css/ui/input-history.css");
+@import url("css/ui/worktree.css");
 @import url("css/panels/memory.css");
 @import url("css/panels/dev-docs.css");
+@import url("css/panels/skills-manager.css");
 @import url("css/features/telegram.css");
 @import url("css/features/voice-input.css");
 @import url("css/features/retro-terminal.css");

@@ -407,6 +407,29 @@ export async function generateSummary(sessionId) {
   return res.json();
 }
 
+export async function forkSession(sessionId, messageId) {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/fork`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messageId }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Fork failed");
+  }
+  return res.json();
+}
+
+export async function fetchBranches(sessionId) {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/branches`);
+  return res.json();
+}
+
+export async function fetchLineage(sessionId) {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/lineage`);
+  return res.json();
+}
+
 export async function saveSystemPromptApi(path, systemPrompt) {
   await fetch("/api/projects/system-prompt", {
     method: "PUT",
@@ -600,5 +623,65 @@ export async function deleteRepoGroup(id) {
     method: "DELETE",
   });
   if (!res.ok) await throwApiError(res);
+  return res.json();
+}
+
+// ── Skills Marketplace (SkillsMP) ───────────────────────
+
+export async function fetchSkillsConfig() {
+  const res = await fetch("/api/skills/config");
+  return res.json();
+}
+
+export async function saveSkillsConfig(config) {
+  const res = await fetch("/api/skills/config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  return res.json();
+}
+
+export async function searchSkills(q, page, limit, sortBy) {
+  let url = `/api/skills/search?q=${encodeURIComponent(q)}`;
+  if (page) url += `&page=${page}`;
+  if (limit) url += `&limit=${limit}`;
+  if (sortBy) url += `&sortBy=${encodeURIComponent(sortBy)}`;
+  const res = await fetch(url);
+  return { data: await res.json(), headers: res.headers };
+}
+
+export async function aiSearchSkills(q) {
+  const res = await fetch(`/api/skills/ai-search?q=${encodeURIComponent(q)}`);
+  return { data: await res.json(), headers: res.headers };
+}
+
+export async function fetchInstalledSkills(projectPath) {
+  let url = "/api/skills/installed";
+  if (projectPath) url += `?projectPath=${encodeURIComponent(projectPath)}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+export async function installSkill(body) {
+  const res = await fetch("/api/skills/install", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+export async function uninstallSkill(name, scope, projectPath) {
+  let url = `/api/skills/${encodeURIComponent(name)}?scope=${scope}`;
+  if (projectPath) url += `&projectPath=${encodeURIComponent(projectPath)}`;
+  const res = await fetch(url, { method: "DELETE" });
+  return res.json();
+}
+
+export async function toggleSkill(name, scope, projectPath) {
+  let url = `/api/skills/${encodeURIComponent(name)}/toggle?scope=${scope}`;
+  if (projectPath) url += `&projectPath=${encodeURIComponent(projectPath)}`;
+  const res = await fetch(url, { method: "PUT" });
   return res.json();
 }

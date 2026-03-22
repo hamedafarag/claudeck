@@ -455,7 +455,7 @@ On each chat session start, `runMaintenance(projectPath)` is called (`ws-handler
 
 ## 7. Monitoring & Notifications
 
-**Key files:** `db.js` (agent_runs table), `server/telegram-sender.js`, `server/push-sender.js`
+**Key files:** `db.js` (agent_runs table, notifications table), `server/notification-logger.js`, `server/telegram-sender.js`, `server/push-sender.js`
 
 ### Agent Run Tracking
 
@@ -485,6 +485,33 @@ All execution modes send rich Telegram notifications on completion/failure:
 | **Workflow** | `workflow` / `error` | Title, numbered step list |
 
 Telegram notifications include inline keyboard buttons for permission requests (Approve/Deny), enabling AFK approval from mobile.
+
+### In-App Notification Bell
+
+Persistent notification history stored in the `notifications` SQLite table. Events are created via `logNotification()` from `server/notification-logger.js` and broadcast to all connected WebSocket clients in real-time.
+
+**Events that create notifications:**
+
+| Source | Type | Trigger |
+|--------|------|---------|
+| Agent completion | `agent` | After `recordAgentRunComplete` in `agent-loop.js` |
+| Agent error | `error` | After agent error handling in `agent-loop.js` |
+| Background session done | `session` | Frontend `POST /api/notifications/create` from `background-sessions.js` |
+| Background session error | `error` | Frontend `POST /api/notifications/create` from `background-sessions.js` |
+| Background session input needed | `approval` | Frontend `POST /api/notifications/create` from `background-sessions.js` |
+
+**API routes** (on existing `/api/notifications` router):
+- `POST /create` — create a notification (used by frontend for bg session events)
+- `GET /history` — paginated fetch with type/unread filters
+- `GET /unread-count` — lightweight badge count
+- `POST /read` — mark as read (by IDs, all, or before timestamp)
+- `DELETE /old` — purge notifications older than 90 days
+
+**WebSocket broadcasts:**
+- `notification:new` — sent when a notification is created (includes notification + unread count)
+- `notification:read` — sent when notifications are marked as read (includes IDs + unread count)
+
+**Read strategies:** explicit dot click, "mark all read" button, auto-mark after 1.5s dropdown view, click-through to source session. Stale unreads (>7 days) auto-marked as read during daily cleanup.
 
 ### Push Notifications
 
@@ -538,6 +565,7 @@ recordAgentRunComplete(monitorRunId, agentId, status, turns, costUsd, durationMs
 
 ### Notifications
 ```javascript
+logNotification(type, title, body, metadata, sessionId, agentId);    // In-app bell (persisted + WS broadcast)
 sendPushNotification(title, body, tag);                              // Browser push
 sendTelegramNotification(eventType, title, body, { metrics... });    // Rich Telegram
 ```

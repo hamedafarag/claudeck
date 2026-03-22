@@ -81,6 +81,9 @@ try { db.exec(`ALTER TABLE sessions ADD COLUMN summary TEXT DEFAULT NULL`); } ca
 try { db.exec(`ALTER TABLE todos ADD COLUMN archived INTEGER DEFAULT 0`); } catch { /* exists */ }
 // Todo priority (0=none, 1=low, 2=medium, 3=high)
 try { db.exec(`ALTER TABLE todos ADD COLUMN priority INTEGER DEFAULT 0`); } catch { /* exists */ }
+// Session branching / conversation forking
+try { db.exec(`ALTER TABLE sessions ADD COLUMN parent_session_id TEXT DEFAULT NULL`); } catch { /* exists */ }
+try { db.exec(`ALTER TABLE sessions ADD COLUMN fork_message_id INTEGER DEFAULT NULL`); } catch { /* exists */ }
 
 // Agent context (shared memory between agents in a chain/orchestration run)
 db.exec(`
@@ -167,6 +170,41 @@ db.exec(`
   END;
 `);
 
+// ── Notifications table ──────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT,
+    metadata TEXT,
+    source_session_id TEXT,
+    source_agent_id TEXT,
+    read_at INTEGER DEFAULT NULL,
+    created_at INTEGER DEFAULT (unixepoch())
+  );
+  CREATE INDEX IF NOT EXISTS idx_notif_created ON notifications(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_notif_unread ON notifications(read_at) WHERE read_at IS NULL;
+`);
+
+// ── Worktrees table ──────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS worktrees (
+    id TEXT PRIMARY KEY,
+    session_id TEXT,
+    project_path TEXT NOT NULL,
+    worktree_path TEXT NOT NULL,
+    branch_name TEXT NOT NULL,
+    base_branch TEXT NOT NULL,
+    status TEXT DEFAULT 'active',
+    user_prompt TEXT,
+    created_at INTEGER DEFAULT (unixepoch()),
+    completed_at INTEGER DEFAULT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_wt_project ON worktrees(project_path);
+  CREATE INDEX IF NOT EXISTS idx_wt_status ON worktrees(status);
+`);
+
 // Backfill content_hash for existing rows
 const unhashed = db.prepare(`SELECT id, project_path, content FROM memories WHERE content_hash IS NULL`).all();
 if (unhashed.length > 0) {
@@ -208,6 +246,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_costs_created_at ON costs(created_at);
   CREATE INDEX IF NOT EXISTS idx_sessions_project_path ON sessions(project_path);
   CREATE INDEX IF NOT EXISTS idx_sessions_pinned_last_used ON sessions(pinned DESC, last_used_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_sessions_parent ON sessions(parent_session_id) WHERE parent_session_id IS NOT NULL;
 `);
 
 // Deduplicated mode CASE subquery — used in 4 session listing queries
@@ -288,6 +327,22 @@ const stmts = {
   searchSessionsAll: db.prepare(
     `SELECT s.*, ${MODE_CASE}
      FROM sessions s WHERE (s.title LIKE ? OR s.project_name LIKE ?) ORDER BY s.pinned DESC, s.last_used_at DESC LIMIT ?`
+  ),
+  // Session branching
+  getMessagesByIdRange: db.prepare(
+    `SELECT role, content, created_at FROM messages WHERE session_id = ? AND id <= ? AND chat_id IS NULL ORDER BY id ASC`
+  ),
+  getLastMessageId: db.prepare(
+    `SELECT MAX(id) as maxId FROM messages WHERE session_id = ? AND chat_id IS NULL`
+  ),
+  getBranches: db.prepare(
+    `SELECT s.*, ${MODE_CASE} FROM sessions s WHERE s.parent_session_id = ? ORDER BY s.created_at DESC`
+  ),
+  getBranchCount: db.prepare(
+    `SELECT COUNT(*) as count FROM sessions WHERE parent_session_id = ?`
+  ),
+  orphanChildren: db.prepare(
+    `UPDATE sessions SET parent_session_id = NULL WHERE parent_session_id = ?`
   ),
   getSessionCosts: db.prepare(
     `SELECT s.id, s.title, s.project_name, s.last_used_at,
@@ -460,11 +515,73 @@ export function searchSessions(query, limit = 20, projectPath) {
 }
 
 export const deleteSession = db.transaction((id) => {
+  // Orphan child forks before deleting parent
+  stmts.orphanChildren.run(id);
   db.prepare("DELETE FROM claude_sessions WHERE session_id = ?").run(id);
   db.prepare("DELETE FROM costs WHERE session_id = ?").run(id);
   db.prepare("DELETE FROM messages WHERE session_id = ?").run(id);
   db.prepare("DELETE FROM sessions WHERE id = ?").run(id);
 });
+
+// ── Session Branching / Forking ─────────────────────────
+export const forkSession = db.transaction((parentSessionId, forkMessageId) => {
+  const parent = stmts.getSession.get(parentSessionId);
+  if (!parent) throw new Error("Session not found");
+
+  if (!forkMessageId) {
+    const last = stmts.getLastMessageId.get(parentSessionId);
+    forkMessageId = last?.maxId;
+    if (!forkMessageId) throw new Error("No messages to fork");
+  }
+
+  const newId = createHash("sha256")
+    .update(parentSessionId + Date.now() + Math.random())
+    .digest("hex")
+    .slice(0, 36);
+  const title = `Fork of: ${parent.title || parent.project_name || "Untitled"}`;
+
+  db.prepare(
+    `INSERT INTO sessions (id, project_name, project_path, title, parent_session_id, fork_message_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(newId, parent.project_name, parent.project_path, title, parentSessionId, forkMessageId);
+
+  const messages = stmts.getMessagesByIdRange.all(parentSessionId, forkMessageId);
+  const insertMsg = db.prepare(
+    "INSERT INTO messages (session_id, role, content, created_at) VALUES (?, ?, ?, ?)"
+  );
+  for (const msg of messages) {
+    insertMsg.run(newId, msg.role, msg.content, msg.created_at);
+  }
+
+  return stmts.getSession.get(newId);
+});
+
+export function getSessionBranches(sessionId) {
+  return stmts.getBranches.all(sessionId);
+}
+
+export function getSessionBranchCount(sessionId) {
+  return stmts.getBranchCount.get(sessionId).count;
+}
+
+export function getSessionLineage(sessionId) {
+  const ancestors = [];
+  let current = stmts.getSession.get(sessionId);
+  while (current && current.parent_session_id) {
+    const parent = stmts.getSession.get(current.parent_session_id);
+    if (!parent) break;
+    ancestors.unshift(parent);
+    current = parent;
+  }
+  // Get siblings (other forks of the same parent)
+  const session = stmts.getSession.get(sessionId);
+  let siblings = [];
+  if (session?.parent_session_id) {
+    siblings = stmts.getBranches.all(session.parent_session_id)
+      .filter(s => s.id !== sessionId);
+  }
+  return { ancestors, siblings };
+}
 
 export function getSessionCosts(projectPath) {
   if (projectPath) {
@@ -1261,6 +1378,137 @@ export function getAgentRunsByType() {
 
 export function getAgentRunsDaily() {
   return runStmts.dailyRuns.all();
+}
+
+// ── Notifications ────────────────────────────────────────
+const notifStmts = {
+  insert: db.prepare(
+    `INSERT INTO notifications (type, title, body, metadata, source_session_id, source_agent_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ),
+  history: db.prepare(
+    `SELECT * FROM notifications ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ),
+  historyUnread: db.prepare(
+    `SELECT * FROM notifications WHERE read_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ),
+  historyByType: db.prepare(
+    `SELECT * FROM notifications WHERE type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ),
+  historyByTypeUnread: db.prepare(
+    `SELECT * FROM notifications WHERE type = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ),
+  unreadCount: db.prepare(
+    `SELECT COUNT(*) as count FROM notifications WHERE read_at IS NULL`
+  ),
+  markRead: db.prepare(
+    `UPDATE notifications SET read_at = unixepoch() WHERE id = ? AND read_at IS NULL`
+  ),
+  markAllRead: db.prepare(
+    `UPDATE notifications SET read_at = unixepoch() WHERE read_at IS NULL`
+  ),
+  markReadBefore: db.prepare(
+    `UPDATE notifications SET read_at = unixepoch() WHERE read_at IS NULL AND created_at < ?`
+  ),
+  purgeOld: db.prepare(
+    `DELETE FROM notifications WHERE created_at < unixepoch() - (? * 86400)`
+  ),
+  markStaleRead: db.prepare(
+    `UPDATE notifications SET read_at = unixepoch() WHERE read_at IS NULL AND created_at < unixepoch() - (7 * 86400)`
+  ),
+};
+
+export function createNotification(type, title, body = null, metadata = null, sourceSessionId = null, sourceAgentId = null) {
+  const result = notifStmts.insert.run(type, title, body, metadata, sourceSessionId, sourceAgentId);
+  return {
+    id: result.lastInsertRowid,
+    type, title, body, metadata,
+    source_session_id: sourceSessionId,
+    source_agent_id: sourceAgentId,
+    read_at: null,
+    created_at: Math.floor(Date.now() / 1000),
+  };
+}
+
+export function getNotificationHistory(limit = 20, offset = 0, unreadOnly = false, type = null) {
+  if (type && unreadOnly) return notifStmts.historyByTypeUnread.all(type, limit, offset);
+  if (type) return notifStmts.historyByType.all(type, limit, offset);
+  if (unreadOnly) return notifStmts.historyUnread.all(limit, offset);
+  return notifStmts.history.all(limit, offset);
+}
+
+export function getUnreadNotificationCount() {
+  return notifStmts.unreadCount.get().count;
+}
+
+export function markNotificationsRead(ids) {
+  const tx = db.transaction((idList) => {
+    for (const id of idList) notifStmts.markRead.run(id);
+  });
+  tx(ids);
+}
+
+export function markAllNotificationsRead() {
+  notifStmts.markAllRead.run();
+}
+
+export function markNotificationsReadBefore(timestamp) {
+  notifStmts.markReadBefore.run(timestamp);
+}
+
+export function purgeOldNotifications(days = 90) {
+  notifStmts.markStaleRead.run();
+  notifStmts.purgeOld.run(days);
+}
+
+// ── Worktrees ─────────────────────────────────────────────
+const wtStmts = {
+  create: db.prepare(
+    `INSERT INTO worktrees (id, session_id, project_path, worktree_path, branch_name, base_branch, status, user_prompt)
+     VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`
+  ),
+  get: db.prepare(`SELECT * FROM worktrees WHERE id = ?`),
+  listByProject: db.prepare(
+    `SELECT * FROM worktrees WHERE project_path = ? ORDER BY created_at DESC`
+  ),
+  listActive: db.prepare(
+    `SELECT * FROM worktrees WHERE status IN ('active', 'completed') ORDER BY created_at DESC`
+  ),
+  updateStatus: db.prepare(
+    `UPDATE worktrees SET status = ?, completed_at = unixepoch() WHERE id = ?`
+  ),
+  updateSession: db.prepare(
+    `UPDATE worktrees SET session_id = ? WHERE id = ?`
+  ),
+  delete: db.prepare(`DELETE FROM worktrees WHERE id = ?`),
+};
+
+export function createWorktreeRecord(id, sessionId, projectPath, worktreePath, branchName, baseBranch, userPrompt) {
+  wtStmts.create.run(id, sessionId, projectPath, worktreePath, branchName, baseBranch, userPrompt);
+}
+
+export function getWorktreeRecord(id) {
+  return wtStmts.get.get(id);
+}
+
+export function listWorktreesByProject(projectPath) {
+  return wtStmts.listByProject.all(projectPath);
+}
+
+export function listActiveWorktrees() {
+  return wtStmts.listActive.all();
+}
+
+export function updateWorktreeStatus(id, status) {
+  wtStmts.updateStatus.run(status, id);
+}
+
+export function updateWorktreeSession(id, sessionId) {
+  wtStmts.updateSession.run(sessionId, id);
+}
+
+export function deleteWorktreeRecord(id) {
+  wtStmts.delete.run(id);
 }
 
 // ── Memories (persistent cross-session context) ──────────

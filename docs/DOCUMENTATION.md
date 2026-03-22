@@ -117,6 +117,8 @@ browser ──────── WebSocket ──────── server.js �
 | title             | TEXT    | Auto-generated or manually edited    |
 | pinned            | INTEGER | 0 or 1, pinned sessions sort to top  |
 | summary           | TEXT    | AI-generated session summary (via Claude Haiku) |
+| parent_session_id | TEXT    | Parent session ID (NULL if not a fork) |
+| fork_message_id   | INTEGER | Message ID at which the fork was created |
 | created_at        | INTEGER | Unix timestamp                       |
 | last_used_at      | INTEGER | Unix timestamp, updated on each use  |
 
@@ -229,6 +231,37 @@ browser ──────── WebSocket ──────── server.js �
 
 **FTS5 index:** `memories_fts` virtual table for full-text search on `content`, kept in sync via INSERT/UPDATE/DELETE triggers.
 
+### notifications
+| Column            | Type    | Description                                    |
+| ----------------- | ------- | ---------------------------------------------- |
+| id                | INTEGER | Auto-increment PK                              |
+| type              | TEXT    | session, agent, workflow, chain, dag, error, approval |
+| title             | TEXT    | Notification title                             |
+| body              | TEXT    | Optional body text                             |
+| metadata          | TEXT    | Optional JSON metadata (cost, tokens, etc.)    |
+| source_session_id | TEXT    | Session that triggered this notification       |
+| source_agent_id   | TEXT    | Agent that triggered this notification         |
+| read_at           | INTEGER | Unix timestamp when marked as read (NULL = unread) |
+| created_at        | INTEGER | Unix timestamp                                 |
+
+**Indexes:** `idx_notif_created` (created_at DESC), `idx_notif_unread` (partial index on read_at WHERE read_at IS NULL).
+
+### worktrees
+| Column        | Type    | Description                                    |
+| ------------- | ------- | ---------------------------------------------- |
+| id            | TEXT PK | Worktree UUID                                  |
+| session_id    | TEXT    | Session that spawned this worktree             |
+| project_path  | TEXT    | Original project path                          |
+| worktree_path | TEXT    | Path to the worktree directory                 |
+| branch_name   | TEXT    | Git branch created for this worktree           |
+| base_branch   | TEXT    | Branch the worktree was created from           |
+| status        | TEXT    | active, completed, merged, or discarded        |
+| user_prompt   | TEXT    | Original user prompt that triggered worktree   |
+| created_at    | INTEGER | Unix timestamp                                 |
+| completed_at  | INTEGER | Unix timestamp (set on merge/discard)          |
+
+**Indexes:** `idx_wt_project` (project_path), `idx_wt_status` (status).
+
 Migrations run automatically on startup (ADD COLUMN with try/catch).
 
 ---
@@ -245,6 +278,9 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | PUT    | /api/sessions/:id/title     | Rename session                         |
 | PUT    | /api/sessions/:id/pin       | Toggle pin/unpin                       |
 | POST   | /api/sessions/:id/summary   | Generate/regenerate AI summary         |
+| POST   | /api/sessions/:id/fork      | Fork session at a message (body: `{ messageId }`) |
+| GET    | /api/sessions/:id/branches  | List direct child forks of a session   |
+| GET    | /api/sessions/:id/lineage   | Get ancestor chain + siblings          |
 
 ### Messages
 | Method | Path                              | Description                     |
@@ -329,6 +365,20 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 | PUT    | /api/repos/groups/:id  | Rename or reparent group (circular ref protection)|
 | DELETE | /api/repos/groups/:id  | Delete group (children reparented to parent)     |
 
+### Skills Marketplace (SkillsMP)
+| Method | Path                        | Description                                      |
+| ------ | --------------------------- | ------------------------------------------------ |
+| GET    | /api/skills/config          | Get marketplace config (activated status, masked key, defaults) |
+| PUT    | /api/skills/config          | Save config (apiKey, defaultScope, searchMode) — validates key with SkillsMP |
+| GET    | /api/skills/search          | Proxy keyword search to SkillsMP (`q`, `page`, `limit`, `sortBy`) |
+| GET    | /api/skills/ai-search       | Proxy AI semantic search to SkillsMP (`q`) |
+| GET    | /api/skills/installed       | List installed skills from global + project scopes |
+| POST   | /api/skills/install         | Install skill from GitHub (`githubUrl`, `name`, `scope`, `projectPath`, `description`) |
+| DELETE | /api/skills/:name           | Uninstall skill (`scope`, `projectPath` query params) |
+| PUT    | /api/skills/:name/toggle    | Enable/disable skill by renaming SKILL.md ↔ SKILL.md.disabled |
+
+All endpoints except `GET /config` and `PUT /config` are gated behind a valid SkillsMP API key (`requireApiKey` middleware — returns 403 with `NO_API_KEY` code if not activated).
+
 ### MCP Server Management
 | Method | Path                    | Description                            |
 | ------ | ----------------------- | -------------------------------------- |
@@ -407,6 +457,16 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 | POST   | /api/memory/optimize    | AI-powered optimization preview (Claude Haiku consolidation) |
 | POST   | /api/memory/optimize/apply | Apply optimization results              |
 
+### Worktrees
+| Method | Path                        | Description                              |
+| ------ | --------------------------- | ---------------------------------------- |
+| POST   | /api/worktrees              | Create a new worktree (`{ projectPath, baseBranch?, branchName?, sessionId?, userPrompt? }`) |
+| GET    | /api/worktrees              | List worktrees for a project (`?project=`) |
+| GET    | /api/worktrees/active       | List all active worktrees                |
+| POST   | /api/worktrees/:id/merge    | Merge worktree branch back and clean up  |
+| GET    | /api/worktrees/:id/diff     | Show diff between worktree and base branch |
+| DELETE | /api/worktrees/:id          | Discard worktree (remove + delete branch)|
+
 ### Version
 | Method | Path                    | Description                              |
 | ------ | ----------------------- | ---------------------------------------- |
@@ -415,7 +475,7 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 ### WebSocket (`/ws`)
 
 **Outgoing** (client to server):
-- `{ type: "chat", message, cwd, sessionId, projectName, chatId, permissionMode, model, maxTurns, images?, systemPrompt? }` — send a message (images: `[{ name, data, mimeType }]` base64-encoded; systemPrompt appended to project prompt)
+- `{ type: "chat", message, cwd, sessionId, projectName, chatId, permissionMode, model, maxTurns, images?, systemPrompt?, worktree? }` — send a message (images: `[{ name, data, mimeType }]` base64-encoded; systemPrompt appended to project prompt; worktree: `{ enabled, branchName? }` for worktree isolation)
 - `{ type: "workflow", workflow, cwd, sessionId, projectName, permissionMode, model }` — run a workflow
 - `{ type: "agent", agentDef, cwd, sessionId, projectName, permissionMode, model, userContext? }` — run an autonomous agent
 - `{ type: "agent_chain", chain, agents, cwd, sessionId, projectName, permissionMode, model }` — run an agent chain
@@ -436,6 +496,8 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 - `agent_chain_started` / `agent_chain_step` / `agent_chain_completed` — chain progress
 - `dag_started` / `dag_level` / `dag_node` / `dag_completed` / `dag_error` — DAG execution
 - `orchestrator_started` / `orchestrator_phase` / `orchestrator_dispatching` / `orchestrator_dispatch` / `orchestrator_completed` / `orchestrator_error` — orchestrator lifecycle
+- `worktree_created` — worktree created for this session (id, branchName, worktreePath)
+- `worktree_completed` — worktree task finished (id, branchName, diff summary)
 - `permission_request` — tool approval needed (id, toolName, input). Also sent to Telegram with inline Approve/Deny buttons if configured.
 - `permission_response_external` — approval/denial from an external source (Telegram). Includes `id`, `behavior`, `source`. Frontend auto-dismisses the permission modal.
 
@@ -544,6 +606,13 @@ Each workflow chains prompts sequentially with context passing and step progress
 - Pin/unpin sessions (pinned sort to top)
 - Delete sessions with cascade (messages, costs, claude mappings)
 - Mode detection badges: single, parallel, both
+- **Session Branching / Forking** — fork a conversation at any assistant message to explore alternative approaches
+  - Fork button (git-branch icon) appears on hover over assistant messages
+  - Deep-copies messages up to the fork point into a new session
+  - Forked sessions show a branch icon in the session list
+  - Context menu: "View Parent Session", "View Forks" with back navigation
+  - Fork of fork supported (unlimited depth)
+  - Deleting a parent orphans its forks (they remain fully functional)
 
 ### 12. Cost Dashboard
 - Click the cost display in the header to open
@@ -577,9 +646,11 @@ Open via **Tools > Analytics** or `/analytics` slash command. Full analytics wit
 | `Cmd+Shift+V`  | Open Events tab           |
 | `Cmd+Shift+T`  | Toggle tips feed          |
 | `Cmd+1`–`4`    | Focus parallel pane 1–4   |
-| `Escape`       | Close any open modal      |
+| `Escape`       | Close any open modal / cancel history navigation |
 | `Enter`        | Send message              |
 | `Shift+Enter`  | New line in input         |
+| `↑` (ArrowUp)  | Recall previous message (empty input) |
+| `↓` (ArrowDown)| Recall next message (while navigating history) |
 
 ### 15. Response Formatting
 - Syntax highlighting via highlight.js (language auto-detection for all code blocks)
@@ -681,6 +752,7 @@ Background session behavior:
 - On WebSocket reconnect, background sessions are reconciled against the server's active query list (`GET /api/sessions/active`). Sessions no longer running get a completion toast; still-active sessions remain in the map
 - Server aborts all active SDK streams on client disconnect — no orphaned processes
 - Send/Stop buttons and thinking indicators reset correctly when backgrounding
+- **Notification bell integration** — background session events (completed, errored, input needed) are persisted as in-app notifications via `POST /api/notifications/create`, visible in the header bell dropdown with click-through to switch back to the session
 
 The guard dialog intercepts session clicks, project switches, and the New Session button.
 
@@ -735,6 +807,10 @@ Git panel in the Git tab — all operations via `POST /api/exec`:
 - **Stage/unstage** — click +/- buttons to `git add` or `git reset HEAD` individual files
 - **Commit** — textarea + button, shows error feedback, clears on success
 - **Log** — last 10 commits with hash (accent), subject, and relative time
+- **Inline diff** — click any file name to view a colored diff modal (per-file collapsible sections with +/- stats)
+- **Branch info bar** — shows current branch, ahead/behind tracking, bulk stage/unstage actions
+- **Discard changes** — per-file discard button with confirmation
+- **Worktrees** — list active worktrees with status badges (running/ready), merge/diff/discard actions per worktree
 - **Refresh** — spinning refresh button reloads branches, status, and log
 - Auto-refreshes on tab switch and project switch
 
@@ -801,6 +877,62 @@ Browser notifications for events that happen while the tab is unfocused, **inclu
 - Push notifications trigger sound via service worker `postMessage` to the client page
 - OS notification sound suppressed (`silent: true`) to avoid double-chime
 - Sound preference stored in `localStorage` (`claudeck-notifications-sound`)
+
+### 32b. Notification Bell & History
+
+Persistent in-app notification system with a bell icon in the header toolbar. Events are stored in the `notifications` SQLite table and survive page reloads.
+
+**Bell icon:**
+- Positioned in `.header-right` before the Session settings dropdown
+- Red badge shows unread count (hidden when 0, shows `99+` for large counts)
+- Bell icon turns accent-colored when unread notifications exist
+- Click toggles a dropdown panel with the 15 most recent notifications
+
+**Dropdown:**
+- Each row shows: type emoji icon, title, body, relative time ("2m", "1h", "3d"), unread dot
+- Type icons: session (💬), agent (🤖), workflow (⚙️), chain (🔗), dag (🌐), error (⚠️), approval (🔒)
+- Footer with "Mark all read" and "View All" buttons
+- Empty state with muted bell icon and "No notifications yet" message
+
+**Events that create notifications:**
+
+| Source | Type | When |
+|--------|------|------|
+| Agent completion | `agent` | After `recordAgentRunComplete` in `agent-loop.js` |
+| Agent error | `error` | After agent error handling in `agent-loop.js` |
+| Background session done | `session` | Toast in `background-sessions.js` |
+| Background session error | `error` | Toast in `background-sessions.js` |
+| Background session input needed | `approval` | Toast in `background-sessions.js` |
+
+**Read/unread management (4 strategies):**
+1. **Explicit click** — click the unread dot on a notification row
+2. **Mark all** — footer button marks all as read
+3. **Auto on view** — 1.5s timer on dropdown open marks visible items as read
+4. **Click-through** — clicking a notification marks it read + switches to the source session
+5. **Age-based** — unreads older than 7 days auto-marked as read during daily cleanup
+
+**Full history modal:**
+- Opened via "View All" in dropdown footer
+- Filter bar: type dropdown, read status (all/unread/read)
+- Checkbox column for multi-select with "Mark Selected Read" and "Purge Old" bulk actions
+- "Load More" pagination (30 items per page)
+- Escape key closes modal
+
+**Real-time sync:**
+- `notification:new` WS broadcast updates badge + dropdown across all tabs
+- `notification:read` WS broadcast syncs read state across tabs
+- Badge re-fetched on WS reconnect
+
+**API routes** (on `/api/notifications` router):
+- `POST /create` — create notification (type, title, body, metadata, sourceSessionId)
+- `GET /history?limit=20&offset=0&unread_only=false&type=` — paginated fetch
+- `GET /unread-count` — lightweight count for badge
+- `POST /read` — mark read: `{ ids: [...] }`, `{ all: true }`, or `{ before: timestamp }`
+- `DELETE /old` — purge notifications older than 90 days
+
+**Cleanup:** `purgeOldNotifications(90)` runs daily via `setInterval` in `server.js`. Marks stale unreads (>7 days) as read and deletes rows older than 90 days.
+
+**Key files:** `server/notification-logger.js`, `server/routes/notifications.js`, `public/js/ui/notification-bell.js`, `public/js/ui/notification-history.js`, `public/css/ui/notification-bell.css`
 
 ### 33. Telegram Integration (Two-Way)
 Full two-way Telegram bot integration for AFK developers — rich notifications outbound, tool approval inbound:
@@ -1041,6 +1173,40 @@ Cross-session project knowledge that survives server restarts and upgrades:
 - Plugins use `ctx.on('projectChanged', fn)` and `ctx.getProjectPath()` instead of accessing the DOM element directly
 - Updated plugin scaffold and claude-editor plugin follow the new pattern
 
+### 53. Git Worktree Support
+Run any chat or agent task in an isolated git worktree without touching the working branch:
+- **Worktree toggle** — tree icon button in the chat input bar; when active, the next message runs in a new worktree
+- **Confirmation card** — before sending, shows the branch name and base branch with "Run in Worktree" / "Run in Current" buttons
+- **Worktree creation** — creates a git worktree at `<project>/../.claudeck-worktrees/<branch>` with branch `claudeck/wt-<shortid>`
+- **Active banner** — while running, shows a banner with branch name, base branch, and worktree status
+- **Completion card** — on task completion, shows merge/diff/discard action buttons
+- **Merge** — merges worktree branch back into the base branch, removes worktree and branch
+- **Diff** — shows a colored diff modal between worktree changes and base branch
+- **Discard** — removes worktree and deletes branch without merging
+- **Git panel section** — "Worktrees" section in the Git tab listing active worktrees with status badges (running/ready) and per-worktree merge/diff/discard actions
+- **Database tracking** — `worktrees` table tracks id, session, paths, branch, status, and user prompt
+- **WebSocket integration** — `worktree_created` and `worktree_completed` messages for real-time UI updates
+
+### 54. Skills Marketplace (SkillsMP)
+Browse, search, install, and manage agent skills from the [SkillsMP](https://skillsmp.com/) registry directly within Claudeck:
+- **Token-gated activation** — panel shows an activation form until user enters a valid SkillsMP API key (free from skillsmp.com). All marketplace features unlock after activation
+- **Browse tab** — keyword search (~200ms) and AI semantic search (~2.5s) with mode toggle; sort by stars or recency; paginated results; clickable skill cards with detail expansion (GitHub link, SkillsMP page, last updated)
+- **Initial state** — "Discover agent skills" with clickable example tags (code-review, commit-message, testing) that pre-fill the search
+- **Search hint** — contextual hint below the search bar that updates based on the selected mode
+- **Install flow** — one-click install with scope selector (Global / Project); downloads SKILL.md + assets from GitHub; normalizes names to valid directory format; injects YAML frontmatter (name + description) if missing; toast notification on success/failure
+- **Duplicate detection** — if installing a skill that already exists in the same scope, shows a custom confirm dialog to overwrite or cancel
+- **Installed tab** — lists installed skills grouped by scope (Project / Global); toggle switch to enable/disable; trash icon to uninstall with custom confirm dialog
+- **Settings tab** — view/change/remove API key, daily quota display, default scope and search mode selectors
+- **Deactivation flow** — remove key from Settings reverts panel to activation form
+- **Skill used messages** — system info messages in chat area when a skill is triggered:
+  - **User-invoked** — detected when user executes a skill slash command (`category: "skill"`)
+  - **Model-invoked** — detected via WebSocket `{ type: "tool", name: "Skill" }` with skill lookup map
+  - **Persistence** — model-invoked skill events render on session reload via `renderMessagesIntoPane`
+- **Post-install integration** — re-triggers `loadProjectCommands()` so new skills appear in `/` autocomplete immediately
+- **Keyboard navigation** — ArrowDown from search to results, ArrowUp/Down between cards, Enter to expand
+- **Error handling** — banners for invalid/expired API key (with re-enter button), quota exceeded, network errors (with retry button)
+- **Files**: `server/routes/skills.js`, `public/js/panels/skills-manager.js`, `public/css/panels/skills-manager.css`, `config/skillsmp-config.json`
+
 ---
 
 ## Slash Commands
@@ -1066,6 +1232,7 @@ Cross-session project knowledge that survives server restarts and upgrades:
 | /mcp             | Open MCP server manager modal  |
 | /notifications   | Toggle browser notifications   |
 | /tips            | Toggle tips feed panel         |
+| /skills          | Open Skills Marketplace panel  |
 | /remember        | Save a memory from chat        |
 
 ### CLI
@@ -1126,6 +1293,14 @@ Loaded from the selected project's `.claude/` directory:
 
 Autocomplete triggers on `/` with keyboard navigation (arrow keys, Tab, Enter). Project commands and skills sort first.
 
+### Message Recall (Input History)
+Two complementary mechanisms for recalling previously sent messages:
+- **Up-arrow recall** — press `↑` on an empty input to cycle through previous messages; `↓` to move forward; `Escape` to cancel
+- **History button** — clock icon below the Send button opens a popover listing all recent messages (newest first); click to insert into input
+- Per-project localStorage persistence (`claudeck-input-history-<projectPath>`, max 100 entries)
+- Slash commands are included in history; messages with attachments store text only
+- Consecutive duplicate messages are deduplicated
+
 ---
 
 ## Configuration
@@ -1145,7 +1320,8 @@ On first run, Claudeck creates `~/.claudeck/` and copies default config files th
 │   ├── agent-chains.json 2 agent chains (sequential pipelines)
 │   ├── agent-dags.json  1 agent DAG (dependency graph)
 │   ├── bot-prompt.json  Assistant bot system prompt
-│   └── telegram-config.json  Telegram bot config + notification preferences
+│   ├── telegram-config.json  Telegram bot config + notification preferences
+│   └── skillsmp-config.json  SkillsMP marketplace config (apiKey, defaultScope, searchMode)
 ├── plugins/             User-installed tab-sdk plugins
 ├── data.db              SQLite database
 └── .env                 Environment variables
@@ -1263,7 +1439,7 @@ Configure via **Tools > Telegram** in the header or edit directly. Requires a Te
 All colors are CSS custom properties on `:root` (defined in `css/variables.css`). The light theme overrides them via `html[data-theme="light"]`. No page reload required.
 
 ### Layout
-- **Header** (36px): background session indicator, **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, notifications, Telegram, dev docs), panel toggle
+- **Header** (36px): background session indicator, **Notification bell** (badge + dropdown + history modal), **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, notifications, Telegram, dev docs), panel toggle
 - **Sidebar** (272px): project selector (with add project button), session controls (search, new session, parallel toggle), session list (with right-click context menu)
 - **Main area**: messages (820px max-width), input bar (with tooltipped action buttons), toolbox/workflow/agent panels
 - **Right panel** (300px, resizable): tabbed container with Tasks, Files, Git, Repos, Events, plugin tabs
@@ -1283,6 +1459,7 @@ Claudeck/
 │   ├── ws-handler.js      WebSocket handler with stale session retry
 │   ├── agent-loop.js      Autonomous agent execution
 │   ├── summarizer.js      AI session summary generation via Claude Haiku
+│   ├── notification-logger.js  In-app notification creation + WS broadcast
 │   ├── push-sender.js     Web Push notification sender
 │   ├── telegram-sender.js Telegram Bot API (rich messages, inline keyboards, permissions)
 │   ├── telegram-poller.js Telegram callback listener (long-poll getUpdates, routes approvals)
@@ -1299,13 +1476,14 @@ Claudeck/
 │       ├── linear.js      Linear API proxy (issues, teams, states)
 │       ├── mcp.js         MCP server CRUD (global + per-project)
 │       ├── repos.js       Repos CRUD (groups + repos)
-│       ├── notifications.js Push subscription management + VAPID key
+│       ├── notifications.js Push subscriptions + notification bell API (history, read, create)
 │       ├── tips.js        Tips feed API + RSS proxy
 │       ├── bot.js         Assistant bot system prompt API
 │       ├── agents.js      Agents listing API
 │       ├── todos.js       Todo + brag CRUD
 │       ├── telegram.js    Telegram notification config + test
-│       └── memory.js      Memory CRUD, search, stats, optimize
+│       ├── memory.js      Memory CRUD, search, stats, optimize
+│       └── skills.js      SkillsMP marketplace (search, install, uninstall, toggle, config)
 ├── config/                Default JSON configs (copied to ~/.claudeck/ on first run)
 │   ├── folders.json       Project configurations
 │   ├── repos.json         Repository groups + repos
@@ -1313,7 +1491,8 @@ Claudeck/
 │   ├── workflows.json     4 multi-step workflows
 │   ├── agents.json        4 autonomous agent definitions
 │   ├── bot-prompt.json    Assistant bot system prompt
-│   └── telegram-config.json Telegram bot config + notification preferences
+│   ├── telegram-config.json Telegram bot config + notification preferences
+│   └── skillsmp-config.json SkillsMP marketplace config
 ├── package.json           6 runtime dependencies
 ├── cli.js                 CLI entry point (npx/global install)
 ├── .github/
@@ -1328,17 +1507,17 @@ Claudeck/
     ├── style.css          CSS entry point (@import hub)
     ├── css/
     │   ├── core/          variables.css, reset.css, responsive.css
-    │   ├── ui/            layout, sessions, messages, parallel, modals, etc.
+    │   ├── ui/            layout, sessions, messages, parallel, modals, input-history, etc.
     │   ├── features/      welcome.css, tour.css, voice-input.css, retro-terminal.css
-    │   └── panels/        assistant-bot, tips-feed, dev-docs, telegram, mcp-manager
+    │   └── panels/        assistant-bot, tips-feed, dev-docs, telegram, mcp-manager, skills-manager
     ├── data/
     │   └── tips.json      20 curated tips + RSS feed definitions
     └── js/
         ├── main.js        Entry point — imports all modules
         ├── core/          store, dom, constants, events, utils, api, ws, plugin-loader
         ├── ui/            messages, formatting, diff, export, theme, commands, parallel, etc.
-        ├── features/      chat, sessions, projects, home, welcome, tour, attachments, voice-input, easter-egg, etc.
-        └── panels/        assistant-bot, tips-feed, dev-docs, file-explorer, git-panel, mcp-manager
+        ├── features/      chat, sessions, projects, input-history, home, welcome, tour, attachments, voice-input, easter-egg, etc.
+        └── panels/        assistant-bot, tips-feed, dev-docs, file-explorer, git-panel, mcp-manager, skills-manager
 plugins/                   Full-stack plugins (client.js, server.js, config.json)
     ├── linear/            Issues + settings with server-side API routes
     ├── repos/             Repository management with server-side routes

@@ -9,7 +9,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { appendFileSync, readdirSync, existsSync, statSync } from "fs";
 import webpush from "web-push";
-import { getDb, allClaudeSessions } from "./db.js";
+import { getDb, allClaudeSessions, purgeOldNotifications } from "./db.js";
 import { initPushSender } from "./server/push-sender.js";
 import { initTelegramSender } from "./server/telegram-sender.js";
 import { startTelegramPoller, stopTelegramPoller } from "./server/telegram-poller.js";
@@ -30,7 +30,10 @@ import tipsRouter from "./server/routes/tips.js";
 import botRouter from "./server/routes/bot.js";
 import notificationsRouter, { setVapidPublicKey } from "./server/routes/notifications.js";
 import memoryRouter from "./server/routes/memory.js";
+import worktreesRouter from "./server/routes/worktrees.js";
+import skillsRouter from "./server/routes/skills.js";
 import { setupWebSocket } from "./server/ws-handler.js";
+import { setWss } from "./server/notification-logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -85,6 +88,13 @@ const sessionIds = new Map();
 // Share sessionIds with sessions router
 setSessionIds(sessionIds);
 
+// Reconcile orphaned worktrees (fire-and-forget)
+import { listActiveWorktrees, updateWorktreeStatus } from "./db.js";
+import { reconcileOrphanedWorktrees } from "./server/utils/git-worktree.js";
+reconcileOrphanedWorktrees(listActiveWorktrees, updateWorktreeStatus)
+  .then(() => console.log("Worktree reconciliation complete"))
+  .catch((e) => console.error("Worktree reconciliation error:", e.message));
+
 // Mount routes
 app.use("/api/projects", projectsRouter);
 app.use("/api/sessions", sessionsRouter);
@@ -106,6 +116,8 @@ app.use("/api/tips", tipsRouter);
 app.use("/api/bot", botRouter);
 app.use("/api/telegram", telegramRouter);
 app.use("/api/memory", memoryRouter);
+app.use("/api/worktrees", worktreesRouter);
+app.use("/api/skills", skillsRouter);
 
 // Version endpoint
 import { readFileSync } from "fs";
@@ -164,6 +176,7 @@ app.get("/api/plugins", (req, res) => {
 });
 
 // WebSocket
+setWss(wss);
 setupWebSocket(wss, sessionIds);
 
 const PORT = process.env.PORT || 9009;
@@ -188,6 +201,9 @@ mountPluginRoutes(app, fullStackPluginsDir).then(() => {
 `);
   });
 });
+
+// Purge old notifications once per day
+setInterval(() => purgeOldNotifications(90), 24 * 60 * 60 * 1000);
 
 // Graceful shutdown
 process.on("SIGINT", () => {
