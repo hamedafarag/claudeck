@@ -99,6 +99,8 @@ export const $ = {
   fpSearch: document.getElementById("fp-search"),
   fpList: document.getElementById("fp-list"),
   fpCount: document.getElementById("fp-count"),
+  fpSelected: document.getElementById("fp-selected"),
+  fpEmpty: document.getElementById("fp-empty"),
 
   // Image attachments
   imageBtn: document.getElementById("image-btn"),
