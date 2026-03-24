@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://www.producthunt.com/products/claudeck?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-claudeck" target="_blank" rel="noopener noreferrer"><img alt="Claudeck on Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1105387&theme=light&t=1774340505179" /></a>
+</p>
+
+<p align="center">
   <a href="https://www.npmjs.com/package/claudeck"><img src="https://img.shields.io/npm/v/claudeck?color=cb3837&label=npm" alt="npm version" /></a>
   <a href="https://github.com/hamedafarag/claudeck/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/claudeck?color=blue" alt="license" /></a>
   <img src="https://img.shields.io/node/v/claudeck?color=339933" alt="node version" />
