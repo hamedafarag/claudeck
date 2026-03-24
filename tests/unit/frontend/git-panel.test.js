@@ -154,4 +154,167 @@ describe("git-panel", () => {
     expect(domElements.gitLogList.innerHTML).toBe("");
     expect(domElements.gitBranchSelect.innerHTML).toBe("");
   });
+
+  // ── loadStatus via refresh ──────────────────────────────
+
+  it("renders staged files in status list", async () => {
+    mockExecCommand.mockImplementation((cmd) => {
+      if (cmd.includes("git status"))
+        return Promise.resolve({ stdout: "A  newfile.js\n", error: false });
+      if (cmd.includes("git branch"))
+        return Promise.resolve({ stdout: "* main\n", error: false });
+      if (cmd.includes("git log"))
+        return Promise.resolve({ stdout: "", error: false });
+      if (cmd.includes("git rev-parse"))
+        return Promise.resolve({ stdout: "main\n", error: false });
+      if (cmd.includes("git rev-list"))
+        return Promise.resolve({ stdout: "", error: true });
+      return Promise.resolve({ stdout: "", error: false });
+    });
+
+    domElements.gitRefreshBtn.dispatchEvent(new Event("click"));
+
+    await vi.waitFor(() => {
+      const group = domElements.gitStatusList.querySelector(".git-status-group");
+      expect(group).not.toBeNull();
+      const title = group.querySelector(".git-status-group-title");
+      expect(title.textContent).toContain("Staged");
+      const fileRow = group.querySelector(".git-status-file");
+      expect(fileRow).not.toBeNull();
+      expect(fileRow.textContent).toContain("newfile.js");
+    });
+  });
+
+  it("renders changed files in status list", async () => {
+    mockExecCommand.mockImplementation((cmd) => {
+      if (cmd.includes("git status"))
+        return Promise.resolve({ stdout: " M changed.js\n", error: false });
+      if (cmd.includes("git branch"))
+        return Promise.resolve({ stdout: "* main\n", error: false });
+      if (cmd.includes("git log"))
+        return Promise.resolve({ stdout: "", error: false });
+      if (cmd.includes("git rev-parse"))
+        return Promise.resolve({ stdout: "main\n", error: false });
+      if (cmd.includes("git rev-list"))
+        return Promise.resolve({ stdout: "", error: true });
+      return Promise.resolve({ stdout: "", error: false });
+    });
+
+    domElements.gitRefreshBtn.dispatchEvent(new Event("click"));
+
+    await vi.waitFor(() => {
+      const group = domElements.gitStatusList.querySelector(".git-status-group");
+      expect(group).not.toBeNull();
+      const title = group.querySelector(".git-status-group-title");
+      expect(title.textContent).toContain("Changes");
+      const fileRow = group.querySelector(".git-status-file");
+      expect(fileRow).not.toBeNull();
+      expect(fileRow.textContent).toContain("changed.js");
+    });
+  });
+
+  it("renders untracked files", async () => {
+    mockExecCommand.mockImplementation((cmd) => {
+      if (cmd.includes("git status"))
+        return Promise.resolve({ stdout: "?? untracked.txt\n", error: false });
+      if (cmd.includes("git branch"))
+        return Promise.resolve({ stdout: "* main\n", error: false });
+      if (cmd.includes("git log"))
+        return Promise.resolve({ stdout: "", error: false });
+      if (cmd.includes("git rev-parse"))
+        return Promise.resolve({ stdout: "main\n", error: false });
+      if (cmd.includes("git rev-list"))
+        return Promise.resolve({ stdout: "", error: true });
+      return Promise.resolve({ stdout: "", error: false });
+    });
+
+    domElements.gitRefreshBtn.dispatchEvent(new Event("click"));
+
+    await vi.waitFor(() => {
+      const group = domElements.gitStatusList.querySelector(".git-status-group");
+      expect(group).not.toBeNull();
+      const title = group.querySelector(".git-status-group-title");
+      expect(title.textContent).toContain("Untracked");
+      const fileRow = group.querySelector(".git-status-file");
+      expect(fileRow).not.toBeNull();
+      expect(fileRow.textContent).toContain("untracked.txt");
+    });
+  });
+
+  it("renders clean working tree message", async () => {
+    mockExecCommand.mockImplementation((cmd) => {
+      if (cmd.includes("git status"))
+        return Promise.resolve({ stdout: "", error: false });
+      if (cmd.includes("git branch"))
+        return Promise.resolve({ stdout: "* main\n", error: false });
+      if (cmd.includes("git log"))
+        return Promise.resolve({ stdout: "", error: false });
+      if (cmd.includes("git rev-parse"))
+        return Promise.resolve({ stdout: "main\n", error: false });
+      if (cmd.includes("git rev-list"))
+        return Promise.resolve({ stdout: "", error: true });
+      return Promise.resolve({ stdout: "", error: false });
+    });
+
+    domElements.gitRefreshBtn.dispatchEvent(new Event("click"));
+
+    await vi.waitFor(() => {
+      const emptyMsg = domElements.gitStatusList.querySelector(".git-empty");
+      expect(emptyMsg).not.toBeNull();
+      expect(emptyMsg.textContent).toContain("Working tree clean");
+    });
+  });
+
+  it("renders commit log entries", async () => {
+    mockExecCommand.mockImplementation((cmd) => {
+      if (cmd.includes("git status"))
+        return Promise.resolve({ stdout: "", error: false });
+      if (cmd.includes("git branch"))
+        return Promise.resolve({ stdout: "* main\n", error: false });
+      if (cmd.includes("git log"))
+        return Promise.resolve({
+          stdout: "abc1234|Fix bug|2h ago\ndef5678|Add feature|1d ago\n",
+          error: false,
+        });
+      if (cmd.includes("git rev-parse"))
+        return Promise.resolve({ stdout: "main\n", error: false });
+      if (cmd.includes("git rev-list"))
+        return Promise.resolve({ stdout: "", error: true });
+      return Promise.resolve({ stdout: "", error: false });
+    });
+
+    domElements.gitRefreshBtn.dispatchEvent(new Event("click"));
+
+    await vi.waitFor(() => {
+      const logItems = domElements.gitLogList.querySelectorAll(".git-log-item");
+      expect(logItems.length).toBe(2);
+    });
+  });
+
+  it("populates branch select with branches", async () => {
+    mockExecCommand.mockImplementation((cmd) => {
+      if (cmd.includes("git status"))
+        return Promise.resolve({ stdout: "", error: false });
+      if (cmd.includes("git branch"))
+        return Promise.resolve({
+          stdout: "  main\n* feature\n  dev\n",
+          error: false,
+        });
+      if (cmd.includes("git log"))
+        return Promise.resolve({ stdout: "", error: false });
+      if (cmd.includes("git rev-parse"))
+        return Promise.resolve({ stdout: "feature\n", error: false });
+      if (cmd.includes("git rev-list"))
+        return Promise.resolve({ stdout: "", error: true });
+      return Promise.resolve({ stdout: "", error: false });
+    });
+
+    domElements.gitRefreshBtn.dispatchEvent(new Event("click"));
+
+    await vi.waitFor(() => {
+      const options = domElements.gitBranchSelect.querySelectorAll("option");
+      expect(options.length).toBe(3);
+      expect(domElements.gitBranchSelect.value).toBe("feature");
+    });
+  });
 });

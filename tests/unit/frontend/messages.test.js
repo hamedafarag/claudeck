@@ -60,8 +60,11 @@ import {
   appendAssistantText,
   appendToolIndicator,
   appendToolResult,
+  renderMessagesIntoPane,
 } from "../../../public/js/ui/messages.js";
 import { scrollToBottom } from "../../../public/js/core/utils.js";
+import { renderDiffView, renderAdditionsView } from "../../../public/js/ui/diff.js";
+import { setState } from "../../../public/js/core/store.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -562,6 +565,256 @@ describe("messages", () => {
       appendToolResult(null, "error content", true, pane);
       const indicator = pane.messagesDiv.querySelector(".tool-indicator.tool-error");
       expect(indicator).not.toBeNull();
+    });
+  });
+
+  // ─── renderMessagesIntoPane ───────────────────────────────────────────────
+
+  describe("renderMessagesIntoPane", () => {
+    it("shows whaly placeholder for empty messages", () => {
+      renderMessagesIntoPane([], pane);
+      expect(pane.messagesDiv.querySelector(".whaly-placeholder")).not.toBeNull();
+    });
+
+    it("shows whaly placeholder for null messages", () => {
+      renderMessagesIntoPane(null, pane);
+      expect(pane.messagesDiv.querySelector(".whaly-placeholder")).not.toBeNull();
+    });
+
+    it("renders user message", () => {
+      renderMessagesIntoPane([
+        { role: "user", content: JSON.stringify({ text: "Hello Claude" }) },
+      ], pane);
+      expect(pane.messagesDiv.querySelector(".msg-user")).not.toBeNull();
+      expect(pane.messagesDiv.querySelector(".msg-user-body").textContent).toBe("Hello Claude");
+    });
+
+    it("renders assistant message", () => {
+      renderMessagesIntoPane([
+        { role: "assistant", content: JSON.stringify({ text: "Hi there" }) },
+      ], pane);
+      expect(pane.messagesDiv.querySelector(".msg-assistant")).not.toBeNull();
+    });
+
+    it("renders tool indicator with isLive=false", () => {
+      renderMessagesIntoPane([
+        { role: "tool", content: JSON.stringify({ name: "Read", input: { file_path: "/test.js" }, id: "t1" }) },
+      ], pane);
+      const indicator = pane.messagesDiv.querySelector(".tool-indicator");
+      expect(indicator).not.toBeNull();
+      expect(indicator.classList.contains("tool-running")).toBe(false);
+    });
+
+    it("renders tool_result", () => {
+      renderMessagesIntoPane([
+        { role: "tool", content: JSON.stringify({ name: "Read", input: {}, id: "t1" }) },
+        { role: "tool_result", content: JSON.stringify({ toolUseId: "t1", content: "file contents", isError: false }) },
+      ], pane);
+      const indicator = pane.messagesDiv.querySelector(".tool-indicator.tool-done");
+      expect(indicator).not.toBeNull();
+    });
+
+    it("renders result summary", () => {
+      renderMessagesIntoPane([
+        { role: "assistant", content: JSON.stringify({ text: "Done" }), id: "a1" },
+        { role: "result", content: JSON.stringify({ model: "sonnet", num_turns: 2, cost_usd: 0.01 }) },
+      ], pane);
+      const status = pane.messagesDiv.querySelector(".status");
+      expect(status).not.toBeNull();
+      expect(status.textContent).toContain("sonnet");
+    });
+
+    it("renders error status", () => {
+      renderMessagesIntoPane([
+        { role: "error", content: JSON.stringify({ error: "API error", subtype: "overloaded" }) },
+      ], pane);
+      const status = pane.messagesDiv.querySelector(".status.error");
+      expect(status).not.toBeNull();
+      expect(status.textContent).toContain("[overloaded]");
+      expect(status.textContent).toContain("API error");
+    });
+
+    it("renders aborted status", () => {
+      renderMessagesIntoPane([
+        { role: "aborted", content: JSON.stringify({}) },
+      ], pane);
+      const status = pane.messagesDiv.querySelector(".status.error");
+      expect(status).not.toBeNull();
+      expect(status.textContent).toBe("Aborted");
+    });
+
+    it("renders skill message for Skill tool_use", () => {
+      renderMessagesIntoPane([
+        { role: "tool", content: JSON.stringify({ name: "Skill", input: { skill: "commit", description: "Auto commit" }, id: "s1" }) },
+      ], pane);
+      const skillMsg = pane.messagesDiv.querySelector(".skill-used-message");
+      expect(skillMsg).not.toBeNull();
+    });
+
+    it("renders skill role message", () => {
+      renderMessagesIntoPane([
+        { role: "skill", content: JSON.stringify({ skill: "review", description: "Code review" }) },
+      ], pane);
+      const skillMsg = pane.messagesDiv.querySelector(".skill-used-message");
+      expect(skillMsg).not.toBeNull();
+    });
+
+    it("extracts file paths from user message content", () => {
+      const text = 'Check this\n<file path="src/app.js">content here</file>';
+      renderMessagesIntoPane([
+        { role: "user", content: JSON.stringify({ text }) },
+      ], pane);
+      const fileTags = pane.messagesDiv.querySelectorAll(".msg-user-file-tag");
+      expect(fileTags.length).toBe(1);
+      expect(fileTags[0].textContent).toBe("src/app.js");
+      // User text should NOT contain the <file> block
+      const body = pane.messagesDiv.querySelector(".msg-user-body");
+      expect(body.textContent).toBe("Check this");
+    });
+
+    it("clears messagesDiv before rendering", () => {
+      pane.messagesDiv.innerHTML = "<div>old content</div>";
+      renderMessagesIntoPane([
+        { role: "user", content: JSON.stringify({ text: "new" }) },
+      ], pane);
+      expect(pane.messagesDiv.querySelector("div:first-child").textContent).not.toBe("old content");
+    });
+
+    it("resets currentAssistantMsg after rendering", () => {
+      renderMessagesIntoPane([
+        { role: "assistant", content: JSON.stringify({ text: "hello" }) },
+      ], pane);
+      expect(pane.currentAssistantMsg).toBeNull();
+    });
+
+    it("renders full conversation with multiple message types", () => {
+      renderMessagesIntoPane([
+        { role: "user", content: JSON.stringify({ text: "Fix the bug" }) },
+        { role: "assistant", content: JSON.stringify({ text: "Let me look at the code" }), id: "a1" },
+        { role: "tool", content: JSON.stringify({ name: "Read", input: { file_path: "app.js" }, id: "t1" }) },
+        { role: "tool_result", content: JSON.stringify({ toolUseId: "t1", content: "code...", isError: false }) },
+        { role: "assistant", content: JSON.stringify({ text: "Found the issue" }), id: "a2" },
+        { role: "result", content: JSON.stringify({ model: "sonnet", num_turns: 3 }) },
+      ], pane);
+      // Should have: user msg + assistant msg + tool indicator + assistant msg + result status
+      expect(pane.messagesDiv.querySelector(".msg-user")).not.toBeNull();
+      expect(pane.messagesDiv.querySelectorAll(".msg-assistant").length).toBe(2);
+      expect(pane.messagesDiv.querySelector(".tool-indicator")).not.toBeNull();
+      expect(pane.messagesDiv.querySelector(".status")).not.toBeNull();
+    });
+  });
+
+  // ─── appendToolIndicator — diff branches ──────────────────────────────────
+
+  describe("appendToolIndicator — diff branches", () => {
+    it("renders diff view for Edit tool when renderDiffView returns element", () => {
+      const diffEl = document.createElement("div");
+      diffEl.className = "diff-view";
+      renderDiffView.mockReturnValueOnce(diffEl);
+
+      appendToolIndicator("Edit", { old_string: "a", new_string: "b", file_path: "test.js" }, pane, "t1", true);
+      expect(pane.messagesDiv.querySelector(".diff-view")).not.toBeNull();
+      // Should NOT have a regular tool-indicator
+      expect(pane.messagesDiv.querySelector(".tool-indicator")).toBeNull();
+    });
+
+    it("renders additions view for Write tool when renderAdditionsView returns element", () => {
+      const addEl = document.createElement("div");
+      addEl.className = "additions-view";
+      renderAdditionsView.mockReturnValueOnce(addEl);
+
+      appendToolIndicator("Write", { content: "new file content", file_path: "new.js" }, pane, "t2", true);
+      expect(pane.messagesDiv.querySelector(".additions-view")).not.toBeNull();
+    });
+
+    it("falls through to default indicator when renderDiffView returns null", () => {
+      appendToolIndicator("Edit", { old_string: "a", new_string: "b", file_path: "test.js" }, pane, "t1", true);
+      expect(pane.messagesDiv.querySelector(".tool-indicator")).not.toBeNull();
+    });
+  });
+
+  // ─── appendToolResult — in-place updates ──────────────────────────────────
+
+  describe("appendToolResult — in-place updates", () => {
+    it("hides spinner on completion", () => {
+      appendToolIndicator("Read", {}, pane, "t1", true);
+      appendToolResult("t1", "done", false, pane);
+      const spinner = pane.messagesDiv.querySelector(".tool-spinner");
+      expect(spinner.style.display).toBe("none");
+    });
+
+    it("shows success status icon", () => {
+      appendToolIndicator("Read", {}, pane, "t1", true);
+      appendToolResult("t1", "content", false, pane);
+      const icon = pane.messagesDiv.querySelector(".tool-status-icon");
+      expect(icon.style.display).toBe("");
+      expect(icon.innerHTML).toContain("\u2713");
+    });
+
+    it("shows error status icon", () => {
+      appendToolIndicator("Read", {}, pane, "t1", true);
+      appendToolResult("t1", "not found", true, pane);
+      const icon = pane.messagesDiv.querySelector(".tool-status-icon");
+      expect(icon.innerHTML).toContain("\u2717");
+    });
+
+    it("shows result preview text", () => {
+      appendToolIndicator("Read", {}, pane, "t1", true);
+      appendToolResult("t1", "file content here", false, pane);
+      const preview = pane.messagesDiv.querySelector(".tool-result-preview");
+      expect(preview.style.display).toBe("");
+      expect(preview.textContent).toBe("file content here");
+    });
+
+    it("truncates result preview to 150 chars", () => {
+      appendToolIndicator("Read", {}, pane, "t1", true);
+      const longContent = "x".repeat(200);
+      appendToolResult("t1", longContent, false, pane);
+      const preview = pane.messagesDiv.querySelector(".tool-result-preview");
+      expect(preview.textContent.length).toBe(150);
+    });
+
+    it("appends result to tool-body", () => {
+      appendToolIndicator("Read", {}, pane, "t1", true);
+      appendToolResult("t1", "result text", false, pane);
+      const body = pane.messagesDiv.querySelector(".tool-body");
+      expect(body.innerHTML).toContain("Result");
+      expect(body.innerHTML).toContain("result text");
+    });
+
+    it("adds error class to result preview on error", () => {
+      appendToolIndicator("Read", {}, pane, "t1", true);
+      appendToolResult("t1", "error msg", true, pane);
+      const preview = pane.messagesDiv.querySelector(".tool-result-preview");
+      expect(preview.className).toContain("error");
+    });
+  });
+
+  // ─── appendAssistantText — streaming counter ──────────────────────────────
+
+  describe("appendAssistantText — streaming counter", () => {
+    it("accumulates raw text in dataset", () => {
+      appendAssistantText("hello ", pane);
+      appendAssistantText("world", pane);
+      expect(pane.currentAssistantMsg.dataset.raw).toBe("hello world");
+    });
+
+    it("calls setState with updated char count", () => {
+      appendAssistantText("test", pane);
+      expect(setState).toHaveBeenCalledWith("streamingCharCount", 4);
+    });
+  });
+
+  // ─── appendToolIndicator — click toggle ───────────────────────────────────
+
+  describe("appendToolIndicator — click toggle", () => {
+    it("toggles expanded class on click", () => {
+      appendToolIndicator("Read", {}, pane, "t1", true);
+      const indicator = pane.messagesDiv.querySelector(".tool-indicator");
+      indicator.click();
+      expect(indicator.classList.contains("expanded")).toBe(true);
+      indicator.click();
+      expect(indicator.classList.contains("expanded")).toBe(false);
     });
   });
 });

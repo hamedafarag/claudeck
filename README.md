@@ -46,7 +46,7 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 
 ## Why Claudeck?
 
-- **Zero-framework** — Vanilla JS, 6 npm dependencies, no build step
+- **Zero-framework** — Vanilla JS + Web Components, 6 npm dependencies, no build step
 - **Full agent orchestration** — Chains, DAGs, orchestrator, and monitoring dashboard
 - **Persistent memory** — Cross-session project knowledge with FTS5 search and AI optimization
 - **Cost visibility** — Per-session tracking, daily charts, token breakdowns
@@ -176,7 +176,8 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 | Backend | Express 4, WebSocket (ws 8), web-push 3 |
 | AI SDK | @anthropic-ai/claude-code |
 | Database | SQLite via better-sqlite3 (WAL mode) |
-| Frontend | Vanilla JS ES modules, CSS custom properties |
+| Frontend | Vanilla JS ES modules + Web Components (Light DOM), CSS custom properties |
+| Testing | Vitest + happy-dom (2,400+ tests, 55% coverage) |
 | Rendering | highlight.js, Mermaid (diagrams) — CDN |
 
 ---
@@ -276,6 +277,26 @@ npx skills add https://github.com/hamedafarag/claudeck-skills
 
 ---
 
+## Testing
+
+```bash
+npm test              # Run all 2,400+ tests
+npm test -- --coverage  # With coverage report
+```
+
+| Layer | Tests | Coverage |
+|-------|-------|----------|
+| **components/** (Web Components) | 170+ | 100% |
+| **core/** | 110+ | 90% |
+| **ui/** | 280+ | 65% |
+| **features/** | 210+ | 22% |
+| **panels/** | 150+ | 35% |
+| **server/** | 1,300+ | 95% |
+
+19 Web Components in `public/js/components/` — each is a self-contained Custom Element (Light DOM) that owns its HTML, testable with zero mocks.
+
+---
+
 ## Contributing
 
 Contributions are welcome! Fork the repo, make your changes, and open a PR.
@@ -285,6 +306,7 @@ git clone https://github.com/hamedafarag/claudeck.git
 cd claudeck
 npm install
 npm start
+npm test    # Run tests before submitting
 ```
 
 See [DOCUMENTATION.md](docs/DOCUMENTATION.md) for architecture details and [CONFIGURATION.md](docs/CONFIGURATION.md) for the config system.

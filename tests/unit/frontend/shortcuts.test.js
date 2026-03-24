@@ -10,7 +10,6 @@ const mockNewSessionBtn = { click: vi.fn() };
 
 vi.mock("../../../public/js/core/dom.js", () => ({
   $: {
-    shortcutsModal: mockShortcutsModal,
     sessionSearchInput: mockSessionSearchInput,
     newSessionBtn: mockNewSessionBtn,
   },
@@ -45,10 +44,11 @@ vi.mock("../../../public/js/panels/tips-feed.js", () => ({
 beforeEach(async () => {
   vi.resetModules();
 
-  // Create DOM elements the module accesses via getElementById
-  const closeBtn = document.createElement("button");
-  closeBtn.id = "shortcuts-modal-close";
-  document.body.appendChild(closeBtn);
+  // Create shortcuts modal element (now resolved via getElementById, not dom.js)
+  const shortcutsModalEl = document.createElement("div");
+  shortcutsModalEl.id = "shortcuts-modal";
+  shortcutsModalEl.className = "modal-overlay hidden";
+  document.body.appendChild(shortcutsModalEl);
 
   // Create some modal overlays for closeAllModals testing
   const modal1 = document.createElement("div");
@@ -100,7 +100,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  document.getElementById("shortcuts-modal-close")?.remove();
+  document.getElementById("shortcuts-modal")?.remove();
   document.getElementById("test-modal-1")?.remove();
   document.getElementById("test-modal-2")?.remove();
 });
@@ -134,8 +134,14 @@ describe("shortcuts", () => {
   });
 
   it("toggles shortcuts modal on Cmd+/", () => {
+    const modal = document.getElementById("shortcuts-modal");
+    expect(modal.classList.contains("hidden")).toBe(true);
+
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "/", metaKey: true, bubbles: true }));
-    expect(mockShortcutsModal.classList.toggle).toHaveBeenCalledWith("hidden");
+    expect(modal.classList.contains("hidden")).toBe(false);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "/", metaKey: true, bubbles: true }));
+    expect(modal.classList.contains("hidden")).toBe(true);
   });
 
   it("clicks new session button on Cmd+N", () => {

@@ -116,8 +116,7 @@ export const $ = {
   modalCloseBtn: document.getElementById("modal-close"),
   modalCancelBtn: document.getElementById("modal-cancel"),
 
-  // Shortcuts
-  shortcutsModal: document.getElementById("shortcuts-modal"),
+  // Shortcuts — rendered by <claudeck-shortcuts-modal> web component
 
   // Cost dashboard
   costDashboardModal: document.getElementById("cost-dashboard-modal"),

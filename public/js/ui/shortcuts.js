@@ -11,12 +11,8 @@ function closeAllModals() {
   document.querySelectorAll(".modal-overlay:not([data-persistent])").forEach((m) => m.classList.add("hidden"));
 }
 
-document.getElementById("shortcuts-modal-close").addEventListener("click", () => {
-  $.shortcutsModal.classList.add("hidden");
-});
-$.shortcutsModal.addEventListener("click", (e) => {
-  if (e.target === $.shortcutsModal) $.shortcutsModal.classList.add("hidden");
-});
+// Shortcuts modal ref — rendered by <claudeck-shortcuts-modal> web component
+const shortcutsModal = document.getElementById("shortcuts-modal");
 
 document.addEventListener("keydown", (e) => {
   const isMeta = e.metaKey || e.ctrlKey;
@@ -43,7 +39,7 @@ document.addEventListener("keydown", (e) => {
 
   if (isMeta && e.key === "/") {
     e.preventDefault();
-    $.shortcutsModal.classList.toggle("hidden");
+    shortcutsModal.classList.toggle("hidden");
     return;
   }
 
@@ -113,7 +109,7 @@ registerCommand("shortcuts", {
   category: "app",
   description: "Show keyboard shortcuts",
   execute() {
-    $.shortcutsModal.classList.remove("hidden");
+    shortcutsModal.classList.remove("hidden");
   },
 });
 

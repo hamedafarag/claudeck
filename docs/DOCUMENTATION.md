@@ -62,10 +62,11 @@ browser ──────── WebSocket ──────── server.js �
    │   │   ├── constants.js           ├── config/ (default configs, copied to ~/.claudeck/)
    │   │   ├── utils.js               ├── plugins/ (full-stack plugins)
    │   │   └── plugin-loader.js       │   ├── linear/ (client.js, server.js, config.json)
-   │   ├── ui/   (shared UI modules)  │   ├── repos/ (client.js, server.js)
-   │   ├── features/ (chat, voice, welcome, tour) │   ├── tasks/ (client.js, server.js)
-   │   │                              │   ├── claude-editor/ (client.js, client.css)
-   │   └── panels/  (bot, tips, docs) │   ├── event-stream/ (client.js, client.css)
+   │   ├── components/ (Web Components) │   ├── repos/ (client.js, server.js)
+   │   ├── ui/   (shared UI modules)  │   ├── tasks/ (client.js, server.js)
+   │   ├── features/ (chat, voice, welcome, tour) │   ├── claude-editor/ (client.js, client.css)
+   │   │                              │   ├── event-stream/ (client.js, client.css)
+   │   └── panels/  (bot, tips, docs) │   └── ... (tic-tac-toe, sudoku)
    │                                  │   └── ... (tic-tac-toe, sudoku)
    ├── css/
    │   ├── core/       (variables, reset, responsive)
@@ -84,7 +85,8 @@ browser ──────── WebSocket ──────── server.js �
 - **WebSocket** streams assistant text, tool calls, and results in real time
 - **Reconnect with backoff** — exponential backoff (2s → 4s → 8s → ... → 30s cap, 0-25% jitter), distinct `ws:reconnected` event triggers state sync
 - **State sync on reconnect** — reconciles background sessions, resets streaming panes, reloads messages from DB, refreshes session list
-- **Modular frontend** — 40+ ES modules organized into `core/`, `ui/`, `features/`, `panels/`, `plugins/` with no bundler
+- **Modular frontend** — 40+ ES modules organized into `core/`, `components/`, `ui/`, `features/`, `panels/`, `plugins/` with no bundler
+- **Web Components** — 19 Light DOM Custom Elements in `components/` encapsulate modal and section HTML, keeping `index.html` lean (~540 lines)
 - **Plugin system** — full-stack plugin architecture: `plugins/<name>/` directories with `client.js`, optional `server.js` (auto-mounted at `/api/plugins/<name>/`), `client.css`, and `config.json`. Also supports user plugins from `~/.claudeck/plugins/`. All discovered via `GET /api/plugins`
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
@@ -1499,7 +1501,7 @@ Claudeck/
 │   └── workflows/
 │       └── publish.yml    GitHub Actions — auto-publish to npm on release
 └── public/
-    ├── index.html         HTML structure + modals + SW registration
+    ├── index.html         HTML layout skeleton + Web Component tags (~540 lines)
     ├── manifest.json      PWA Web App Manifest
     ├── sw.js              Service worker (offline fallback + push + caching)
     ├── offline.html       Offline fallback page
@@ -1513,7 +1515,8 @@ Claudeck/
     ├── data/
     │   └── tips.json      20 curated tips + RSS feed definitions
     └── js/
-        ├── main.js        Entry point — imports all modules
+        ├── main.js        Entry point — imports components then all modules
+        ├── components/    19 Web Components (Light DOM Custom Elements for modals + sections)
         ├── core/          store, dom, constants, events, utils, api, ws, plugin-loader
         ├── ui/            messages, formatting, diff, export, theme, commands, parallel, etc.
         ├── features/      chat, sessions, projects, input-history, home, welcome, tour, attachments, voice-input, easter-egg, etc.

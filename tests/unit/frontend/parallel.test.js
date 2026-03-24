@@ -38,7 +38,7 @@ vi.mock("../../../public/js/features/input-history.js", () => ({
   handleHistoryKeydown: vi.fn(),
 }));
 
-let panes, getPane, initSinglePane, _setInputHistoryGetter, _setChatFns;
+let panes, getPane, initSinglePane, _setInputHistoryGetter, _setChatFns, createChatPane;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -75,6 +75,7 @@ beforeEach(async () => {
   initSinglePane = mod.initSinglePane;
   _setInputHistoryGetter = mod._setInputHistoryGetter;
   _setChatFns = mod._setChatFns;
+  createChatPane = mod.createChatPane;
 });
 
 describe("parallel", () => {
@@ -141,6 +142,107 @@ describe("parallel", () => {
   describe("_setChatFns", () => {
     it("is a function", () => {
       expect(typeof _setChatFns).toBe("function");
+    });
+  });
+
+  describe("createChatPane", () => {
+    it("createChatPane returns container and state", () => {
+      _setChatFns({ sendMessage: vi.fn(), stopGeneration: vi.fn() });
+      const result = createChatPane("chat-1", 0);
+      expect(result).toHaveProperty("container");
+      expect(result).toHaveProperty("state");
+    });
+
+    it("container has chat-pane class", () => {
+      _setChatFns({ sendMessage: vi.fn(), stopGeneration: vi.fn() });
+      const { container } = createChatPane("chat-1", 0);
+      expect(container.className).toBe("chat-pane");
+    });
+
+    it("container has data-chatId attribute", () => {
+      _setChatFns({ sendMessage: vi.fn(), stopGeneration: vi.fn() });
+      const { container } = createChatPane("chat-1", 0);
+      expect(container.dataset.chatId).toBe("chat-1");
+    });
+
+    it("container has header with Chat N label", () => {
+      _setChatFns({ sendMessage: vi.fn(), stopGeneration: vi.fn() });
+      const { container } = createChatPane("chat-1", 0);
+      const label = container.querySelector(".chat-pane-label");
+      expect(label).not.toBeNull();
+      expect(label.textContent).toBe("Chat 1");
+    });
+
+    it("container has messages div", () => {
+      _setChatFns({ sendMessage: vi.fn(), stopGeneration: vi.fn() });
+      const { container } = createChatPane("chat-1", 0);
+      const msgs = container.querySelector(".messages");
+      expect(msgs).not.toBeNull();
+    });
+
+    it("container has textarea", () => {
+      _setChatFns({ sendMessage: vi.fn(), stopGeneration: vi.fn() });
+      const { container } = createChatPane("chat-1", 0);
+      const textarea = container.querySelector("textarea");
+      expect(textarea).not.toBeNull();
+      expect(textarea.placeholder).toBe("Ask Claude... (Chat 1)");
+    });
+
+    it("container has send and stop buttons", () => {
+      _setChatFns({ sendMessage: vi.fn(), stopGeneration: vi.fn() });
+      const { container } = createChatPane("chat-1", 0);
+      const sendBtn = container.querySelector(".pane-send-btn");
+      const stopBtn = container.querySelector(".pane-stop-btn");
+      expect(sendBtn).not.toBeNull();
+      expect(stopBtn).not.toBeNull();
+    });
+
+    it("state has correct properties", () => {
+      _setChatFns({ sendMessage: vi.fn(), stopGeneration: vi.fn() });
+      const { state } = createChatPane("chat-1", 0);
+      expect(state.chatId).toBe("chat-1");
+      expect(state.isStreaming).toBe(false);
+      expect(state.currentAssistantMsg).toBeNull();
+      expect(state.messagesDiv).not.toBeNull();
+      expect(state.messageInput).not.toBeNull();
+      expect(state.sendBtn).not.toBeNull();
+      expect(state.stopBtn).not.toBeNull();
+    });
+
+    it("send button click calls sendMessage", () => {
+      const mockSendMessage = vi.fn();
+      const mockStopGeneration = vi.fn();
+      _setChatFns({ sendMessage: mockSendMessage, stopGeneration: mockStopGeneration });
+      const { container, state } = createChatPane("chat-1", 0);
+      const sendBtn = container.querySelector(".pane-send-btn");
+      sendBtn.click();
+      expect(mockSendMessage).toHaveBeenCalledWith(state);
+    });
+
+    it("stop button click calls stopGeneration", () => {
+      const mockSendMessage = vi.fn();
+      const mockStopGeneration = vi.fn();
+      _setChatFns({ sendMessage: mockSendMessage, stopGeneration: mockStopGeneration });
+      const { container, state } = createChatPane("chat-1", 0);
+      const stopBtn = container.querySelector(".pane-stop-btn");
+      stopBtn.click();
+      expect(mockStopGeneration).toHaveBeenCalledWith(state);
+    });
+
+    it("Enter key in textarea triggers sendMessage", () => {
+      const mockSendMessage = vi.fn();
+      const mockStopGeneration = vi.fn();
+      _setChatFns({ sendMessage: mockSendMessage, stopGeneration: mockStopGeneration });
+      const { container, state } = createChatPane("chat-1", 0);
+      const textarea = container.querySelector("textarea");
+      const enterEvent = new KeyboardEvent("keydown", {
+        key: "Enter",
+        shiftKey: false,
+        bubbles: true,
+        cancelable: true,
+      });
+      textarea.dispatchEvent(enterEvent);
+      expect(mockSendMessage).toHaveBeenCalledWith(state);
     });
   });
 });

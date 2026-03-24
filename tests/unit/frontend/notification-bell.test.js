@@ -121,4 +121,228 @@ describe("notification-bell", () => {
 
     expect(badgeEl.textContent).toBe("99+");
   });
+
+  // ── Toggle dropdown ──────────────────────────────────────────────────────
+
+  describe("toggle dropdown", () => {
+    function mockFetchForDropdown(notifications = []) {
+      globalThis.fetch = vi.fn((url) => {
+        if (url.includes("/history")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(notifications),
+          });
+        }
+        if (url.includes("/unread-count")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ count: 0 }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+    }
+
+    // Use outside click to reliably close dropdown and sync internal state
+    function ensureClosed() {
+      document.body.click();
+    }
+
+    it("opens dropdown on bell click", async () => {
+      ensureClosed();
+      mockFetchForDropdown([]);
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+      const dropdownEl = document.getElementById("notif-dropdown");
+
+      bellBtnEl.click();
+
+      expect(dropdownEl.classList.contains("hidden")).toBe(false);
+    });
+
+    it("closes dropdown on second bell click", () => {
+      ensureClosed();
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+      const dropdownEl = document.getElementById("notif-dropdown");
+
+      mockFetchForDropdown([]);
+
+      // First click opens
+      bellBtnEl.click();
+      expect(dropdownEl.classList.contains("hidden")).toBe(false);
+
+      // Second click closes
+      bellBtnEl.click();
+      expect(dropdownEl.classList.contains("hidden")).toBe(true);
+    });
+
+    it("closes dropdown on outside click", () => {
+      ensureClosed();
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+      const dropdownEl = document.getElementById("notif-dropdown");
+
+      mockFetchForDropdown([]);
+
+      // Open the dropdown
+      bellBtnEl.click();
+      expect(dropdownEl.classList.contains("hidden")).toBe(false);
+
+      // Click outside
+      document.body.click();
+      expect(dropdownEl.classList.contains("hidden")).toBe(true);
+    });
+  });
+
+  // ── Render notifications ─────────────────────────────────────────────────
+
+  describe("render notifications", () => {
+    function mockFetchForDropdown(notifications = []) {
+      globalThis.fetch = vi.fn((url) => {
+        if (url.includes("/history")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(notifications),
+          });
+        }
+        if (url.includes("/unread-count")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ count: 0 }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+    }
+
+    function ensureClosed() {
+      document.body.click();
+    }
+
+    it("renders notification items when history returns data", async () => {
+      ensureClosed();
+      const dropdownEl = document.getElementById("notif-dropdown");
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+
+      mockFetchForDropdown([
+        { id: 1, title: "Session done", type: "session", body: "Completed", created_at: Math.floor(Date.now() / 1000), read_at: null },
+      ]);
+
+      bellBtnEl.click();
+
+      await vi.waitFor(() => {
+        const items = dropdownEl.querySelectorAll(".notif-item");
+        expect(items.length).toBe(1);
+      });
+    });
+
+    it("renders empty state when no notifications", async () => {
+      ensureClosed();
+      const dropdownEl = document.getElementById("notif-dropdown");
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+
+      mockFetchForDropdown([]);
+
+      bellBtnEl.click();
+
+      await vi.waitFor(() => {
+        expect(dropdownEl.textContent).toContain("No notifications yet");
+      });
+    });
+
+    it("shows mark all read button", async () => {
+      ensureClosed();
+      const dropdownEl = document.getElementById("notif-dropdown");
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+
+      mockFetchForDropdown([
+        { id: 10, title: "Test notif", type: "agent", body: "body", created_at: Math.floor(Date.now() / 1000), read_at: null },
+      ]);
+
+      bellBtnEl.click();
+
+      await vi.waitFor(() => {
+        const btn = dropdownEl.querySelector('[data-action="mark-all-read"]');
+        expect(btn).not.toBeNull();
+      });
+    });
+
+    it("renders unread dot for unread notifications", async () => {
+      ensureClosed();
+      const dropdownEl = document.getElementById("notif-dropdown");
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+
+      mockFetchForDropdown([
+        { id: 20, title: "Unread notif", type: "session", body: "", created_at: Math.floor(Date.now() / 1000), read_at: null },
+      ]);
+
+      bellBtnEl.click();
+
+      await vi.waitFor(() => {
+        const dot = dropdownEl.querySelector(".notif-dot.unread");
+        expect(dot).not.toBeNull();
+      });
+    });
+  });
+
+  // ── timeAgo via rendered output ──────────────────────────────────────────
+
+  describe("timeAgo via rendered output", () => {
+    function mockFetchForDropdown(notifications = []) {
+      globalThis.fetch = vi.fn((url) => {
+        if (url.includes("/history")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(notifications),
+          });
+        }
+        if (url.includes("/unread-count")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ count: 0 }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+    }
+
+    function ensureClosed() {
+      document.body.click();
+    }
+
+    it("shows 'now' for recent notifications", async () => {
+      ensureClosed();
+      const dropdownEl = document.getElementById("notif-dropdown");
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+
+      mockFetchForDropdown([
+        { id: 30, title: "Just now", type: "session", body: "", created_at: Math.floor(Date.now() / 1000), read_at: null },
+      ]);
+
+      bellBtnEl.click();
+
+      await vi.waitFor(() => {
+        const timeEl = dropdownEl.querySelector(".notif-time");
+        expect(timeEl).not.toBeNull();
+        expect(timeEl.textContent).toBe("now");
+      });
+    });
+
+    it("shows minutes for older notifications", async () => {
+      ensureClosed();
+      const dropdownEl = document.getElementById("notif-dropdown");
+      const bellBtnEl = document.getElementById("notif-bell-btn");
+
+      const fiveMinAgo = Math.floor(Date.now() / 1000) - 300;
+      mockFetchForDropdown([
+        { id: 31, title: "Five min ago", type: "agent", body: "", created_at: fiveMinAgo, read_at: null },
+      ]);
+
+      bellBtnEl.click();
+
+      await vi.waitFor(() => {
+        const timeEl = dropdownEl.querySelector(".notif-time");
+        expect(timeEl).not.toBeNull();
+        expect(timeEl.textContent).toBe("5m");
+      });
+    });
+  });
 });
