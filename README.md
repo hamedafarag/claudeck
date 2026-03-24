@@ -84,6 +84,7 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 ### Code & Files
 
 - **File Explorer** — Lazy tree, syntax-highlighted preview, drag-to-chat
+- **File Picker** — Attach files with type dots, binary detection, search, selected chips
 - **Git Panel** — Branch switching, staging, commit, log, inline diff viewer
 - **Git Worktrees** — Run any chat/agent task in an isolated worktree; merge, diff, or discard results
 - **Repos Manager** — Organize repos in nested groups with GitHub links

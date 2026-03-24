@@ -67,7 +67,6 @@ browser ──────── WebSocket ──────── server.js �
    │   ├── features/ (chat, voice, welcome, tour) │   ├── claude-editor/ (client.js, client.css)
    │   │                              │   ├── event-stream/ (client.js, client.css)
    │   └── panels/  (bot, tips, docs) │   └── ... (tic-tac-toe, sudoku)
-   │                                  │   └── ... (tic-tac-toe, sudoku)
    ├── css/
    │   ├── core/       (variables, reset, responsive)
    │   ├── ui/         (messages, sessions, layout)
@@ -574,12 +573,19 @@ Each workflow chains prompts sequentially with context passing and step progress
 
 ### 8. File Attachments
 - File picker modal with recursive tree (depth 3, max 500 files)
-- Search/filter files by name
-- Multi-select with badge count
+- Search/filter files by name with search icon
+- Multi-select with badge count and selected file chips strip
+- File type color dots (code, config, markup, docs, data, binary)
+- Binary file detection with warning label (non-selectable)
+- Info banner showing 50KB text file constraint
+- Inline error states (too large, not found, permission denied) with auto-dismiss
+- Loading spinners during file content fetch
+- Empty state when no files match search
 - Files prepended as `<file path="...">` blocks
 - Attached file paths displayed as pills in user messages (RTL direction so filename is always visible when truncated)
 - File paths extracted from saved messages and re-rendered on session replay
 - 50KB per-file limit with path traversal protection
+- Files and images cleared automatically on project switch
 
 ### 9. Image / Vision Support
 - Attach images via **image button** (file picker), **paste** (Cmd+V), or **drag-and-drop** onto the message input
@@ -1443,7 +1449,7 @@ All colors are CSS custom properties on `:root` (defined in `css/variables.css`)
 ### Layout
 - **Header** (36px): background session indicator, **Notification bell** (badge + dropdown + history modal), **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, notifications, Telegram, dev docs), panel toggle
 - **Sidebar** (272px): project selector (with add project button), session controls (search, new session, parallel toggle), session list (with right-click context menu)
-- **Main area**: messages (820px max-width), input bar (with tooltipped action buttons), toolbox/workflow/agent panels
+- **Main area**: messages (820px max-width), input bar with inline toolbar strip (attach, images, agents, voice, worktree, prompts) below textarea, toolbox/workflow/agent panels
 - **Right panel** (300px, resizable): tabbed container with Tasks, Files, Git, Repos, Events, plugin tabs
 - **Status bar** (24px): connection dot, git branch, project name, version badge, activity, background sessions, model, permission mode, max turns, cost
 - **Responsive**: tablet (≤1024px) — sidebar becomes slide-in overlay; mobile (≤640px) — full-screen overlays, bottom-sheet dropdowns, compact input bar
