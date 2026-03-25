@@ -45,7 +45,8 @@
     "start": "node server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:perf": "vitest run --config vitest.config.perf.js"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.128",

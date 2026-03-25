@@ -184,7 +184,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 | AI SDK | @anthropic-ai/claude-code |
 | Database | SQLite via better-sqlite3 (WAL mode) |
 | Frontend | Vanilla JS ES modules + Web Components (Light DOM), CSS custom properties |
-| Testing | Vitest + happy-dom (2,400+ tests, 55% coverage) |
+| Testing | Vitest + happy-dom (2,400+ unit tests, 55% coverage) + WS perf benchmarks |
 | Rendering | highlight.js, Mermaid (diagrams) — CDN |
 
 ---
@@ -289,6 +289,7 @@ npx skills add https://github.com/hamedafarag/claudeck-skills
 ```bash
 npm test              # Run all 2,400+ tests
 npm test -- --coverage  # With coverage report
+npm run test:perf     # WebSocket performance benchmarks
 ```
 
 | Layer | Tests | Coverage |
@@ -301,6 +302,31 @@ npm test -- --coverage  # With coverage report
 | **server/** | 1,350+ | 95% |
 
 19 Web Components in `public/js/components/` — each is a self-contained Custom Element (Light DOM) that owns its HTML, testable with zero mocks.
+
+### Performance Benchmarks
+
+The `test:perf` suite measures WebSocket relay performance with real TCP connections over localhost (no mocked sockets). Results from 4 scenarios:
+
+**Approval Round-Trip Latency** — server sends `permission_request` → client responds → server receives:
+
+| Concurrent Sessions | p50 | p95 | p99 |
+|---|---|---|---|
+| 1 | 70 µs | 132 µs | 196 µs |
+| 5 | 187 µs | 222 µs | 244 µs |
+| 10 | 300 µs | 466 µs | 721 µs |
+| 25 | 382 µs | 570 µs | 764 µs |
+
+**Message Throughput** — streaming text chunks to connected clients:
+
+| Clients | Total msg/s |
+|---|---|
+| 1 | ~295k |
+| 10 | ~393k |
+| 50 | ~435k |
+
+**Connection Scaling** — 100 simultaneous connections: p50 establish time 156 µs, ~35 KB memory per connection.
+
+**Broadcast Fan-Out** — notification delivery to all connected clients: p50 under 1 ms even at 100 clients.
 
 ---
 

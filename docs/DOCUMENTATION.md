@@ -1507,6 +1507,14 @@ Claudeck/
 │   └── skillsmp-config.json SkillsMP marketplace config
 ├── package.json           6 runtime dependencies
 ├── cli.js                 CLI entry point (npx/global install)
+├── vitest.config.js       Unit test config
+├── vitest.config.perf.js  Performance benchmark config
+├── tests/
+│   ├── setup.js           Global test setup (temp dir for CLAUDECK_HOME)
+│   ├── unit/              2,400+ unit tests (frontend + backend)
+│   └── perf/              WebSocket performance benchmarks (4 scenarios)
+│       ├── ws-perf.test.js  Approval latency, throughput, scaling, broadcast
+│       └── helpers/         Test harness + stats utilities
 ├── .github/
 │   └── workflows/
 │       └── publish.yml    GitHub Actions — auto-publish to npm on release

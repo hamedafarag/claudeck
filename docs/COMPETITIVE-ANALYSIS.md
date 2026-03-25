@@ -553,6 +553,7 @@ Based on competitive gaps and market trends:
 - Cost dashboard fills a gap that even Anthropic doesn't address
 - Repos management is a new category no competitor has
 - Persistent memory with FTS5 search and AI optimization — most competitors lack cross-session knowledge
+- **Published WebSocket performance benchmarks** — sub-millisecond approval round-trips (p99 < 800 µs at 25 sessions), 435k msg/s throughput, 35 KB/connection overhead. No competitor publishes relay performance data
 
 ---
 
