@@ -1,190 +1,322 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0d1117">
-  <title>Claudeck :: offline</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#020203">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Claudeck :: offline</title>
+<link rel="icon" type="image/png" href="/icons/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Outfit:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 
-    body {
-      background: #050508;
-      color: #b8c4d0;
-      font-family: "SF Mono", "Fira Code", "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-    }
+:root{
+  --bg:            #050508;
+  --bg-secondary:  #0c0d10;
+  --bg-deep:       #020203;
+  --bg-elevated:   #181a22;
+  --border:        #1e2028;
+  --border-subtle: #161820;
+  --border-accent: rgba(51,209,122,.12);
+  --text:          #c4cfd9;
+  --text-sec:      #6b7a8d;
+  --text-dim:      #3a4250;
+  --accent:        #33d17a;
+  --accent-dim:    rgba(51,209,122,.08);
+  --accent-glow:   rgba(51,209,122,.25);
+  --success:       #33d17a;
+  --warning:       #e5a50a;
+  --error:         #ed333b;
+  --font-display:  "Chakra Petch","Rajdhani","Exo 2",sans-serif;
+  --font-sans:     "Outfit","DM Sans","Segoe UI",sans-serif;
+  --font-mono:     "JetBrains Mono","SF Mono","Fira Code","Cascadia Code","Consolas",monospace;
+  --header-h:      40px;
+}
 
-    .offline-container {
-      text-align: center;
-      padding: 2rem;
-      max-width: 480px;
-    }
+/* Light theme */
+html[data-theme="light"]{
+  --bg:            #f7f7f4;
+  --bg-secondary:  #eeeee9;
+  --bg-deep:       #eaeae4;
+  --bg-elevated:   #ffffff;
+  --border:        #c8c8c0;
+  --border-subtle: #d6d6cf;
+  --border-accent: rgba(26,138,74,.12);
+  --text:          #1a1a18;
+  --text-sec:      #4a4a44;
+  --text-dim:      #8a8a80;
+  --accent:        #1a8a4a;
+  --accent-dim:    rgba(26,138,74,.06);
+  --accent-glow:   rgba(26,138,74,.15);
+  --success:       #1a8a4a;
+  --warning:       #8a6500;
+  --error:         #c41a22;
+}
+html[data-theme="light"] .top-header::after,
+html[data-theme="light"] .status-bar::before{
+  opacity:0;
+}
 
-    /* ASCII art logo */
-    .ascii-logo {
-      margin: 0 auto 2rem;
-      font-size: 3.2px;
-      line-height: 1.15;
-      letter-spacing: 0.02em;
-      color: #33d17a;
-      white-space: pre;
-      overflow: hidden;
-      text-align: left;
-      display: inline-block;
-      text-shadow: 0 0 6px rgba(51, 209, 122, 0.3);
-    }
+html{height:100%}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-sans);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
 
-    @media (min-width: 480px) {
-      .ascii-logo { font-size: 4.5px; }
-    }
-    @media (min-width: 640px) {
-      .ascii-logo { font-size: 5.5px; }
-    }
+/* ── Header ── */
+.top-header{
+  height:var(--header-h);
+  background:var(--bg-deep);
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  padding:0 16px;
+  font-family:var(--font-mono);
+  font-size:12px;
+  gap:8px;
+  flex-shrink:0;
+  position:relative;
+}
+.top-header::after{
+  content:"";
+  position:absolute;
+  bottom:-1px;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+  opacity:.3;
+}
+.term-prompt{ color:var(--success); font-weight:700; }
+.term-cmd{ color:var(--accent); font-weight:600; font-family:var(--font-display); letter-spacing:.04em; }
+.term-sep{ color:var(--border); margin:0 2px; }
+.term-status{ color:var(--text-dim); font-size:11px; }
+.header-right{
+  margin-left:auto;
+  display:flex;align-items:center;gap:6px;
+  color:var(--error);
+  font-size:11px;
+}
+.header-right svg{ color:var(--error); }
 
-    .offline-title {
-      font-size: 1.4rem;
-      color: #33d17a;
-      margin-bottom: 0.5rem;
-      direction: ltr;
-    }
+/* ── Main ── */
+.main-area{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:40px 24px 80px;
+  gap:16px;
+  opacity:0;
+  animation:fadeIn .5s ease .1s forwards;
+}
+@keyframes fadeIn{to{opacity:1}}
 
+.whaly-img{
+  width:120px;
+  height:auto;
+  image-rendering:pixelated;
+  filter:drop-shadow(0 8px 24px rgba(51,209,122,.08)) grayscale(.6);
+  transition:filter .3s;
+  cursor:pointer;
+}
+.whaly-img:hover{
+  filter:drop-shadow(0 8px 32px rgba(51,209,122,.15)) grayscale(.3);
+}
 
-    .offline-message {
-      color: #6b7a8d;
-      font-size: 0.85rem;
-      line-height: 1.6;
-      margin-bottom: 2rem;
-    }
+.whaly-text{
+  color:var(--text-dim);
+  font-size:14px;
+  font-family:var(--font-display);
+  text-align:center;
+  letter-spacing:.04em;
+  font-weight:500;
+}
+.whaly-hint{
+  color:var(--text-dim);
+  font-size:11px;
+  font-family:var(--font-sans);
+  opacity:.5;
+  text-align:center;
+  line-height:1.6;
+}
 
-    .retry-btn {
-      background: transparent;
-      border: 1px solid #33d17a;
-      color: #33d17a;
-      padding: 0.6rem 1.8rem;
-      font-family: inherit;
-      font-size: 0.85rem;
-      cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.2s;
-    }
+/* ── Retry button — styled like a ghost input bar ── */
+.retry-wrap{
+  margin-top:12px;
+  opacity:0;
+  animation:fadeIn .4s ease .4s forwards;
+}
+.retry-btn{
+  background:var(--bg-secondary);
+  border:1px solid var(--border);
+  color:var(--accent);
+  font-family:var(--font-mono);
+  font-size:12px;
+  font-weight:500;
+  padding:10px 24px;
+  border-radius:8px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:all .2s;
+}
+.retry-btn:hover{
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px var(--border-accent);
+  color:var(--accent);
+}
+.retry-btn:active{
+  transform:scale(.98);
+}
+.retry-btn svg{
+  width:14px;height:14px;
+  animation:spin 2s linear infinite paused;
+}
+.retry-btn:hover svg{
+  animation-play-state:running;
+}
+@keyframes spin{
+  to{transform:rotate(360deg)}
+}
 
-    .retry-btn:hover {
-      background: rgba(51, 209, 122, 0.1);
-      box-shadow: 0 0 12px rgba(51, 209, 122, 0.2);
-    }
+/* ── Status bar ── */
+.status-bar{
+  height:24px;
+  background:var(--bg-deep);
+  border-top:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  padding:0 12px;
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--text-dim);
+  flex-shrink:0;
+  user-select:none;
+  position:relative;
+}
+.status-bar::before{
+  content:"";
+  position:absolute;
+  top:-1px;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+  opacity:.3;
+}
+.sb-left,.sb-right{
+  display:flex;align-items:center;gap:0;
+}
+.sb-left{flex:1;justify-content:flex-start;}
+.sb-right{flex:1;justify-content:flex-end;}
+.sb-item{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:0 8px;height:24px;white-space:nowrap;
+}
+.sb-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--error);flex-shrink:0;
+}
+.sb-dot.blink{
+  animation:blink 1.5s infinite;
+}
+@keyframes blink{
+  0%,100%{opacity:1}
+  50%{opacity:.3}
+}
+.sb-sep{
+  width:1px;height:12px;
+  background:var(--border);flex-shrink:0;
+}
 
-    /* Subtle glow pulse on ASCII logo */
-    @keyframes ascii-glow {
-      0%, 100% { text-shadow: 0 0 6px rgba(51, 209, 122, 0.3); }
-      50% { text-shadow: 0 0 14px rgba(51, 209, 122, 0.5), 0 0 30px rgba(51, 209, 122, 0.15); }
-    }
-
-    .ascii-logo { animation: ascii-glow 4s ease-in-out infinite; }
-
-    /* Floating geometric particles */
-    .particles {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    .particle {
-      position: absolute;
-      opacity: 0.06;
-      animation: float 20s infinite linear;
-    }
-
-    @keyframes float {
-      0% { transform: translateY(100vh) rotate(0deg); }
-      100% { transform: translateY(-20vh) rotate(360deg); }
-    }
-  </style>
-
+/* ── Responsive ── */
+@media(max-width:640px){
+  .whaly-img{width:80px}
+  .header-right span{display:none}
+}
+</style>
+<script>
+const t = localStorage.getItem('claudeck-theme');
+if (t) document.documentElement.setAttribute('data-theme', t);
+</script>
 </head>
 <body>
-  <!-- Floating geometric particles background -->
-  <div class="particles">
-    <svg class="particle" style="left:10%;width:30px;animation-delay:0s;animation-duration:25s" viewBox="0 0 40 40">
-      <polygon points="20,2 38,20 20,38 2,20" fill="none" stroke="#33d17a" stroke-width="1"/>
-    </svg>
-    <svg class="particle" style="left:30%;width:20px;animation-delay:5s;animation-duration:18s" viewBox="0 0 40 40">
-      <polygon points="20,0 40,20 20,40 0,20" fill="none" stroke="#c69ff5" stroke-width="1"/>
-    </svg>
-    <svg class="particle" style="left:55%;width:25px;animation-delay:2s;animation-duration:22s" viewBox="0 0 40 40">
-      <circle cx="20" cy="20" r="15" fill="none" stroke="#33d17a" stroke-width="1"/>
-    </svg>
-    <svg class="particle" style="left:75%;width:35px;animation-delay:8s;animation-duration:28s" viewBox="0 0 60 60">
-      <path d="M30,5 L55,30 L30,55 L5,30 Z" fill="none" stroke="#c69ff5" stroke-width="1"/>
-      <path d="M30,15 L45,30 L30,45 L15,30 Z" fill="none" stroke="#33d17a" stroke-width="1"/>
-    </svg>
-    <svg class="particle" style="left:90%;width:18px;animation-delay:12s;animation-duration:20s" viewBox="0 0 40 40">
-      <polygon points="20,2 38,20 20,38 2,20" fill="none" stroke="#33d17a" stroke-width="1"/>
-    </svg>
-  </div>
 
-  <div class="offline-container">
-    <!-- ASCII falcon logo -->
-    <div class="ascii-logo">
-                                  -%%%%%%%%%%%##**++==---::....
-                                  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%%%%%%%##*+=--::...
-                                  #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%#*######******##*****+
-                                 .#@%**+++**##%%@@@@@@@@@@@@@@@@@@%#*#*******************:
-                                 .#@#*+.-*######%%%%#**+++++=+#@@%%#*#####***************+
-                                 .#@#*=:=***####%%%%%%%%%%%%%#%@@%##*####*****************:
-                                 .%@#*--+****######%%%%%%%%%%%@@@%##*#####***************+:
-                                 :%@##-=+****########%%%%%%%%%@@@%##*####****************+.
-                                 :%@#*-===+++**########%%%%%%@@@@%#**#####**************+*.
-                                 :@@#*-====++++**###########%%@@@%#*######**************+*
-                                 -@@#*--====+++++++*****#####%@@@%#*#######*************++
-                                 -@@#*--======++++++++++*****#@@%%#*#####***************++
-                                 -@%#*--========+++++++++++++#@@%%#*######**************++
-                                 =@%#*--=================+===#@@%%#*##*****************++=
-                                 =@%#*---====================#@@%#**#####*#************++=
-                                 =@%#*----===================%@@%#*########************++-
-                                 +@%%@#*+====================@@@%#*######*************+++-
-                                 +@@@@@@@@@%%*==============-@@@%#*###*#**************+++:
-                                 +@@@@@@@@@@@@@@@@@@@#+======@@@%#**##****************+++:
-                                 *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%%***#****************++++.
-                                 *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%%********************++++.
-                                 *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%%*******************+++++
-                                 *@@@@@@@@@@@@@##@@@@@@@@@@@@@@%#******************+++++=
-                                 #@%%@@@@@@@@@@@@@%#-:=*#%%@@@@%#*****************++++++=
-                                .#@@@@@@@@@@@@@@@@@@@@@%=::*@@@%#*****************++++++=
-                                 +##%%@@@@@@@@@@@@@@@@@@@@@@@@@%*****************++++++=-
-                    .*%#*#%##:     .:+####%%%@@@@@@@@@@@@@@@@@@%*****************+++=+==-
-                .:*@%##+**++%%#%%*-:.-++===**##%%%@@@@@@@@@@@@@%***************+++=+=+==:
-              -*%%%##%*#+*****+#**##%%%#*=======++*##%%%%@@@@@%#************++*++++++-.
-           -%@@#%#**+#+##+**=#*+#*+#+##+#%@@#+=========+####%%##*********+++++++++:.
-       .=%@@@@##*+*#+##*+#+##***+**+**+#*+#**#%%@#++======-==+*=--=****++*+**+=:                 .:.
-     .*@@@@@@@%*##*###**+#***#+*#**#*+#***#=*+*#**%%%%#*+=====::++*****+***-:                    :.
-      +%@@@@@@@@@@########**#+#*+**+#*+*#*+#*+##+**+####%@@@#====++*****:                       ::
-       -*##%@@@@@@@@@%########*+#+*#*+*#+#*****=#*+*#****%@@@@@@#-=+=:                         :-
-         .:=*#%%@@@@@@@@@@%#########+*+##*+**+###******%@@@@@@%#*:......                      ::
-              .*##%%@@@@@@@@@@%###*+####+*%%####****#@@@@@@@##**=--=-==++++.               .-=.
-                 .-+#%%@@@@@@@@@@@%###*+##*=+##***%@@@@@@%#**+-.:..   ..:-==:         .:--:.
-                     .-*#%%@@@@@@@@@@@%##**%%%%%@@@@@@@%#**+: .:=#**==-+---:.:----::::.
-                         :+##%%@@@@@@@@@@@@@@@@@@@@@@##**+-. :#@#####***+--=.
-                            .-+#%%%@@@@@@@@@@@@@@@%#**+-. .+@@@@@@@@%%%@@@%-
-                                .:*##%%@@@@@@@@@%#**+: .=%@@@@@@@@@@@@@@##*=
-                                    .-*##%%@@@#**+=. .*@@@@@@@@@@@@@@%#*****.
-                                        :=*##**+-.   =@@@@@@@@@@@@@%#****+-.
-                                           .::.      +@@@@@@@@@@@#****+-.
-                                                      :+#%@@@@@#***+=.
+<header class="top-header">
+  <span class="term-prompt">&gt;</span>
+  <span class="term-cmd">claude</span>
+  <span class="term-sep">&middot;</span>
+  <span class="term-status">offline</span>
+  <div class="header-right">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>
+    </svg>
+    <span>disconnected</span>
+  </div>
+</header>
+
+<main class="main-area">
+  <img src="/icons/whaly.png" alt="Whaly" class="whaly-img" id="whaly">
+  <div class="whaly-text">~ no connection ~</div>
+  <div class="whaly-hint">
+    Claudeck needs a network connection to<br>
+    communicate with Claude Code
+  </div>
+  <div class="retry-wrap">
+    <button class="retry-btn" onclick="location.reload()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      retry connection
+    </button>
+  </div>
+</main>
+
+<div class="status-bar">
+  <div class="sb-left">
+    <div class="sb-item">
+      <div class="sb-dot blink"></div>
+      disconnected
+    </div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">waiting for network</div>
+  </div>
+  <div class="sb-right">
+    <div class="sb-item">offline</div>
+  </div>
 </div>
 
-    <div class="offline-title">> offline</div>
+<script>
+// Auto-retry every 10 seconds
+let retryTimer;
+function startAutoRetry() {
+  retryTimer = setInterval(() => {
+    fetch('/api/version', { cache: 'no-store' })
+      .then(r => { if (r.ok) location.reload(); })
+      .catch(() => {});
+  }, 10000);
+}
+startAutoRetry();
 
-    <p class="offline-message">
-      No network connection available.<br>
-      Claudeck requires a connection to communicate with Claude.
-    </p>
-    <button class="retry-btn" onclick="location.reload()">retry connection</button>
-  </div>
+// Whaly easter egg
+let clicks = 0;
+document.getElementById('whaly').addEventListener('click', () => {
+  clicks++;
+  if (clicks >= 5) {
+    clicks = 0;
+    const w = document.getElementById('whaly');
+    w.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
+    w.style.transform = 'scale(1.2) rotate(-10deg)';
+    setTimeout(() => { w.style.transform = ''; }, 500);
+  }
+});
+</script>
 </body>
 </html>

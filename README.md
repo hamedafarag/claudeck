@@ -31,6 +31,9 @@ npx claudeck
 # Custom port
 npx claudeck --port 3000
 
+# Enable authentication (for remote access via Cloudflare Tunnel, etc.)
+npx claudeck --auth
+
 # Or install globally
 npm install -g claudeck
 claudeck
@@ -50,6 +53,7 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 - **Full agent orchestration** — Chains, DAGs, orchestrator, and monitoring dashboard
 - **Persistent memory** — Cross-session project knowledge with FTS5 search and AI optimization
 - **Cost visibility** — Per-session tracking, daily charts, token breakdowns
+- **Secure remote access** — Token-based auth for Cloudflare Tunnel or reverse proxy setups
 - **Works everywhere** — PWA, mobile responsive, Telegram AFK approval
 - **Extensible** — Full-stack plugin system with auto-discovery
 
@@ -146,8 +150,9 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 | **Confirm All** | Prompt for every tool call |
 | **Plan Mode** | No execution, planning only |
 
-### UI & Experience
+### Security & UI
 
+- **Authentication** — `--auth` flag enables token-based auth with login page, HttpOnly cookies, and WebSocket verification. Localhost bypasses auth by default (auto-detected proxy headers like `X-Forwarded-For` disable the bypass for tunneled requests).
 - Dark theme (terminal CRT aesthetic) and light theme
 - Installable as a PWA with offline fallback
 - Mobile responsive with tablet/mobile breakpoints
@@ -167,7 +172,8 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
                           server/dag-executor.js   ├── data.db     (SQLite + memories)
                           server/notification-logger.js
                           server/utils/git-worktree.js
-                          server/memory-optimizer.js └── .env      (VAPID keys)
+                          server/auth.js
+                          server/memory-optimizer.js └── .env      (VAPID keys, auth token)
                           plugins/
 ```
 
@@ -232,7 +238,7 @@ All user data lives in `~/.claudeck/` (override with `CLAUDECK_HOME`):
 │   └── skillsmp-config.json  Skills Marketplace config
 ├── plugins/                  User-installed plugins
 ├── data.db                   SQLite database
-└── .env                      VAPID keys, port config
+└── .env                      VAPID keys, port, auth token
 ```
 
 Defaults are copied on first run. User edits are never overwritten on upgrade.
@@ -292,7 +298,7 @@ npm test -- --coverage  # With coverage report
 | **ui/** | 280+ | 65% |
 | **features/** | 210+ | 22% |
 | **panels/** | 150+ | 35% |
-| **server/** | 1,300+ | 95% |
+| **server/** | 1,350+ | 95% |
 
 19 Web Components in `public/js/components/` — each is a self-contained Custom Element (Light DOM) that owns its HTML, testable with zero mocks.
 

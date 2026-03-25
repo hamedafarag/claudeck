@@ -34,16 +34,27 @@ import worktreesRouter from "./server/routes/worktrees.js";
 import skillsRouter from "./server/routes/skills.js";
 import { setupWebSocket } from "./server/ws-handler.js";
 import { setWss } from "./server/notification-logger.js";
+import { authMiddleware, verifyWsClient, isAuthEnabled, getToken, loginHandler, statusHandler } from "./server/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server, path: "/ws" });
+const wss = new WebSocketServer({ server, path: "/ws", verifyClient: verifyWsClient });
+
+// ── Middleware ordering: json → auth routes (unauthenticated) → auth middleware → static + API ──
+app.use(express.json());
+
+// Auth endpoints (always accessible)
+app.post("/api/auth/login", loginHandler);
+app.get("/api/auth/status", statusHandler);
+app.get("/login", (_req, res) => res.sendFile(join(__dirname, "public", "login.html")));
+
+// Auth middleware — everything below is protected when auth is enabled
+app.use(authMiddleware);
 
 app.use(express.static(join(__dirname, "public")));
-app.use(express.json());
 
 // ── Web Push (VAPID) setup ──────────────────────────────────
 {
@@ -198,7 +209,7 @@ mountPluginRoutes(app, fullStackPluginsDir).then(() => {
   \x1b[1m\x1b[32m➜\x1b[0m  \x1b[1mReady:\x1b[0m   ${url}
   \x1b[2m➜  Port:\x1b[0m    ${PORT}
   \x1b[2m➜  Data:\x1b[0m    ~/.claudeck/
-`);
+${isAuthEnabled() ? `  \x1b[2m➜  Auth:\x1b[0m    \x1b[33menabled\x1b[0m\n  \x1b[2m➜  Token:\x1b[0m   ${getToken()}\n` : ''}`);
   });
 });
 

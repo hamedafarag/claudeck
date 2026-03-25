@@ -14,6 +14,9 @@ npx claudeck
 # Custom port (saved to ~/.claudeck/.env for future runs)
 npx claudeck --port 3000
 
+# Enable authentication (for remote access via Cloudflare Tunnel, etc.)
+npx claudeck --auth
+
 # Or install globally
 npm install -g claudeck
 claudeck
@@ -55,7 +58,8 @@ browser ──────── WebSocket ──────── server.js �
    │   ├── core/                      ├── server/routes/ (route modules)
    │   │   ├── store.js (reactive)    ├── server/plugin-mount.js (auto-mount plugin routes)
    │   │   ├── ws.js (WebSocket)      ├── server/ws-handler.js
-   │   │   ├── api.js (fetch calls)   ├── server/agent-loop.js
+   │   │   ├── api.js (fetch calls)   ├── server/auth.js (token auth middleware)
+   │   │   │                          ├── server/agent-loop.js
    │   │   │                          ├── server/telegram-sender.js (two-way)
    │   │   ├── events.js (event bus)  ├── server/telegram-poller.js (callback listener)
    │   │   ├── dom.js (DOM refs)      ├── db.js (SQLite)
@@ -78,7 +82,7 @@ browser ──────── WebSocket ──────── server.js �
    ├── config/                        JSON config files (copied from defaults on first run)
    ├── plugins/                       User-installed plugins
    ├── data.db                        SQLite database
-   └── .env                           Environment variables (VAPID keys, API keys)
+   └── .env                           Environment variables (VAPID keys, API keys, auth token)
 ```
 
 - **WebSocket** streams assistant text, tool calls, and results in real time
@@ -1541,6 +1545,7 @@ plugins/                   Full-stack plugins (client.js, server.js, config.json
 
 ## Security
 
+- **Authentication** — opt-in token-based auth via `--auth` flag. 256-bit hex token auto-generated on first use. Login page at `/login`. `HttpOnly` + `SameSite=strict` cookie. WebSocket connections verified via `verifyClient`. Localhost bypasses auth by default (proxy-aware — requests with `X-Forwarded-For` or `X-Real-IP` headers are not treated as localhost). Programmatic access via `Authorization: Bearer <token>` header. Timing-safe token comparison (`crypto.timingSafeEqual`). Zero new dependencies.
 - **Tool approval** — three permission modes (bypass, confirm writes, confirm all) with approve/deny modal for dangerous tool calls
 - **Path traversal protection** — normalized `resolve()` + `sep` comparison on all file endpoints (cross-platform safe)
 - **Browse endpoint security** — `path.isAbsolute()` validation, hidden directory filtering, directory existence check via `stat()`
@@ -1551,7 +1556,7 @@ plugins/                   Full-stack plugins (client.js, server.js, config.json
 - **CLI execution** — simple commands use `execFile()` (no shell injection); complex commands use `exec()` with 30s timeout and 512KB buffer limit
 - **MCP path validation** — project path must be absolute with no `..` traversal segments
 - **Prepared statements**: All SQL queries use parameterized statements
-- **CORS**: Not explicitly configured (local-only use)
+- **CORS**: Not explicitly configured (local-only use unless auth is enabled)
 
 ---
 

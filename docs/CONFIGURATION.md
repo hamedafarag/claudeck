@@ -210,6 +210,9 @@ The `.env` file lives at `~/.claudeck/.env`. On first run, if a `.env` exists in
 PORT=9009                        # Server port (default 9009)
 VAPID_PUBLIC_KEY=                # Auto-generated on first run
 VAPID_PRIVATE_KEY=               # Auto-generated on first run
+CLAUDECK_AUTH=true               # Enable authentication (default: disabled)
+CLAUDECK_TOKEN=<64-char-hex>     # Auth token (auto-generated with --auth flag)
+CLAUDECK_AUTH_LOCALHOST=true     # Require auth even on localhost (default: false)
 ```
 
 ### Port configuration
@@ -222,6 +225,31 @@ npx claudeck --port 3000    # Updates ~/.claudeck/.env and starts on port 3000
 ```
 
 VAPID keys are generated automatically if missing — no manual setup needed for push notifications.
+
+### Authentication
+
+Claudeck supports token-based authentication for securing remote access (e.g., via Cloudflare Tunnel). Auth is **opt-in** — disabled by default for backwards compatibility.
+
+```bash
+# Enable auth (auto-generates a 256-bit token, saved to ~/.claudeck/.env)
+npx claudeck --auth
+
+# Enable auth with a custom token
+npx claudeck --token my-secret-token
+
+# Disable auth for this run (even if token exists in .env)
+npx claudeck --no-auth
+```
+
+When auth is enabled:
+- The token is printed in the terminal on startup
+- All HTTP routes, static assets, and WebSocket connections are protected
+- A login page is served at `/login` where users enter the token
+- An `HttpOnly` + `SameSite=strict` cookie is set after login (1-year expiry)
+- Programmatic access is supported via `Authorization: Bearer <token>` header
+- **Localhost bypass**: Direct local connections skip auth by default. Tunneled requests (ngrok, Cloudflare Tunnel, etc.) are detected via `X-Forwarded-For` / `X-Real-IP` headers and require auth. Set `CLAUDECK_AUTH_LOCALHOST=true` to require auth even for direct localhost access.
+
+To persist auth across restarts, add `CLAUDECK_AUTH=true` and `CLAUDECK_TOKEN=<token>` to `~/.claudeck/.env` (the `--auth` flag does this automatically).
 
 ---
 

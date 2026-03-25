@@ -3,6 +3,7 @@ import { homedir } from "os";
 import { join } from "path";
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { createInterface } from "readline";
+import crypto from "crypto";
 
 const DEFAULT_PORT = 9009;
 const envDir = process.env.CLAUDECK_HOME || join(homedir(), ".claudeck");
@@ -13,14 +14,19 @@ function readEnv() {
   try { return readFileSync(envPath, "utf-8"); } catch { return ""; }
 }
 
-function savePort(port) {
+function saveEnvVar(key, value) {
   let content = readEnv();
-  if (/^PORT=.*/m.test(content)) {
-    content = content.replace(/^PORT=.*/m, `PORT=${port}`);
+  const re = new RegExp(`^${key}=.*`, "m");
+  if (re.test(content)) {
+    content = content.replace(re, `${key}=${value}`);
   } else {
-    content = content.trimEnd() + `\nPORT=${port}\n`;
+    content = content.trimEnd() + `\n${key}=${value}\n`;
   }
   writeFileSync(envPath, content);
+}
+
+function savePort(port) {
+  saveEnvVar("PORT", port);
 }
 
 function getSavedPort() {
@@ -35,7 +41,50 @@ function ask(question) {
   });
 }
 
+function handleAuthFlags() {
+  // --no-auth: explicitly disable for this run
+  if (process.argv.includes("--no-auth")) {
+    process.env.CLAUDECK_AUTH = "false";
+    return;
+  }
+
+  // --token <value> or --token=<value>: set custom token + enable auth
+  const tokenArg = process.argv.find(a => a.startsWith("--token"));
+  if (tokenArg) {
+    const token = tokenArg.includes("=")
+      ? tokenArg.split("=")[1]
+      : process.argv[process.argv.indexOf(tokenArg) + 1];
+    if (token) {
+      process.env.CLAUDECK_TOKEN = token;
+      process.env.CLAUDECK_AUTH = "true";
+      saveEnvVar("CLAUDECK_TOKEN", token);
+      saveEnvVar("CLAUDECK_AUTH", "true");
+      console.log(`\x1b[2m  Auth token set and saved to ~/.claudeck/.env\x1b[0m`);
+    }
+    return;
+  }
+
+  // --auth: enable auth, auto-generate token if missing
+  if (process.argv.includes("--auth")) {
+    process.env.CLAUDECK_AUTH = "true";
+    const envContent = readEnv();
+    const existingToken = envContent.match(/^CLAUDECK_TOKEN=(.+)/m);
+    if (existingToken) {
+      process.env.CLAUDECK_TOKEN = existingToken[1];
+    } else {
+      const token = crypto.randomBytes(32).toString("hex");
+      process.env.CLAUDECK_TOKEN = token;
+      saveEnvVar("CLAUDECK_TOKEN", token);
+      saveEnvVar("CLAUDECK_AUTH", "true");
+      console.log(`\x1b[2m  Generated auth token and saved to ~/.claudeck/.env\x1b[0m`);
+    }
+  }
+}
+
 async function main() {
+  // Handle auth flags before anything else
+  handleAuthFlags();
+
   // --port flag takes priority
   const portArg = process.argv.find(a => a.startsWith('--port'));
   if (portArg) {

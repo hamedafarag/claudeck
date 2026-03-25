@@ -1,5 +1,15 @@
 // All fetch() calls consolidated into named functions
 
+// Global 401 interceptor — redirect to login on auth failure
+const _origFetch = window.fetch;
+window.fetch = async (...args) => {
+  const res = await _origFetch(...args);
+  if (res.status === 401 && !window.location.pathname.startsWith("/login")) {
+    window.location.href = "/login";
+  }
+  return res;
+};
+
 export async function fetchProjects() {
   const res = await fetch("/api/projects");
   return res.json();
