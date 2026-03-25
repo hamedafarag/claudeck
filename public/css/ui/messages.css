@@ -770,10 +770,15 @@ html[data-theme="light"] .msg-user {
   border-top: 1px solid var(--border);
   display: flex;
   gap: 8px;
-  align-items: flex-start;
+  align-items: flex-end;
   max-width: calc(var(--chat-max-w) + 48px);
   width: 100%;
   margin: 0 auto;
+}
+
+.input-bar > .send-history-group {
+  align-self: flex-end;
+  margin-bottom: 24px;
 }
 
 /* Gradient fade above input */
@@ -837,21 +842,79 @@ html[data-theme="light"] .msg-user {
   transition: all 0.2s var(--ease-smooth);
 }
 
-#send-btn             { background: var(--accent-solid); color: #000; }
-#send-btn:hover       { background: var(--accent); box-shadow: var(--glow-strong); transform: scale(1.02); }
-#send-btn:active      { transform: scale(0.97); }
-#send-btn:disabled    { opacity: 0.25; cursor: not-allowed; transform: none; }
-#stop-btn             { background: var(--error); color: #fff; }
-#stop-btn:hover       { opacity: 0.85; transform: scale(1.02); }
-#stop-btn:active      { transform: scale(0.97); }
+/* Send button */
+#send-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--accent-solid);
+  color: #000;
+  position: relative;
+  box-shadow: 0 0 12px rgba(46, 194, 126, 0.2);
+}
+
+#send-btn::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  transform: scale(0.95);
+}
+
+#send-btn:hover {
+  background: var(--accent);
+  box-shadow: 0 0 20px rgba(46, 194, 126, 0.35), var(--glow-strong);
+  transform: scale(1.05);
+}
+
+#send-btn:hover::after {
+  opacity: 0.4;
+  transform: scale(1);
+}
+
+#send-btn:active {
+  transform: scale(0.93);
+  box-shadow: 0 0 8px rgba(46, 194, 126, 0.15);
+}
+
+#send-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+#send-btn:disabled::after { display: none; }
+
+/* Stop button */
+#stop-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--error);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(237, 51, 59, 0.2);
+}
+
+#stop-btn:hover {
+  box-shadow: 0 0 20px rgba(237, 51, 59, 0.35);
+  transform: scale(1.05);
+}
+
+#stop-btn:active {
+  transform: scale(0.93);
+}
 
 /* ── Input Meta Labels ────────────────────────────────── */
 .input-meta {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 2px 0;
   user-select: none;
+  margin-left: auto;
 }
 
 .input-meta-item {

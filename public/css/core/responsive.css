@@ -150,8 +150,8 @@ body.sidebar-open #sidebar-backdrop {
     padding: 6px 8px;
   }
 
-  /* Hide toolbox/agent/workflow buttons on mobile */
-  .input-bar > .toolbox-toggle {
+  /* Hide toolbox strip on mobile */
+  .toolbox-strip {
     display: none;
   }
 

@@ -103,7 +103,7 @@ describe("connectWebSocket", () => {
     it("emits ws:disconnected event", () => {
       connectWebSocket();
       const ws = wsInstances[0];
-      ws.onclose();
+      ws.onclose({ code: 1006 });
 
       expect(emit).toHaveBeenCalledWith("ws:disconnected");
     });
@@ -111,7 +111,7 @@ describe("connectWebSocket", () => {
     it("updates connection dot and text to reconnecting", () => {
       connectWebSocket();
       const ws = wsInstances[0];
-      ws.onclose();
+      ws.onclose({ code: 1006 });
 
       expect($.connectionDot.className).toBe("term-dot reconnecting");
       expect($.connectionText.textContent).toBe("reconnecting");
@@ -120,7 +120,7 @@ describe("connectWebSocket", () => {
     it("schedules reconnect via setTimeout", () => {
       connectWebSocket();
       const ws = wsInstances[0];
-      ws.onclose();
+      ws.onclose({ code: 1006 });
 
       // Advance timers to trigger reconnect
       vi.advanceTimersByTime(35000); // past max backoff

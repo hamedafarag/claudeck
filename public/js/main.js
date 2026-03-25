@@ -1,4 +1,26 @@
 // Entry point — imports all modules and runs boot sequence
+
+// Web Components — must load before dom.js so getElementById finds their elements
+import './components/welcome-overlay.js';
+import './components/orchestrate-modal.js';
+import './components/agent-monitor-modal.js';
+import './components/dag-editor-modal.js';
+import './components/chain-modal.js';
+import './components/agent-modal.js';
+import './components/workflow-modal.js';
+import './components/prompt-modal.js';
+import './components/system-prompt-modal.js';
+import './components/file-picker-modal.js';
+import './components/shortcuts-modal.js';
+import './components/cost-dashboard-modal.js';
+import './components/bg-confirm-modal.js';
+import './components/permission-modal.js';
+import './components/linear-create-modal.js';
+import './components/telegram-modal.js';
+import './components/mcp-modal.js';
+import './components/add-project-modal.js';
+import './components/status-bar.js';
+
 import './core/store.js';
 import './core/dom.js';
 import './core/constants.js';

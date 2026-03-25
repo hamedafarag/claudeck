@@ -264,7 +264,7 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 | Offline fallback page | **Yes** | N/A | No | N/A | No | No |
 | **Security & Access** |
 | Permission/tool approval UI | **Yes** | **Yes** | **Yes** | **Yes** | No | No |
-| Authentication | No | N/A | Cloud | N/A | No | No |
+| Authentication | **Yes** | N/A | Cloud | N/A | No | No |
 | **Infrastructure** |
 | MCP server management | **Yes** | **Yes** | **Yes** | **Yes** | No | No |
 | PWA / home screen | **Yes** | N/A | **Yes** | N/A | No | No |
@@ -324,12 +324,9 @@ The Claude Code web UI ecosystem has grown significantly. Key developments:
 
 ### Tier 1 — High Impact (address next)
 
-#### 1. Authentication & Security
+#### ~~1. Authentication & Security~~ (DONE)
 **Found in**: Codeman (QR tokens), CloudCLI (cloud auth), Anthropic Remote Control (TLS credentials)
-**Current state**: No auth — anyone on the network can access.
-**What to build**: Token-based auth middleware. Auto-generate random token on first run. Optional HTTPS.
-**Effort**: Low. Express middleware + token generation.
-**Priority**: HIGH — security is a prerequisite for any remote/team usage.
+**Implemented**: Token-based auth with cookie sessions. `claudeck --auth` auto-generates a 256-bit hex token, saved to `~/.claudeck/.env`. Login page at `/login` with token input. `HttpOnly` + `SameSite=strict` cookie set on login. WebSocket connections verified via `verifyClient`. Proxy-aware localhost bypass (detects `X-Forwarded-For` / `X-Real-IP` from ngrok/Cloudflare Tunnel). Programmatic access via `Authorization: Bearer <token>` header. Zero new dependencies — uses Node.js built-in `crypto.randomBytes` and `crypto.timingSafeEqual`.
 
 #### ~~2. Mobile Responsive Layout~~ (DONE)
 **Found in**: CloudCLI, Codeman, sugyan/webui, sunpix
@@ -450,14 +447,14 @@ These features are **not found in any competitor** (or found in very few):
 
 ## Implementation Progress
 
-**Last updated**: March 22, 2026
-**Completed**: 14 / 14 (Phase 1-3) + 1 / 4 (Phase 4) + 17 / 17 (Phase 5-6) + 3 / 3 (Phase 7) + 5 / 9 (Phase 8 — v1.2)
+**Last updated**: March 25, 2026
+**Completed**: 15 / 15 (Phase 1-3) + 1 / 4 (Phase 4) + 17 / 17 (Phase 5-6) + 3 / 3 (Phase 7) + 5 / 9 (Phase 8 — v1.2)
 
 ### Phase 1 — Quick Wins (Low Effort, High Impact)
 - [x] 1. Model switching (dropdown in header)
 - [x] 2. Input/output token capture (save from SDK, display in dashboard)
 - [x] 3. Plan mode toggle
-- [ ] 4. Authentication (token-based middleware)
+- [x] 4. **Authentication** — Token-based auth with cookie sessions, login page, WebSocket verification, localhost bypass
 
 ### Phase 2 — Core Gaps
 - [x] 5. **Permission/tool approval UI** — Three modes, approval modal, queue, background session support
@@ -517,7 +514,7 @@ These features are **not found in any competitor** (or found in very few):
 
 Based on competitive gaps and market trends:
 
-1. **Authentication** (Phase 1 #4) — Security prerequisite. Every serious competitor has some form of auth. Low effort, high impact.
+1. ~~**Authentication** (Phase 1 #4)~~ — **DONE.** Token-based auth with `--auth` flag, login page, cookie sessions, WebSocket verification, localhost bypass.
 
 2. ~~**Mobile responsive** (Phase 2 #6)~~ — **DONE.** Sidebar toggle, tablet/mobile breakpoints, touch targets.
 
@@ -538,7 +535,7 @@ Based on competitive gaps and market trends:
 - **Lightest footprint**: 6 npm deps vs 20-50+ for competitors
 
 ### Where Claudeck trails:
-- **No auth/security**: Blocks remote and team usage
+- ~~No auth/security~~: Token-based auth with login page, cookie sessions, WebSocket verification, localhost bypass
 - ~~No mobile support~~: Now has responsive layout with sidebar toggle and touch targets
 - ~~No image support~~: Now supports multimodal (PNG/JPEG/GIF/WebP via paste, drop, or picker)
 - **No multi-CLI**: CloudCLI supports 4 CLIs (Claude, Cursor, Codex, Gemini)
@@ -556,6 +553,7 @@ Based on competitive gaps and market trends:
 - Cost dashboard fills a gap that even Anthropic doesn't address
 - Repos management is a new category no competitor has
 - Persistent memory with FTS5 search and AI optimization — most competitors lack cross-session knowledge
+- **Published WebSocket performance benchmarks** — sub-millisecond approval round-trips (p99 < 800 µs at 25 sessions), 435k msg/s throughput, 35 KB/connection overhead. No competitor publishes relay performance data
 
 ---
 
@@ -563,8 +561,8 @@ Based on competitive gaps and market trends:
 
 Claudeck is the most feature-rich Claude Code web UI, with 23+ unique features not found in any competitor. All core feature gaps have been closed: mobile responsive layout, voice input, CLAUDE.md editor, plugin system with marketplace, autonomous agents, home page with AI activity grid, two-way Telegram integration (rich notifications + AFK tool approval), VS Code-style status bar, and persistent cross-session memory. The platform now has a distinctive identity with the Whaly pixel whale mascot, Claudeck branding, and even an easter egg.
 
-**Remaining gaps**: Authentication (#4) for remote/team usage, auto-update notifications (#12), rate limiting (#13), and HTTPS support (#14).
+**Remaining gaps**: Auto-update notifications (#12), rate limiting (#13), and HTTPS support (#14).
 
 The multi-agent system is now fully built out with agent chains, DAGs, orchestrator, shared context, and monitoring dashboard. NPX publishing is complete. v1.1.0 added persistent memory (FTS5, auto-capture, AI optimization), Tab SDK enhancements, a landing page for GitHub Pages, and multiple Windows compatibility fixes. v1.2 added notification bell, session branching, message recall, and git worktree isolation.
 
-The biggest strategic question is whether to go deeper on unique AI features (workflows, analytics, agents) or broader on platform coverage (multi-CLI, desktop app). Given Claudeck's strong moat in AI features and zero-framework architecture, **authentication** is the last major blocker for remote/team adoption.
+The biggest strategic question is whether to go deeper on unique AI features (workflows, analytics, agents) or broader on platform coverage (multi-CLI, desktop app). With authentication now implemented, Claudeck is ready for remote and team usage via Cloudflare Tunnel or similar reverse proxies.

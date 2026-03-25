@@ -4,10 +4,13 @@ const CACHE_NAME = 'claudeck-v1';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to pre-cache for offline support
+const LOGIN_URL = '/login';
 const PRECACHE_URLS = [
   OFFLINE_URL,
+  '/login.html',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/icons/whaly.png',
 ];
 
 // ── Install: pre-cache offline page ──
@@ -32,10 +35,15 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
-  // Navigation requests (HTML pages) — show offline page on failure
+  // Navigation requests (HTML pages) — redirect to login on 401, show offline page on failure
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(OFFLINE_URL))
+      fetch(event.request).then((response) => {
+        if (response.status === 401) {
+          return Response.redirect(LOGIN_URL, 302);
+        }
+        return response;
+      }).catch(() => caches.match(OFFLINE_URL))
     );
     return;
   }

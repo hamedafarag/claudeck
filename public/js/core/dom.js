@@ -99,6 +99,8 @@ export const $ = {
   fpSearch: document.getElementById("fp-search"),
   fpList: document.getElementById("fp-list"),
   fpCount: document.getElementById("fp-count"),
+  fpSelected: document.getElementById("fp-selected"),
+  fpEmpty: document.getElementById("fp-empty"),
 
   // Image attachments
   imageBtn: document.getElementById("image-btn"),
@@ -114,8 +116,7 @@ export const $ = {
   modalCloseBtn: document.getElementById("modal-close"),
   modalCancelBtn: document.getElementById("modal-cancel"),
 
-  // Shortcuts
-  shortcutsModal: document.getElementById("shortcuts-modal"),
+  // Shortcuts — rendered by <claudeck-shortcuts-modal> web component
 
   // Cost dashboard
   costDashboardModal: document.getElementById("cost-dashboard-modal"),

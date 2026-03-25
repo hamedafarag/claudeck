@@ -14,6 +14,9 @@ npx claudeck
 # Custom port (saved to ~/.claudeck/.env for future runs)
 npx claudeck --port 3000
 
+# Enable authentication (for remote access via Cloudflare Tunnel, etc.)
+npx claudeck --auth
+
 # Or install globally
 npm install -g claudeck
 claudeck
@@ -55,18 +58,19 @@ browser ──────── WebSocket ──────── server.js �
    │   ├── core/                      ├── server/routes/ (route modules)
    │   │   ├── store.js (reactive)    ├── server/plugin-mount.js (auto-mount plugin routes)
    │   │   ├── ws.js (WebSocket)      ├── server/ws-handler.js
-   │   │   ├── api.js (fetch calls)   ├── server/agent-loop.js
+   │   │   ├── api.js (fetch calls)   ├── server/auth.js (token auth middleware)
+   │   │   │                          ├── server/agent-loop.js
    │   │   │                          ├── server/telegram-sender.js (two-way)
    │   │   ├── events.js (event bus)  ├── server/telegram-poller.js (callback listener)
    │   │   ├── dom.js (DOM refs)      ├── db.js (SQLite)
    │   │   ├── constants.js           ├── config/ (default configs, copied to ~/.claudeck/)
    │   │   ├── utils.js               ├── plugins/ (full-stack plugins)
    │   │   └── plugin-loader.js       │   ├── linear/ (client.js, server.js, config.json)
-   │   ├── ui/   (shared UI modules)  │   ├── repos/ (client.js, server.js)
-   │   ├── features/ (chat, voice, welcome, tour) │   ├── tasks/ (client.js, server.js)
-   │   │                              │   ├── claude-editor/ (client.js, client.css)
-   │   └── panels/  (bot, tips, docs) │   ├── event-stream/ (client.js, client.css)
-   │                                  │   └── ... (tic-tac-toe, sudoku)
+   │   ├── components/ (Web Components) │   ├── repos/ (client.js, server.js)
+   │   ├── ui/   (shared UI modules)  │   ├── tasks/ (client.js, server.js)
+   │   ├── features/ (chat, voice, welcome, tour) │   ├── claude-editor/ (client.js, client.css)
+   │   │                              │   ├── event-stream/ (client.js, client.css)
+   │   └── panels/  (bot, tips, docs) │   └── ... (tic-tac-toe, sudoku)
    ├── css/
    │   ├── core/       (variables, reset, responsive)
    │   ├── ui/         (messages, sessions, layout)
@@ -78,13 +82,14 @@ browser ──────── WebSocket ──────── server.js �
    ├── config/                        JSON config files (copied from defaults on first run)
    ├── plugins/                       User-installed plugins
    ├── data.db                        SQLite database
-   └── .env                           Environment variables (VAPID keys, API keys)
+   └── .env                           Environment variables (VAPID keys, API keys, auth token)
 ```
 
 - **WebSocket** streams assistant text, tool calls, and results in real time
 - **Reconnect with backoff** — exponential backoff (2s → 4s → 8s → ... → 30s cap, 0-25% jitter), distinct `ws:reconnected` event triggers state sync
 - **State sync on reconnect** — reconciles background sessions, resets streaming panes, reloads messages from DB, refreshes session list
-- **Modular frontend** — 40+ ES modules organized into `core/`, `ui/`, `features/`, `panels/`, `plugins/` with no bundler
+- **Modular frontend** — 40+ ES modules organized into `core/`, `components/`, `ui/`, `features/`, `panels/`, `plugins/` with no bundler
+- **Web Components** — 19 Light DOM Custom Elements in `components/` encapsulate modal and section HTML, keeping `index.html` lean (~540 lines)
 - **Plugin system** — full-stack plugin architecture: `plugins/<name>/` directories with `client.js`, optional `server.js` (auto-mounted at `/api/plugins/<name>/`), `client.css`, and `config.json`. Also supports user plugins from `~/.claudeck/plugins/`. All discovered via `GET /api/plugins`
 - **Reactive store** — centralized pub/sub state management across modules
 - **Event bus** — decoupled cross-module communication
@@ -572,12 +577,19 @@ Each workflow chains prompts sequentially with context passing and step progress
 
 ### 8. File Attachments
 - File picker modal with recursive tree (depth 3, max 500 files)
-- Search/filter files by name
-- Multi-select with badge count
+- Search/filter files by name with search icon
+- Multi-select with badge count and selected file chips strip
+- File type color dots (code, config, markup, docs, data, binary)
+- Binary file detection with warning label (non-selectable)
+- Info banner showing 50KB text file constraint
+- Inline error states (too large, not found, permission denied) with auto-dismiss
+- Loading spinners during file content fetch
+- Empty state when no files match search
 - Files prepended as `<file path="...">` blocks
 - Attached file paths displayed as pills in user messages (RTL direction so filename is always visible when truncated)
 - File paths extracted from saved messages and re-rendered on session replay
 - 50KB per-file limit with path traversal protection
+- Files and images cleared automatically on project switch
 
 ### 9. Image / Vision Support
 - Attach images via **image button** (file picker), **paste** (Cmd+V), or **drag-and-drop** onto the message input
@@ -1441,7 +1453,7 @@ All colors are CSS custom properties on `:root` (defined in `css/variables.css`)
 ### Layout
 - **Header** (36px): background session indicator, **Notification bell** (badge + dropdown + history modal), **Session dropdown** (approval, model, max turns submenus), **Tools dropdown** (MCP servers, notifications, Telegram, dev docs), panel toggle
 - **Sidebar** (272px): project selector (with add project button), session controls (search, new session, parallel toggle), session list (with right-click context menu)
-- **Main area**: messages (820px max-width), input bar (with tooltipped action buttons), toolbox/workflow/agent panels
+- **Main area**: messages (820px max-width), input bar with inline toolbar strip (attach, images, agents, voice, worktree, prompts) below textarea, toolbox/workflow/agent panels
 - **Right panel** (300px, resizable): tabbed container with Tasks, Files, Git, Repos, Events, plugin tabs
 - **Status bar** (24px): connection dot, git branch, project name, version badge, activity, background sessions, model, permission mode, max turns, cost
 - **Responsive**: tablet (≤1024px) — sidebar becomes slide-in overlay; mobile (≤640px) — full-screen overlays, bottom-sheet dropdowns, compact input bar
@@ -1495,11 +1507,19 @@ Claudeck/
 │   └── skillsmp-config.json SkillsMP marketplace config
 ├── package.json           6 runtime dependencies
 ├── cli.js                 CLI entry point (npx/global install)
+├── vitest.config.js       Unit test config
+├── vitest.config.perf.js  Performance benchmark config
+├── tests/
+│   ├── setup.js           Global test setup (temp dir for CLAUDECK_HOME)
+│   ├── unit/              2,400+ unit tests (frontend + backend)
+│   └── perf/              WebSocket performance benchmarks (4 scenarios)
+│       ├── ws-perf.test.js  Approval latency, throughput, scaling, broadcast
+│       └── helpers/         Test harness + stats utilities
 ├── .github/
 │   └── workflows/
 │       └── publish.yml    GitHub Actions — auto-publish to npm on release
 └── public/
-    ├── index.html         HTML structure + modals + SW registration
+    ├── index.html         HTML layout skeleton + Web Component tags (~540 lines)
     ├── manifest.json      PWA Web App Manifest
     ├── sw.js              Service worker (offline fallback + push + caching)
     ├── offline.html       Offline fallback page
@@ -1513,7 +1533,8 @@ Claudeck/
     ├── data/
     │   └── tips.json      20 curated tips + RSS feed definitions
     └── js/
-        ├── main.js        Entry point — imports all modules
+        ├── main.js        Entry point — imports components then all modules
+        ├── components/    19 Web Components (Light DOM Custom Elements for modals + sections)
         ├── core/          store, dom, constants, events, utils, api, ws, plugin-loader
         ├── ui/            messages, formatting, diff, export, theme, commands, parallel, etc.
         ├── features/      chat, sessions, projects, input-history, home, welcome, tour, attachments, voice-input, easter-egg, etc.
@@ -1532,6 +1553,7 @@ plugins/                   Full-stack plugins (client.js, server.js, config.json
 
 ## Security
 
+- **Authentication** — opt-in token-based auth via `--auth` flag. 256-bit hex token auto-generated on first use. Login page at `/login`. `HttpOnly` + `SameSite=strict` cookie. WebSocket connections verified via `verifyClient`. Localhost bypasses auth by default (proxy-aware — requests with `X-Forwarded-For` or `X-Real-IP` headers are not treated as localhost). Programmatic access via `Authorization: Bearer <token>` header. Timing-safe token comparison (`crypto.timingSafeEqual`). Zero new dependencies.
 - **Tool approval** — three permission modes (bypass, confirm writes, confirm all) with approve/deny modal for dangerous tool calls
 - **Path traversal protection** — normalized `resolve()` + `sep` comparison on all file endpoints (cross-platform safe)
 - **Browse endpoint security** — `path.isAbsolute()` validation, hidden directory filtering, directory existence check via `stat()`
@@ -1542,7 +1564,7 @@ plugins/                   Full-stack plugins (client.js, server.js, config.json
 - **CLI execution** — simple commands use `execFile()` (no shell injection); complex commands use `exec()` with 30s timeout and 512KB buffer limit
 - **MCP path validation** — project path must be absolute with no `..` traversal segments
 - **Prepared statements**: All SQL queries use parameterized statements
-- **CORS**: Not explicitly configured (local-only use)
+- **CORS**: Not explicitly configured (local-only use unless auth is enabled)
 
 ---
 

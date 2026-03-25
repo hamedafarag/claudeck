@@ -349,6 +349,23 @@ body::after {
 .hero-terminal .copy-btn svg { width: 16px; height: 16px; }
 
 /* ═══════════════════════════════════════════
+   PRODUCT HUNT BADGE (nav)
+   ═══════════════════════════════════════════ */
+.nav-ph {
+  display: flex; align-items: center;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all .3s var(--ease-out);
+  opacity: .75;
+}
+.nav-ph:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  filter: drop-shadow(0 4px 12px rgba(255,108,55,.15));
+}
+.nav-ph img { display: block; height: 36px; width: auto; border-radius: 7px; }
+
+/* ═══════════════════════════════════════════
    STATS STRIP
    ═══════════════════════════════════════════ */
 .stats-strip {
@@ -1110,6 +1127,7 @@ body::after {
 @media (max-width: 768px) {
   .nav-links { display: none; }
   .nav-hamburger { display: flex; }
+  .nav-ph { display: none; }
   .nav-links.open {
     display: flex;
     flex-direction: column;
@@ -1160,6 +1178,9 @@ body::after {
     <a href="#agents">Agents</a>
     <a href="#plugins">Plugins</a>
     <a href="https://github.com/hamedafarag/claudeck" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://www.producthunt.com/products/claudeck?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-claudeck" target="_blank" rel="noopener noreferrer" class="nav-ph">
+      <img alt="Claudeck on Product Hunt" height="36" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1105387&amp;theme=dark&amp;t=1774342457531">
+    </a>
     <a href="https://www.npmjs.com/package/claudeck" target="_blank" rel="noopener" class="nav-cta">npx claudeck</a>
   </div>
   <button class="nav-hamburger" id="hamburger" aria-label="Toggle menu">
@@ -1352,6 +1373,17 @@ body::after {
         <span class="bento-tag">Telegram</span>
       </div>
     </div>
+
+    <div class="bento-card reveal reveal-delay-6">
+      <div class="bento-icon amber">&#128274;</div>
+      <h3>Secure Remote Access</h3>
+      <p>Token-based authentication for Cloudflare Tunnel or reverse proxy setups. One flag to enable. Localhost bypasses auth by default.</p>
+      <div class="bento-tags">
+        <span class="bento-tag">--auth flag</span>
+        <span class="bento-tag">HttpOnly cookie</span>
+        <span class="bento-tag">WebSocket auth</span>
+      </div>
+    </div>
   </div>
 </section>
 </div>
@@ -1395,7 +1427,7 @@ body::after {
   <div class="section-header reveal" style="text-align:left;">
     <div class="section-label">Quick Start</div>
     <h2 class="section-title">One command. That's it.</h2>
-    <p class="section-desc">No config files. No environment variables. No build process. Just run it.</p>
+    <p class="section-desc">No config files. No build process. Just run it. Add <code style="font-family:var(--ff-mono);color:var(--accent);background:var(--accent-dim);padding:2px 6px;border-radius:4px;">--auth</code> for remote access.</p>
   </div>
 
   <div class="terminal-demo reveal reveal-delay-1" id="terminalDemo">
@@ -1440,7 +1472,7 @@ body::after {
 <div class="section-alt" id="allfeatures">
 <section class="section">
   <div class="section-header reveal">
-    <div class="section-label">70 Features</div>
+    <div class="section-label">71 Features</div>
     <h2 class="section-title">Batteries included.</h2>
     <p class="section-desc">Everything a developer needs, organized by what you're doing.</p>
   </div>
@@ -1578,9 +1610,10 @@ body::after {
       <div class="feature-cat-header">
         <div class="feature-cat-icon green" style="background:var(--accent-dim);font-size:13px;">&#10024;</div>
         <span class="feature-cat-name">UI &amp; Experience</span>
-        <span class="feature-cat-count">10</span>
+        <span class="feature-cat-count">11</span>
       </div>
       <div class="feature-list">
+        <div class="feature-item">Token-based authentication</div>
         <div class="feature-item">Dark + light theme</div>
         <div class="feature-item">Installable as PWA</div>
         <div class="feature-item">Mobile responsive</div>

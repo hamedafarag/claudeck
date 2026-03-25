@@ -16,6 +16,7 @@ export default defineConfig({
         "public/js/ui/**/*.js",
         "public/js/features/**/*.js",
         "public/js/panels/**/*.js",
+        "public/js/components/**/*.js",
       ],
       exclude: ["node_modules/**", "e2e/**", "tests/**"],
     },

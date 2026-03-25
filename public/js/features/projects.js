@@ -8,6 +8,7 @@ import { panes } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats } from './cost-dashboard.js';
 import { showWhalyPlaceholder, addSkillUsedMessage } from '../ui/messages.js';
+import { updateAttachmentBadge, clearImageAttachments } from './attachments.js';
 
 export async function loadProjects() {
   try {
@@ -362,6 +363,12 @@ $.projectSelect.addEventListener("change", async () => {
     if ($.projectSelect.value) {
       setState("view", "chat");
     }
+    // Clear attachments and input on project switch
+    setState("attachedFiles", []);
+    setState("allProjectFiles", []);
+    clearImageAttachments();
+    updateAttachmentBadge();
+    $.messageInput.value = "";
     updateSystemPromptIndicator();
     updateHeaderProjectName();
     updateSessionControls();

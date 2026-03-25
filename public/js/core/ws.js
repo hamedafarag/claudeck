@@ -44,7 +44,13 @@ export function connectWebSocket() {
     emit("ws:message", msg);
   };
 
-  ws.onclose = () => {
+  ws.onclose = (event) => {
+    // Auth rejected — redirect to login instead of reconnecting
+    if (event.code === 1008 || event.code === 4401) {
+      window.location.href = "/login";
+      return;
+    }
+
     const delay = getBackoffDelay();
     backoffAttempt++;
     console.log(`WebSocket disconnected, reconnecting in ${Math.round(delay)}ms (attempt ${backoffAttempt})...`);

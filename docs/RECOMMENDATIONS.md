@@ -27,7 +27,7 @@
 ### 5. ~~File Context Attachments~~ ✅ Implemented
 - ~~Drag-and-drop files or paste code into the chat~~
 - ~~"Add context" button to include specific files before sending~~
-- Attach button with file picker modal, file search, multi-select, files prepended as `<file>` blocks, `/attach` command
+- ~~Attach button with file picker modal, file search, multi-select, files prepended as `<file>` blocks, `/attach` command~~
 
 ## Medium Impact — Professional UX
 

@@ -1,4 +1,47 @@
 /* ── Toolbox ──────────────────────────────────────────── */
+
+/* Inline toolbar below textarea */
+.input-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 4px 0;
+  gap: 8px;
+}
+
+.toolbox-strip {
+  display: flex;
+  gap: 1px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.toolbox-strip .toolbox-toggle {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  padding: 0;
+  transition: all 0.15s var(--ease-smooth);
+}
+
+.toolbox-strip .toolbox-toggle:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.toolbox-strip .toolbox-toggle.active {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.toolbox-strip .toolbox-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
 .toolbox-toggle {
   background: transparent;
   color: var(--text-dim);

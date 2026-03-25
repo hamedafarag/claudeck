@@ -19,61 +19,7 @@
   <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.6/dist/driver.js.iife.js"></script>
 </head>
 <body>
-  <!-- Welcome Overlay (first visit only) -->
-  <div id="welcome-overlay" class="welcome-overlay hidden">
-    <div class="welcome-container">
-      <div class="welcome-mascot">
-        <img src="/icons/whaly.png" alt="Whaly" class="welcome-whaly" draggable="false">
-      </div>
-      <h1 class="welcome-title">Welcome to <span>Claudeck</span></h1>
-      <div class="welcome-version">v1.0 &middot; browser-based AI development environment</div>
-      <p class="welcome-description">
-        Your local command center for Claude Code. Chat with AI, run workflows,
-        manage projects, explore files, and orchestrate autonomous agents &mdash;
-        all from a single interface.
-      </p>
-      <div class="welcome-features">
-        <div class="welcome-feature">
-          <div class="welcome-feature-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-          </div>
-          <div>
-            <div class="welcome-feature-title">AI Chat</div>
-            <div class="welcome-feature-desc">Stream conversations with Claude, run slash commands, attach files</div>
-          </div>
-        </div>
-        <div class="welcome-feature">
-          <div class="welcome-feature-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-            </svg>
-          </div>
-          <div>
-            <div class="welcome-feature-title">Agents & Workflows</div>
-            <div class="welcome-feature-desc">Automate tasks with pre-built or custom agent pipelines</div>
-          </div>
-        </div>
-        <div class="welcome-feature">
-          <div class="welcome-feature-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            </svg>
-          </div>
-          <div>
-            <div class="welcome-feature-title">Dev Tools</div>
-            <div class="welcome-feature-desc">File explorer, Git panel, MCP servers, cost analytics</div>
-          </div>
-        </div>
-      </div>
-      <div class="welcome-actions">
-        <button id="welcome-get-started" class="welcome-btn-primary">Get Started</button>
-        <button id="welcome-take-tour" class="welcome-btn-secondary">Take a Tour</button>
-      </div>
-      <div class="welcome-hint">Press <kbd>Enter</kbd> or <kbd>Esc</kbd> to skip</div>
-    </div>
-  </div>
+  <claudeck-welcome-overlay></claudeck-welcome-overlay>
 
   <header class="top-header">
     <button id="sidebar-toggle-btn" aria-label="Toggle sidebar">
@@ -373,68 +319,72 @@
           <span class="input-waiting-text">Claude is waiting for your response</span>
         </div>
         <div class="input-bar">
-          <button id="agent-btn" data-tooltip="Agents & Workflows" class="toolbox-toggle">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="9" cy="16" r="1"/><circle cx="15" cy="16" r="1"/><path d="M12 2v4"/><path d="M8 7h8a2 2 0 0 1 2 2v2H6V9a2 2 0 0 1 2-2z"/><path d="M5 11h1"/><path d="M18 11h1"/>
-            </svg>
-          </button>
-          <button id="attach-btn" data-tooltip="Attach Files" class="toolbox-toggle" style="position:relative;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-            </svg>
-            <span id="attach-badge" class="attach-badge hidden">0</span>
-          </button>
-          <button id="image-btn" data-tooltip="Attach Images" class="toolbox-toggle">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-          </button>
-          <button id="mic-btn" data-tooltip="Voice Input" class="toolbox-toggle">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="23"/>
-              <line x1="8" y1="23" x2="16" y2="23"/>
-            </svg>
-          </button>
-          <button id="worktree-btn" data-tooltip="Worktree Mode" class="toolbox-toggle">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
-            </svg>
-          </button>
-          <button id="toolbox-btn" data-tooltip="Saved Prompts" class="toolbox-toggle">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-            </svg>
-          </button>
           <div class="input-textarea-wrap">
             <textarea id="message-input" placeholder="> type a message or / for commands..." rows="1"></textarea>
-            <div class="input-meta">
-              <span class="input-meta-item" id="input-meta-model" title="Selected model"></span>
-              <span class="input-meta-sep">&middot;</span>
-              <span class="input-meta-item" id="input-meta-perm" title="Permission mode"></span>
-              <span class="input-meta-sep">&middot;</span>
-              <span class="input-meta-item" id="input-meta-turns" title="Max turns per query"></span>
-              <span class="input-meta-sep">&middot;</span>
-              <span class="input-meta-shortcuts">
-                <span class="input-meta-kbd" title="Toggle right panel">&#8984;B</span>
-                <span class="input-meta-kbd" title="New session">&#8984;N</span>
-                <span class="input-meta-kbd" title="Search sessions">&#8984;K</span>
-                <span class="input-meta-kbd" title="Show all shortcuts">&#8984;/</span>
-              </span>
+            <div class="input-toolbar">
+              <div class="toolbox-strip">
+                <button id="attach-btn" data-tooltip="Files" class="toolbox-toggle">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                  </svg>
+                  <span id="attach-badge" class="attach-badge hidden">0</span>
+                </button>
+                <button id="image-btn" data-tooltip="Images" class="toolbox-toggle">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </button>
+                <button id="agent-btn" data-tooltip="Agents" class="toolbox-toggle">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="9" cy="16" r="1"/><circle cx="15" cy="16" r="1"/><path d="M12 2v4"/><path d="M8 7h8a2 2 0 0 1 2 2v2H6V9a2 2 0 0 1 2-2z"/><path d="M5 11h1"/><path d="M18 11h1"/>
+                  </svg>
+                </button>
+                <button id="mic-btn" data-tooltip="Voice" class="toolbox-toggle">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </svg>
+                </button>
+                <button id="worktree-btn" data-tooltip="Worktree" class="toolbox-toggle">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
+                  </svg>
+                </button>
+                <button id="toolbox-btn" data-tooltip="Prompts" class="toolbox-toggle">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="input-meta">
+                <span class="input-meta-item" id="input-meta-model" title="Selected model"></span>
+                <span class="input-meta-sep">&middot;</span>
+                <span class="input-meta-item" id="input-meta-perm" title="Permission mode"></span>
+                <span class="input-meta-sep">&middot;</span>
+                <span class="input-meta-item" id="input-meta-turns" title="Max turns per query"></span>
+                <span class="input-meta-sep">&middot;</span>
+                <span class="input-meta-shortcuts">
+                  <span class="input-meta-kbd" title="Toggle right panel">&#8984;B</span>
+                  <span class="input-meta-kbd" title="New session">&#8984;N</span>
+                  <span class="input-meta-kbd" title="Search sessions">&#8984;K</span>
+                  <span class="input-meta-kbd" title="Show all shortcuts">&#8984;/</span>
+                </span>
+              </div>
             </div>
           </div>
           <div class="send-history-group">
-            <button id="send-btn" title="Send">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M3 10l7-7m0 0l7 7m-7-7v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90, 10, 10)"/>
+            <button id="send-btn" title="Send (Enter)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
             <button id="stop-btn" title="Stop" class="hidden">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <rect x="4" y="4" width="12" height="12" rx="2" fill="currentColor"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor"/>
               </svg>
             </button>
             <button id="history-btn" class="hidden" data-tooltip="Message History" title="Message history" aria-label="Message history">
@@ -551,644 +501,29 @@
     </aside>
   </div>
 
-  <!-- Orchestrate Modal -->
-  <div id="orch-modal" class="modal-overlay hidden">
-    <div class="modal agent-form-modal">
-      <div class="modal-header">
-        <h3>Orchestrate</h3>
-        <button id="orch-modal-close" class="modal-close">&times;</button>
-      </div>
-      <div class="af-section">
-        <div class="af-section-label">How it works</div>
-        <div class="orch-explainer">
-          <div class="orch-explainer-steps">
-            <div class="orch-step"><span class="orch-step-num">1</span><span>Describe your task in plain language</span></div>
-            <div class="orch-step"><span class="orch-step-num">2</span><span>The orchestrator analyzes and decomposes it into sub-tasks</span></div>
-            <div class="orch-step"><span class="orch-step-num">3</span><span>Each sub-task is delegated to the best-fit agent automatically</span></div>
-            <div class="orch-step"><span class="orch-step-num">4</span><span>Results are synthesized into a unified response</span></div>
-          </div>
-        </div>
-      </div>
-      <div class="af-section">
-        <div class="af-section-label">Task</div>
-        <div class="af-field">
-          <label for="orch-task-input">What do you need done?</label>
-          <textarea id="orch-task-input" rows="5" placeholder="e.g. Review the current changes for bugs and security issues, then write tests for any uncovered code paths, and finally refactor any code smells you find."></textarea>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" id="orch-modal-cancel" class="modal-btn-cancel">Cancel</button>
-        <button type="button" id="orch-modal-run" class="modal-btn-save">Run Orchestrator</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- Agent Monitor Modal -->
-  <div id="agent-monitor-modal" class="modal-overlay hidden">
-    <div class="modal agent-monitor-modal">
-      <div class="modal-header">
-        <h3>Agent Monitor</h3>
-        <button id="agent-monitor-close" class="modal-close">&times;</button>
-      </div>
-      <div id="agent-monitor-content"></div>
-    </div>
-  </div>
+  <!-- Modals (Web Components) -->
+  <claudeck-orchestrate-modal></claudeck-orchestrate-modal>
+  <claudeck-agent-monitor-modal></claudeck-agent-monitor-modal>
+  <claudeck-dag-editor></claudeck-dag-editor>
+  <claudeck-chain-modal></claudeck-chain-modal>
+  <claudeck-agent-modal></claudeck-agent-modal>
+  <claudeck-workflow-modal></claudeck-workflow-modal>
+  <claudeck-prompt-modal></claudeck-prompt-modal>
+  <claudeck-system-prompt-modal></claudeck-system-prompt-modal>
+  <claudeck-file-picker></claudeck-file-picker>
+  <claudeck-shortcuts-modal></claudeck-shortcuts-modal>
+  <claudeck-cost-dashboard></claudeck-cost-dashboard>
+  <claudeck-bg-confirm></claudeck-bg-confirm>
+  <claudeck-permission-modal></claudeck-permission-modal>
+  <claudeck-linear-create></claudeck-linear-create>
+  <claudeck-telegram-modal></claudeck-telegram-modal>
+  <claudeck-mcp-modal></claudeck-mcp-modal>
+  <claudeck-add-project></claudeck-add-project>
 
-  <!-- DAG Editor Modal -->
-  <div id="dag-modal" class="modal-overlay hidden">
-    <div class="modal dag-modal-wide">
-      <div class="modal-header">
-        <h3 id="dag-modal-title">New DAG</h3>
-        <button id="dag-modal-close" class="modal-close">&times;</button>
-      </div>
-      <div class="dag-explainer af-section">
-        <div class="af-section-label">What is a DAG?</div>
-        <div class="orch-explainer">
-          <p class="dag-explainer-text">A <strong>DAG</strong> (Directed Acyclic Graph) lets you run agents in parallel when they have no dependencies, and sequentially when one depends on another's output.</p>
-          <div class="orch-explainer-steps">
-            <div class="orch-step"><span class="orch-step-num">1</span><span><strong>Drag agents</strong> from the palette onto the canvas</span></div>
-            <div class="orch-step"><span class="orch-step-num">2</span><span><strong>Connect outputs → inputs</strong> by dragging between ports to define dependencies</span></div>
-            <div class="orch-step"><span class="orch-step-num">3</span><span><strong>Click an edge</strong> to remove a connection</span></div>
-            <div class="orch-step"><span class="orch-step-num">4</span><span>Agents on the same level <strong>run in parallel</strong>, dependent agents wait</span></div>
-          </div>
-        </div>
-      </div>
-      <div class="dag-editor-toolbar af-section">
-        <div class="af-section-label">Details</div>
-        <div class="af-grid-2">
-          <div class="af-field">
-            <label for="dag-form-title">Title</label>
-            <input id="dag-form-title" type="text" placeholder="e.g. Full Review Pipeline" required>
-          </div>
-          <div class="af-field">
-            <label for="dag-form-desc">Description</label>
-            <input id="dag-form-desc" type="text" placeholder="Short description">
-          </div>
-        </div>
-      </div>
-      <div class="dag-editor-body">
-        <div class="dag-node-palette" id="dag-node-palette"></div>
-        <div class="dag-canvas-wrap">
-          <svg id="dag-canvas" class="dag-canvas"></svg>
-        </div>
-      </div>
-      <input id="dag-form-edit-id" type="hidden">
-      <div class="modal-actions">
-        <button type="button" id="dag-modal-cancel" class="modal-btn-cancel">Cancel</button>
-        <button type="button" id="dag-auto-layout" class="modal-btn-cancel">Auto Layout</button>
-        <button type="button" id="dag-modal-save" class="modal-btn-save">Save DAG</button>
-      </div>
-    </div>
-  </div>
+  <!-- Status Bar (Web Component) -->
+  <claudeck-status-bar></claudeck-status-bar>
 
-  <!-- Agent Chain Modal -->
-  <div id="chain-modal" class="modal-overlay hidden">
-    <div class="modal agent-form-modal">
-      <div class="modal-header">
-        <h3 id="chain-modal-title">New Chain</h3>
-        <button id="chain-modal-close" class="modal-close">&times;</button>
-      </div>
-      <form id="chain-form">
-        <div class="af-section">
-          <div class="af-section-label">Details</div>
-          <div class="af-field">
-            <label for="chain-form-title">Title</label>
-            <input id="chain-form-title" type="text" placeholder="e.g. Full Code Review Pipeline" required>
-          </div>
-          <div class="af-field">
-            <label for="chain-form-desc">Description</label>
-            <input id="chain-form-desc" type="text" placeholder="Short description of the chain">
-          </div>
-        </div>
-        <div class="af-section">
-          <div class="af-section-label">Pipeline</div>
-          <div id="chain-agent-list" class="chain-agent-list"></div>
-          <button type="button" id="chain-add-agent-btn" class="chain-add-agent-btn">+ Add Agent Step</button>
-        </div>
-        <div class="af-section">
-          <div class="af-section-label">Settings</div>
-          <div class="af-field">
-            <label for="chain-form-context">Context Passing</label>
-            <select id="chain-form-context">
-              <option value="summary">Summary (recommended)</option>
-              <option value="full">Full output</option>
-              <option value="none">None</option>
-            </select>
-          </div>
-        </div>
-        <input id="chain-form-edit-id" type="hidden">
-        <div class="modal-actions">
-          <button type="button" id="chain-modal-cancel" class="modal-btn-cancel">Cancel</button>
-          <button type="submit" class="modal-btn-save">Save Chain</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Agent CRUD Modal -->
-  <div id="agent-modal" class="modal-overlay hidden">
-    <div class="modal agent-form-modal">
-      <div class="modal-header">
-        <h3 id="agent-modal-title">New Agent</h3>
-        <button id="agent-modal-close" class="modal-close">&times;</button>
-      </div>
-      <form id="agent-form">
-        <div class="af-section">
-          <div class="af-section-label">Identity</div>
-          <div class="af-grid-2">
-            <div class="af-field">
-              <label for="agent-form-title">Title</label>
-              <input id="agent-form-title" type="text" placeholder="e.g. Code Documenter" required>
-            </div>
-            <div class="af-field">
-              <label for="agent-form-icon">Icon</label>
-              <select id="agent-form-icon">
-                <option value="search">Search</option>
-                <option value="bug">Bug</option>
-                <option value="check">Check</option>
-                <option value="tool" selected>Tool</option>
-              </select>
-            </div>
-          </div>
-          <div class="af-field">
-            <label for="agent-form-desc">Description</label>
-            <input id="agent-form-desc" type="text" placeholder="Short description of what this agent does" required>
-          </div>
-        </div>
-        <div class="af-section">
-          <div class="af-section-label">Behavior</div>
-          <div class="af-field">
-            <label for="agent-form-goal">Goal</label>
-            <textarea id="agent-form-goal" rows="4" placeholder="Describe the agent's goal in detail. Be specific about what files to look at, what to check, and what output to produce..." required></textarea>
-          </div>
-        </div>
-        <div class="af-section">
-          <div class="af-section-label">Constraints</div>
-          <div class="af-grid-2">
-            <div class="af-field">
-              <label for="agent-form-max-turns">Max Turns</label>
-              <div class="af-input-with-hint">
-                <input id="agent-form-max-turns" type="number" min="1" max="200" value="50">
-                <span class="af-hint">1 - 200</span>
-              </div>
-            </div>
-            <div class="af-field">
-              <label for="agent-form-timeout">Timeout (seconds)</label>
-              <div class="af-input-with-hint">
-                <input id="agent-form-timeout" type="number" min="30" max="3600" value="300">
-                <span class="af-hint">30 - 3600</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <input id="agent-form-edit-id" type="hidden">
-        <div class="modal-actions">
-          <button type="button" id="agent-modal-cancel" class="modal-btn-cancel">Cancel</button>
-          <button type="submit" class="modal-btn-save">Save Agent</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Workflow CRUD Modal -->
-  <div id="wf-modal" class="modal-overlay hidden">
-    <div class="modal agent-form-modal">
-      <div class="modal-header">
-        <h3 id="wf-modal-title">New Workflow</h3>
-        <button id="wf-modal-close" class="modal-close">&times;</button>
-      </div>
-      <form id="wf-form">
-        <div class="af-section">
-          <div class="af-section-label">Identity</div>
-          <div class="af-field">
-            <label for="wf-form-title">Title</label>
-            <input id="wf-form-title" type="text" placeholder="e.g. Review PR" required>
-          </div>
-          <div class="af-field">
-            <label for="wf-form-desc">Description</label>
-            <input id="wf-form-desc" type="text" placeholder="Short description of this workflow">
-          </div>
-        </div>
-        <div class="af-section">
-          <div class="af-section-label">Steps</div>
-          <div id="wf-steps-list" class="wf-steps-list"></div>
-          <button type="button" id="wf-add-step-btn" class="wf-step-add">+ Add Step</button>
-        </div>
-        <input id="wf-form-edit-id" type="hidden">
-        <div class="modal-actions">
-          <button type="button" id="wf-modal-cancel" class="modal-btn-cancel">Cancel</button>
-          <button type="submit" class="modal-btn-save">Save Workflow</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Add Prompt Modal -->
-  <div id="prompt-modal" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>New Prompt</h3>
-        <button id="modal-close" class="modal-close">&times;</button>
-      </div>
-      <form id="prompt-form">
-        <label for="prompt-title">Title</label>
-        <input id="prompt-title" type="text" placeholder="e.g. Optimize Imports" required>
-        <label for="prompt-desc">Description</label>
-        <input id="prompt-desc" type="text" placeholder="Short description of what it does" required>
-        <label for="prompt-text">Prompt</label>
-        <textarea id="prompt-text" rows="4" placeholder="The full prompt to send to Claude..." required></textarea>
-        <div class="modal-actions">
-          <button type="button" id="modal-cancel" class="modal-btn-cancel">Cancel</button>
-          <button type="submit" class="modal-btn-save">Save Prompt</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- System Prompt Modal -->
-  <div id="system-prompt-modal" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>System Prompt</h3>
-        <button id="sp-modal-close" class="modal-close">&times;</button>
-      </div>
-      <form id="system-prompt-form">
-        <label for="sp-textarea">Custom instructions for Claude in this project</label>
-        <p class="sp-hint">If a <code>CLAUDE.md</code> file exists in the project root, it is automatically included by the SDK — no need to duplicate it here.</p>
-        <textarea id="sp-textarea" rows="8" placeholder="e.g., You are an expert in React + TypeScript. This is a monorepo..."></textarea>
-        <div class="modal-actions">
-          <button type="button" id="sp-clear-btn" class="modal-btn-cancel">Clear</button>
-          <button type="button" id="sp-cancel-btn" class="modal-btn-cancel">Cancel</button>
-          <button type="submit" class="modal-btn-save">Save</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- File Picker Modal -->
-  <div id="file-picker-modal" class="modal-overlay hidden">
-    <div class="modal file-picker-modal">
-      <div class="modal-header">
-        <h3>Attach Files</h3>
-        <button id="fp-modal-close" class="modal-close">&times;</button>
-      </div>
-      <input id="fp-search" type="text" class="file-picker-search" placeholder="Search files..." autocomplete="off">
-      <div id="fp-list" class="file-picker-list"></div>
-      <div class="file-picker-footer">
-        <span id="fp-count">0 files selected</span>
-        <button id="fp-done-btn" class="modal-btn-save">Done</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Keyboard Shortcuts Modal -->
-  <div id="shortcuts-modal" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Keyboard Shortcuts</h3>
-        <button id="shortcuts-modal-close" class="modal-close">&times;</button>
-      </div>
-      <table class="shortcuts-table">
-        <tr><td><span class="kbd">&#8984;K</span></td><td>Focus session search</td></tr>
-        <tr><td><span class="kbd">&#8984;N</span></td><td>New session</td></tr>
-        <tr><td><span class="kbd">&#8984;/</span></td><td>Show keyboard shortcuts</td></tr>
-        <tr><td><span class="kbd">&#8984;B</span></td><td>Toggle right panel</td></tr>
-        <tr><td><span class="kbd">&#8984;&#8679;E</span></td><td>Open file explorer</td></tr>
-        <tr><td><span class="kbd">&#8984;&#8679;G</span></td><td>Open git panel</td></tr>
-        <tr><td><span class="kbd">&#8984;&#8679;R</span></td><td>Open repos panel</td></tr>
-        <tr><td><span class="kbd">&#8984;&#8679;V</span></td><td>Open events panel</td></tr>
-        <tr><td><span class="kbd">&#8984;&#8679;A</span></td><td>Go to home page</td></tr>
-        <tr><td><span class="kbd">&#8984;&#8679;T</span></td><td>Toggle tips feed</td></tr>
-        <tr><td><span class="kbd">&#8984;1</span>–<span class="kbd">&#8984;4</span></td><td>Focus parallel pane 1–4</td></tr>
-        <tr><td><span class="kbd">Esc</span></td><td>Close any open modal</td></tr>
-        <tr><td><span class="kbd">Enter</span></td><td>Send message</td></tr>
-        <tr><td><span class="kbd">Shift+Enter</span></td><td>New line in input</td></tr>
-        <tr><td><span class="kbd">/</span></td><td>Slash commands autocomplete</td></tr>
-        <tr><td><span class="kbd">&uarr;</span></td><td>Recall previous message (empty input)</td></tr>
-        <tr><td><span class="kbd">&darr;</span></td><td>Recall next message (in history)</td></tr>
-        <tr><td><span class="kbd">Esc</span></td><td>Cancel history navigation</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- Cost Dashboard Modal -->
-  <div id="cost-dashboard-modal" class="modal-overlay hidden">
-    <div class="modal cost-dashboard-modal">
-      <div class="modal-header">
-        <h3>Cost Dashboard</h3>
-        <button id="cost-modal-close" class="modal-close">&times;</button>
-      </div>
-      <div id="cost-dashboard-content">
-        <div class="cost-summary-cards" id="cost-summary-cards"></div>
-        <div class="cost-table-container">
-          <table class="cost-table">
-            <thead>
-              <tr>
-                <th data-sort="title">Session</th>
-                <th data-sort="turns">Turns</th>
-                <th data-sort="tokens">Tokens</th>
-                <th data-sort="cost">Cost</th>
-              </tr>
-            </thead>
-            <tbody id="cost-table-body"></tbody>
-          </table>
-        </div>
-        <div class="cost-chart-section">
-          <h4>Daily Costs (Last 30 Days)</h4>
-          <div class="cost-chart" id="cost-chart"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Background Session Confirmation Dialog -->
-  <div id="bg-confirm-modal" class="modal-overlay hidden" data-persistent>
-    <div class="modal bg-confirm-modal">
-      <div class="modal-header">
-        <h3>Session In Progress</h3>
-      </div>
-      <p class="bg-confirm-text">Claude is still responding in this session. What would you like to do?</p>
-      <div class="modal-actions bg-confirm-actions">
-        <button id="bg-confirm-cancel" class="modal-btn-cancel">Cancel</button>
-        <button id="bg-confirm-abort" class="modal-btn-cancel bg-confirm-abort-btn">Abort Session</button>
-        <button id="bg-confirm-background" class="modal-btn-save">Continue in Background</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Permission Approval Modal -->
-  <div id="perm-modal" class="modal-overlay hidden" data-persistent>
-    <div class="modal perm-modal">
-      <div class="modal-header perm-modal-header">
-        <h3><span class="perm-tool-icon">&#9888;</span> <span id="perm-modal-tool-name">Tool Approval</span></h3>
-      </div>
-      <span id="perm-bg-badge" class="perm-bg-badge hidden"></span>
-      <div id="perm-modal-summary" class="perm-modal-summary"></div>
-      <details class="perm-modal-details">
-        <summary>Full input</summary>
-        <pre id="perm-modal-input" class="perm-modal-input"></pre>
-      </details>
-      <label class="perm-always-allow">
-        <input type="checkbox" id="perm-always-allow-cb">
-        Always allow <strong id="perm-always-allow-tool"></strong> this session
-      </label>
-      <div class="modal-actions">
-        <button id="perm-deny-btn" class="perm-deny-btn">Deny</button>
-        <button id="perm-allow-btn" class="perm-allow-btn">Allow</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Linear Create Issue Modal -->
-  <div id="linear-create-modal" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Create Issue</h3>
-        <button id="linear-create-close" class="modal-close">&times;</button>
-      </div>
-      <form id="linear-create-form">
-        <label for="linear-create-title">Title</label>
-        <input id="linear-create-title" type="text" placeholder="Issue title" required>
-        <label for="linear-create-desc">Description</label>
-        <textarea id="linear-create-desc" rows="3" placeholder="Optional description..."></textarea>
-        <label for="linear-create-team">Project (Team)</label>
-        <select id="linear-create-team" required>
-          <option value="">Select a team...</option>
-        </select>
-        <label for="linear-create-state">State</label>
-        <select id="linear-create-state" disabled>
-          <option value="">Select a team first...</option>
-        </select>
-        <div class="modal-actions">
-          <button type="button" id="linear-create-cancel" class="modal-btn-cancel">Cancel</button>
-          <button type="submit" id="linear-create-submit" class="modal-btn-save">Create</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Telegram Settings Modal -->
-  <div id="telegram-modal" class="modal-overlay hidden">
-    <div class="modal telegram-modal">
-      <div class="modal-header">
-        <h2>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.2 4.6L2.4 11.2c-.8.3-.8 1.5 0 1.8l4.6 1.7 1.7 5.5c.2.6 1 .8 1.4.3l2.5-2.8 4.8 3.5c.6.4 1.4.1 1.5-.6L21.2 4.6z"/>
-          </svg>
-          Telegram Notifications
-        </h2>
-        <button class="modal-close" id="telegram-close">&times;</button>
-      </div>
-      <div class="modal-body" style="padding:16px;">
-        <div class="telegram-form">
-          <label class="telegram-toggle-row">
-            <input type="checkbox" id="telegram-enabled">
-            <span>Enable Telegram notifications</span>
-          </label>
-          <div class="telegram-field">
-            <label for="telegram-bot-token">Bot Token</label>
-            <input type="password" id="telegram-bot-token" placeholder="123456:ABC-DEF..." autocomplete="off">
-          </div>
-          <div class="telegram-field">
-            <label for="telegram-chat-id">Chat ID</label>
-            <input type="text" id="telegram-chat-id" placeholder="-100123456789" autocomplete="off">
-          </div>
-          <div class="telegram-field">
-            <label for="telegram-afk-timeout">AFK Approval Timeout (minutes)</label>
-            <input type="number" id="telegram-afk-timeout" min="1" max="120" value="15" style="width:80px;">
-          </div>
-
-          <div class="telegram-notify-section">
-            <label class="telegram-field-label">Notification Events</label>
-            <div class="telegram-notify-grid">
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-session" checked> Session complete</label>
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-workflow" checked> Workflow complete</label>
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-chain" checked> Chain complete</label>
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-agent" checked> Agent complete</label>
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-orchestrator" checked> Orchestrator complete</label>
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-dag" checked> DAG complete</label>
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-errors" checked> Errors &amp; failures</label>
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-permissions" checked> Permission requests (AFK approve/deny)</label>
-              <label class="telegram-toggle-row"><input type="checkbox" id="tg-notify-start" checked> Task start</label>
-            </div>
-          </div>
-
-          <div class="telegram-actions">
-            <button class="btn btn-secondary" id="telegram-test-btn">Send Test</button>
-            <button class="btn btn-primary" id="telegram-save-btn">Save</button>
-          </div>
-          <div id="telegram-status" class="telegram-status hidden"></div>
-          <details class="telegram-help">
-            <summary>Setup instructions</summary>
-            <ol>
-              <li>Open Telegram and search for <strong>@BotFather</strong></li>
-              <li>Send <code>/newbot</code> and follow the prompts to create a bot</li>
-              <li>Copy the <strong>Bot Token</strong> and paste it above</li>
-              <li>Start a chat with your new bot (send <code>/start</code>)</li>
-              <li>To find your <strong>Chat ID</strong>, send a message to the bot, then visit:<br>
-                <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code><br>
-                Look for <code>"chat":{"id":...</code> in the response</li>
-              <li>For group chats, add the bot to the group and use the group's chat ID (starts with <code>-</code>)</li>
-            </ol>
-          </details>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MCP Server Management Modal -->
-  <div id="mcp-modal" class="modal-overlay hidden">
-    <div class="modal mcp-modal">
-      <div class="modal-header">
-        <h3>MCP Servers</h3>
-        <button id="mcp-modal-close" class="modal-close">&times;</button>
-      </div>
-      <div id="mcp-server-list" class="mcp-server-list"></div>
-      <div id="mcp-form-container" class="mcp-form-container hidden">
-        <h4 id="mcp-form-title" class="mcp-form-title">Add Server</h4>
-        <form id="mcp-form">
-          <label for="mcp-name">Name</label>
-          <input id="mcp-name" type="text" placeholder="my-server" required>
-          <label for="mcp-type">Type</label>
-          <select id="mcp-type">
-            <option value="stdio">stdio</option>
-            <option value="sse">sse</option>
-            <option value="http">http</option>
-          </select>
-          <div id="mcp-stdio-fields">
-            <label for="mcp-command">Command</label>
-            <input id="mcp-command" type="text" placeholder="npx -y @modelcontextprotocol/server-name">
-            <label for="mcp-args">Args (one per line)</label>
-            <textarea id="mcp-args" rows="2" placeholder="--flag&#10;value"></textarea>
-            <label for="mcp-env">Environment (KEY=VALUE, one per line)</label>
-            <textarea id="mcp-env" rows="2" placeholder="API_KEY=xxx"></textarea>
-          </div>
-          <div id="mcp-url-fields" class="hidden">
-            <label for="mcp-url">URL</label>
-            <input id="mcp-url" type="text" placeholder="https://...">
-          </div>
-          <div class="modal-actions">
-            <button type="button" id="mcp-form-cancel" class="modal-btn-cancel">Cancel</button>
-            <button type="submit" id="mcp-form-save" class="modal-btn-save">Save</button>
-          </div>
-        </form>
-      </div>
-      <div class="mcp-modal-footer">
-        <button id="mcp-add-btn" class="modal-btn-save">+ Add Server</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Project Modal -->
-  <div id="add-project-modal" class="modal-overlay hidden">
-    <div class="modal add-project-modal">
-      <div class="modal-header">
-        <h3>Add Project</h3>
-        <button id="add-project-close" class="modal-close">&times;</button>
-      </div>
-      <div class="add-project-body">
-        <div id="folder-breadcrumb" class="folder-breadcrumb"></div>
-        <div id="folder-list" class="folder-list"></div>
-        <div class="folder-select-row">
-          <input id="add-project-name" type="text" placeholder="Project name" autocomplete="off">
-          <button id="add-project-confirm" class="modal-btn-save">Add</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Status Bar -->
-  <footer class="status-bar" id="status-bar">
-    <div class="status-bar-left">
-      <span class="sb-item sb-version" id="sb-version" title="Claudeck version"></span>
-      <span class="sb-sep"></span>
-      <span class="sb-item sb-connection" id="sb-connection" title="Connection status">
-        <span class="sb-dot" id="sb-dot"></span>
-        <span id="sb-connection-text">connecting</span>
-      </span>
-      <span class="sb-sep"></span>
-      <span class="sb-item sb-branch" id="sb-branch" title="Current git branch">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
-        <span id="sb-branch-name">--</span>
-      </span>
-      <span class="sb-sep"></span>
-      <span class="sb-item sb-project" id="sb-project" title="Current project">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        <span id="sb-project-name">no project</span>
-      </span>
-    </div>
-    <div class="status-bar-center">
-      <span class="sb-item sb-activity" id="sb-activity"></span>
-    </div>
-    <div class="status-bar-right">
-      <span class="sb-item sb-bg-sessions hidden" id="sb-bg-sessions" title="Background sessions">
-        <span class="sb-bg-dot"></span>
-        <span id="sb-bg-count">0</span> bg
-      </span>
-      <span class="sb-sep sb-bg-sep hidden" id="sb-bg-sep"></span>
-      <span class="sb-item sb-tokens hidden" id="sb-streaming-tokens" title="Streaming tokens">
-        <span id="sb-tokens-value">~0 tokens</span>
-      </span>
-      <span class="sb-sep sb-tokens-sep hidden" id="sb-tokens-sep"></span>
-      <span class="sb-item sb-context-gauge" id="sb-context-gauge-item">
-        <span id="context-gauge" class="context-gauge hidden" title="Session context usage">
-          <span class="context-gauge-bar"><span id="context-gauge-fill" class="context-gauge-fill"></span></span>
-          <span id="context-gauge-label" class="context-gauge-label">0/200k</span>
-        </span>
-      </span>
-      <span class="sb-sep hidden" id="sb-gauge-sep"></span>
-      <span class="sb-item sb-credits" id="sb-credits" title="Credits">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        <div class="sb-credits-popup" id="sb-credits-popup">
-          <div class="sb-credits-header">Credits</div>
-          <div class="sb-credits-body">
-            <div class="sb-credits-row">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <div class="sb-credits-info">
-                <span class="sb-credits-role">Creator & Architect</span>
-                <span class="sb-credits-name">Hamed Farag</span>
-              </div>
-            </div>
-            <div class="sb-credits-divider"></div>
-            <div class="sb-credits-row">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4c0 2 2 3 2 5h4c0-2 2-3 2-5a4 4 0 0 0-4-4z"/><line x1="10" y1="17" x2="14" y2="17"/><line x1="10" y1="20" x2="14" y2="20"/><line x1="11" y1="23" x2="13" y2="23"/></svg>
-              <div class="sb-credits-info">
-                <span class="sb-credits-role">AI Assistant</span>
-                <span class="sb-credits-name">Claude Code AI</span>
-              </div>
-            </div>
-          </div>
-          <div class="sb-credits-sponsor">
-            <div class="sb-credits-row">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-              <div class="sb-credits-info">
-                <span class="sb-credits-role">Sponsor</span>
-                <span class="sb-credits-name">WakeCap</span>
-              </div>
-            </div>
-          </div>
-          <a class="sb-credits-kofi" href="https://ko-fi.com/hamedfarag" target="_blank" rel="noopener noreferrer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff5e5b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
-            <span>Support on Ko-fi</span>
-          </a>
-        </div>
-      </span>
-      <span class="sb-sep sb-credits-sep"></span>
-      <span class="sb-item sb-cost sb-cost-hint" id="sb-cost">
-        <span id="sb-session-cost">$0.00</span>
-        <span class="sb-cost-pipe">/</span>
-        <span id="sb-total-cost">$0.00</span>
-        <div class="sb-hint-popup">
-          <div class="sb-hint-header">Session / Total Cost</div>
-          <div class="sb-hint-body">
-            <p>Every message carries a fixed <strong>~20k token</strong> overhead from the Claude Code SDK — this includes the system prompt (~12-15k), core tool schemas (~4-5k), and environment context (~1k).</p>
-            <p>This cost is unavoidable and cannot be reduced. Disabling optional tools in Session settings saves only ~2-3k tokens.</p>
-            <p class="sb-hint-dim">Subsequent turns benefit from Anthropic's prompt caching, which significantly reduces the effective cost.</p>
-          </div>
-        </div>
-      </span>
-    </div>
-  </footer>
 
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
