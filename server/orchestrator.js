@@ -158,6 +158,7 @@ export async function runOrchestrator({
     abortController,
     maxTurns: 3, // Planner should just think, not use many tools
     executable: execPath,
+    settingSources: ["user", "project", "local"],
   };
 
   if (!useBypass && !usePlan) {

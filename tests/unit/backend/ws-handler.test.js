@@ -1526,6 +1526,21 @@ describe("ws-handler", () => {
       expect(callArgs.options.maxTurns).toBeUndefined();
     });
 
+    // ── settingSources ────────────────────────────────────────────────────
+    it("passes settingSources to query options", async () => {
+      vi.mocked(query).mockReturnValueOnce(
+        (async function* () {
+          yield { type: "system", subtype: "init", session_id: "cs-ss", model: "claude-sonnet-4-6" };
+          yield { type: "result", subtype: "success", total_cost_usd: 0, duration_ms: 0, num_turns: 1, usage: {}, modelUsage: {} };
+        })(),
+      );
+
+      await sendChat({});
+
+      const callArgs = query.mock.calls[query.mock.calls.length - 1][0];
+      expect(callArgs.options.settingSources).toEqual(["user", "project", "local"]);
+    });
+
     // ── resume from sessionIds map ─────────────────────────────────────────
     it("passes resume when sessionIds has a mapping for the session", async () => {
       vi.mocked(query).mockReturnValueOnce(
@@ -1789,6 +1804,18 @@ describe("ws-handler", () => {
         "error", "Workflow Step Failed",
         expect.stringContaining("Crash"),
       );
+    });
+
+    it("workflow passes settingSources to query options", async () => {
+      const step1 = (async function* () {
+        yield { type: "system", subtype: "init", session_id: "wf-ss1", model: "claude-sonnet-4-6" };
+        yield { type: "result", subtype: "success", total_cost_usd: 0, duration_ms: 0, num_turns: 1, usage: {}, modelUsage: {} };
+      })();
+
+      await sendWorkflow({}, [step1]);
+
+      const callArgs = query.mock.calls[query.mock.calls.length - 1][0];
+      expect(callArgs.options.settingSources).toEqual(["user", "project", "local"]);
     });
 
     it("workflow model resolution passes resolved model to query", async () => {
@@ -2724,6 +2751,19 @@ describe("ws-handler", () => {
 
       const callArgs = query.mock.calls[query.mock.calls.length - 1][0];
       expect(callArgs.options.appendSystemPrompt).toContain("You are a bot");
+    });
+
+    it("passes settingSources to query options", async () => {
+      mockQuery((async function* () {
+        yield { type: "system", subtype: "init", session_id: "cs-ss-d", model: "claude-sonnet-4-6" };
+        yield { type: "result", subtype: "success", total_cost_usd: 0, duration_ms: 0, num_turns: 1, usage: {}, modelUsage: {} };
+      })());
+
+      const ctx = makeCtx();
+      await handleChat(makeMsg(), ctx);
+
+      const callArgs = query.mock.calls[query.mock.calls.length - 1][0];
+      expect(callArgs.options.settingSources).toEqual(["user", "project", "local"]);
     });
 
     it("disabledTools mapped to disallowedTools", async () => {

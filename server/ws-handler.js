@@ -421,6 +421,7 @@ export async function handleWorkflow(msg, { ws, sessionIds, activeQueries, pendi
       abortController,
       maxTurns: 30,
       executable: execPath,
+      settingSources: ["user", "project", "local"],
     };
 
     if (!useBypass && !usePlan) {
@@ -730,6 +731,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
     abortController,
     executable: execPath,
     stderr: (text) => stderrChunks.push(text),
+    settingSources: ["user", "project", "local"],
   };
   if (effectiveMaxTurns) opts.maxTurns = effectiveMaxTurns;
 

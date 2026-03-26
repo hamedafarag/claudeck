@@ -145,6 +145,7 @@ export async function runAgent({
     abortController,
     maxTurns,
     executable: execPath,
+    settingSources: ["user", "project", "local"],
   };
 
   if (!useBypass && !usePlan) {

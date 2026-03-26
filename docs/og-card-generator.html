@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OG Card Generator — Claudeck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin: 0; padding: 40px;
+    background: #1a1a1a;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 24px;
+    font-family: sans-serif; color: #999;
+  }
+  .instructions {
+    max-width: 1200px; text-align: center; font-size: 14px; line-height: 1.6;
+  }
+  .instructions code {
+    background: #333; padding: 2px 6px; border-radius: 4px; color: #ccc;
+  }
+
+  /* ── The actual OG card ── */
+  .og-card {
+    width: 1200px; height: 630px;
+    background: #050508;
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.6);
+  }
+
+  /* Dot grid */
+  .og-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(51,209,122,.1) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 10%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 10%, transparent 70%);
+  }
+
+  /* Radial glow */
+  .og-card::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%; translate: -50% -50%;
+    width: 700px; height: 500px;
+    background: radial-gradient(circle, rgba(51,209,122,.06) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .og-inner {
+    position: relative; z-index: 2;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 0 60px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  .og-mascot {
+    width: 80px; height: auto;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 8px 32px rgba(51,209,122,.2));
+    margin-bottom: 16px;
+  }
+
+  .og-title {
+    font-family: "Chakra Petch", sans-serif;
+    font-size: 72px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #33d17a 0%, #56d4dd 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 40px rgba(51,209,122,.25));
+  }
+
+  .og-tagline {
+    font-family: "Chakra Petch", sans-serif;
+    font-size: 26px;
+    font-weight: 400;
+    color: #6b7a8d;
+    letter-spacing: .5px;
+    margin-bottom: 24px;
+  }
+
+  .og-terminal {
+    display: inline-flex;
+    align-items: center; gap: 10px;
+    padding: 10px 24px;
+    background: rgba(14,15,20,.9);
+    border: 1px solid #1a1c26;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+  .og-terminal .prompt {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 20px;
+    color: #33d17a;
+  }
+  .og-terminal .cmd {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 20px;
+    color: #c8d3de;
+  }
+
+  .og-tags {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .og-tag {
+    padding: 6px 16px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid #1a1c26;
+    border-radius: 20px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    color: #3a4250;
+    letter-spacing: .3px;
+  }
+  .og-tag.green { color: rgba(51,209,122,.6); border-color: rgba(51,209,122,.15); }
+  .og-tag.purple { color: rgba(198,159,245,.6); border-color: rgba(198,159,245,.15); }
+  .og-tag.cyan { color: rgba(86,212,221,.6); border-color: rgba(86,212,221,.15); }
+  .og-tag.blue { color: rgba(123,155,245,.6); border-color: rgba(123,155,245,.15); }
+  .og-tag.amber { color: rgba(240,180,41,.6); border-color: rgba(240,180,41,.15); }
+
+  /* Scanlines */
+  .og-scanlines {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,.03) 2px,
+      rgba(0,0,0,.03) 4px
+    );
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  /* Corner accents */
+  .og-corner {
+    position: absolute;
+    width: 60px; height: 60px;
+    z-index: 4;
+  }
+  .og-corner.tl { top: 20px; left: 20px; border-top: 2px solid rgba(51,209,122,.15); border-left: 2px solid rgba(51,209,122,.15); }
+  .og-corner.tr { top: 20px; right: 20px; border-top: 2px solid rgba(51,209,122,.15); border-right: 2px solid rgba(51,209,122,.15); }
+  .og-corner.bl { bottom: 20px; left: 20px; border-bottom: 2px solid rgba(51,209,122,.15); border-left: 2px solid rgba(51,209,122,.15); }
+  .og-corner.br { bottom: 20px; right: 20px; border-bottom: 2px solid rgba(51,209,122,.15); border-right: 2px solid rgba(51,209,122,.15); }
+</style>
+</head>
+<body>
+
+<div class="instructions">
+  <p><strong>How to export:</strong></p>
+  <p>1. Open DevTools (<code>Cmd+Opt+I</code>) &rarr; Console</p>
+  <p>2. Right-click the card below &rarr; <strong>Capture node screenshot</strong> (in Elements panel, right-click the <code>.og-card</code> node)</p>
+  <p>3. Or use a screenshot tool cropped exactly to the card (1200&times;630)</p>
+  <p>4. Save as <code>docs/images/og-card.png</code></p>
+</div>
+
+<div class="og-card" id="ogCard">
+  <div class="og-scanlines"></div>
+  <div class="og-corner tl"></div>
+  <div class="og-corner tr"></div>
+  <div class="og-corner bl"></div>
+  <div class="og-corner br"></div>
+
+  <div class="og-inner">
+    <img src="images/whaly.png" alt="" class="og-mascot">
+    <div class="og-title">Claudeck</div>
+    <div class="og-tagline">The Browser UI for Claude Code</div>
+    <div class="og-terminal">
+      <span class="prompt">$</span>
+      <span class="cmd">npx claudeck</span>
+    </div>
+    <div class="og-tags">
+      <span class="og-tag green">Chat</span>
+      <span class="og-tag purple">Agents</span>
+      <span class="og-tag cyan">DAG Workflows</span>
+      <span class="og-tag amber">Cost Tracking</span>
+      <span class="og-tag blue">Plugins</span>
+      <span class="og-tag green">Memory</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

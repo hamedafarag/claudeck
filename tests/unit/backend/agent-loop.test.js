@@ -368,6 +368,16 @@ describe("agent-loop — runAgent", () => {
     expect(callArgs.options.maxTurns).toBe(50);
   });
 
+  // ── settingSources passed to query options ────────────────────────────────
+  it("passes settingSources to query options", async () => {
+    const opts = baseOpts();
+
+    await runAgent(opts);
+
+    const callArgs = query.mock.calls[0][0];
+    expect(callArgs.options.settingSources).toEqual(["user", "project", "local"]);
+  });
+
   // ── Tracks tool_use blocks as agent_progress ────────────────────────────
   it("sends agent_progress for tool_use blocks", async () => {
     query.mockReturnValue(
