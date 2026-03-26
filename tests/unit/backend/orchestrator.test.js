@@ -583,6 +583,17 @@ describe("orchestrator — runOrchestrator", () => {
     expect(plannerCall.options.permissionMode).toBe("default");
   });
 
+  // ── settingSources passed to planner options ───────────────────────────
+  it("passes settingSources to planner query options", async () => {
+    queryCallCount = 0;
+    const opts = baseOpts();
+
+    await runOrchestrator(opts);
+
+    const plannerCall = query.mock.calls[0][0];
+    expect(plannerCall.options.settingSources).toEqual(["user", "project", "local"]);
+  });
+
   // ── Branch: model provided sets resolveModel on planner opts ──────────
   it("resolves model name for planner options", async () => {
     queryCallCount = 0;
