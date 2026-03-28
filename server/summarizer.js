@@ -3,10 +3,10 @@ import { execPath } from "process";
 import { getMessagesNoChatId, updateSessionSummary, getSession } from "../db.js";
 
 export async function generateSessionSummary(sessionId) {
-  const session = getSession(sessionId);
+  const session = await getSession(sessionId);
   if (!session) return null;
 
-  const messages = getMessagesNoChatId(sessionId);
+  const messages = await getMessagesNoChatId(sessionId);
   const conversation = [];
   for (const msg of messages) {
     try {
@@ -49,7 +49,7 @@ export async function generateSessionSummary(sessionId) {
   }
 
   if (summary) {
-    updateSessionSummary(sessionId, summary);
+    await updateSessionSummary(sessionId, summary);
   }
   return summary;
 }

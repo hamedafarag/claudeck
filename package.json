@@ -11,6 +11,7 @@
     "cli.js",
     "server.js",
     "db.js",
+    "db/",
     "server/",
     "public/",
     "config/",

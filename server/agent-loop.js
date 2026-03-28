@@ -40,7 +40,7 @@ import { logNotification } from "./notification-logger.js";
  * Build the agent system prompt that instructs Claude to work autonomously
  * toward the given goal.
  */
-function buildAgentPrompt(agentDef, userContext, sharedContext, cwd) {
+async function buildAgentPrompt(agentDef, userContext, sharedContext, cwd) {
   let prompt = `You are an autonomous AI agent. Work toward the following goal step by step, using any tools available to you.\n\n`;
   prompt += `## Goal\n${agentDef.goal}\n\n`;
   if (userContext) {
@@ -48,7 +48,7 @@ function buildAgentPrompt(agentDef, userContext, sharedContext, cwd) {
   }
   // Inject persistent memories from previous sessions
   if (cwd) {
-    const memoryPrompt = buildAgentMemoryPrompt(cwd, 8);
+    const memoryPrompt = await buildAgentMemoryPrompt(cwd, 8);
     if (memoryPrompt) {
       prompt += memoryPrompt + '\n\n';
       console.log(`\n══════ AGENT MEMORY INJECTION ══════`);
@@ -105,7 +105,7 @@ export async function runAgent({
   const monitorRunId = runId || `single-${Date.now()}`;
   const effectiveRunType = runType || 'single';
   try {
-    recordAgentRunStart(monitorRunId, agentId, agentDef.title, effectiveRunType, parentRunId);
+    await recordAgentRunStart(monitorRunId, agentId, agentDef.title, effectiveRunType, parentRunId);
   } catch (e) { /* ignore duplicates */ }
 
   function agentSend(payload) {
@@ -161,8 +161,8 @@ export async function runAgent({
   if (resumeId) opts.resume = resumeId;
 
   // Load shared context from previous agents in this run
-  const sharedContext = runId ? getAllAgentContext(runId) : [];
-  const prompt = buildAgentPrompt(agentDef, userContext, sharedContext, cwd);
+  const sharedContext = runId ? await getAllAgentContext(runId) : [];
+  const prompt = await buildAgentPrompt(agentDef, userContext, sharedContext, cwd);
   let resolvedSid = clientSid;
   let claudeSessionId = null;
   let sessionModel = null;
@@ -185,15 +185,15 @@ export async function runAgent({
 
         sessionIds.set(ourSid, claudeSessionId);
 
-        if (!getSession(ourSid)) {
-          createSession(ourSid, claudeSessionId, projectName || "Agent Session", cwd || "");
-          updateSessionTitle(ourSid, `Agent: ${agentDef.title}`);
+        if (!await getSession(ourSid)) {
+          await createSession(ourSid, claudeSessionId, projectName || "Agent Session", cwd || "");
+          await updateSessionTitle(ourSid, `Agent: ${agentDef.title}`);
         } else {
-          updateClaudeSessionId(ourSid, claudeSessionId);
+          await updateClaudeSessionId(ourSid, claudeSessionId);
         }
 
         agentSend({ type: "session", sessionId: ourSid });
-        addMessage(resolvedSid, "user", JSON.stringify({ text: `[Agent: ${agentDef.title}] ${agentDef.goal}` }), null);
+        await addMessage(resolvedSid, "user", JSON.stringify({ text: `[Agent: ${agentDef.title}] ${agentDef.goal}` }), null);
         continue;
       }
 
@@ -204,7 +204,7 @@ export async function runAgent({
             lastAssistantText += (lastAssistantText ? "\n\n" : "") + block.text;
             agentSend({ type: "text", text: block.text });
             if (resolvedSid) {
-              addMessage(resolvedSid, "assistant", JSON.stringify({ text: block.text }), null);
+              await addMessage(resolvedSid, "assistant", JSON.stringify({ text: block.text }), null);
             }
           } else if (block.type === "tool_use") {
             turnCount++;
@@ -220,7 +220,7 @@ export async function runAgent({
                 : "",
             });
             if (resolvedSid) {
-              addMessage(resolvedSid, "tool", JSON.stringify({ id: block.id, name: block.name, input: block.input }), null);
+              await addMessage(resolvedSid, "tool", JSON.stringify({ id: block.id, name: block.name, input: block.input }), null);
             }
           }
         }
@@ -242,7 +242,7 @@ export async function runAgent({
               isError: block.is_error || false,
             });
             if (resolvedSid) {
-              addMessage(resolvedSid, "tool_result", JSON.stringify({
+              await addMessage(resolvedSid, "tool_result", JSON.stringify({
                 toolUseId: block.tool_use_id,
                 content: text.slice(0, 10000),
                 isError: block.is_error || false,
@@ -266,7 +266,7 @@ export async function runAgent({
           const resultModel = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
 
           if (resolvedSid) {
-            addCost(resolvedSid, costUsd, durationMs, numTurns, inputTokens, outputTokens, {
+            await addCost(resolvedSid, costUsd, durationMs, numTurns, inputTokens, outputTokens, {
               model: resultModel,
               stopReason: sdkMsg.subtype,
               isError: 0,
@@ -280,7 +280,7 @@ export async function runAgent({
             duration_ms: durationMs,
             num_turns: numTurns,
             cost_usd: costUsd,
-            totalCost: getTotalCost(),
+            totalCost: await getTotalCost(),
             input_tokens: inputTokens,
             output_tokens: outputTokens,
             cache_read_tokens: cacheReadTokens,
@@ -301,11 +301,11 @@ export async function runAgent({
 
           // Record completion for monitoring
           try {
-            recordAgentRunComplete(monitorRunId, agentId, 'completed', numTurns, costUsd, durationMs, inputTokens, outputTokens);
+            await recordAgentRunComplete(monitorRunId, agentId, 'completed', numTurns, costUsd, durationMs, inputTokens, outputTokens);
           } catch (e) { /* ignore */ }
 
           // Log notification
-          logNotification('agent', `Agent "${agentDef.title}" completed`,
+          await logNotification('agent', `Agent "${agentDef.title}" completed`,
             `${numTurns} turns · $${costUsd.toFixed(4)} · ${(durationMs / 1000).toFixed(1)}s`,
             JSON.stringify({ costUsd, durationMs, inputTokens, outputTokens, turns: numTurns }),
             resolvedSid, agentId);
@@ -315,7 +315,7 @@ export async function runAgent({
             const summary = lastAssistantText.length > 4000
               ? lastAssistantText.slice(0, 4000) + "\n\n[truncated]"
               : lastAssistantText;
-            setAgentContext(runId, agentId, "output", summary);
+            await setAgentContext(runId, agentId, "output", summary);
           }
         } else if (sdkMsg.subtype?.startsWith("error")) {
           const errMsg = sdkMsg.errors?.join(", ") || "Unknown error";
@@ -329,14 +329,14 @@ export async function runAgent({
           const resultModel = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
 
           if (resolvedSid) {
-            addCost(resolvedSid, costUsd, durationMs, numTurns, inputTokens, outputTokens, {
+            await addCost(resolvedSid, costUsd, durationMs, numTurns, inputTokens, outputTokens, {
               model: resultModel,
               stopReason: sdkMsg.subtype,
               isError: 1,
               cacheReadTokens,
               cacheCreationTokens,
             });
-            addMessage(resolvedSid, "error", JSON.stringify({ error: errMsg, subtype: sdkMsg.subtype }), null);
+            await addMessage(resolvedSid, "error", JSON.stringify({ error: errMsg, subtype: sdkMsg.subtype }), null);
           }
 
           lastAgentMetrics = { durationMs, costUsd, inputTokens, outputTokens, model: resultModel, turns: numTurns, isError: true, error: errMsg };
@@ -345,11 +345,11 @@ export async function runAgent({
 
           // Record error for monitoring
           try {
-            recordAgentRunComplete(monitorRunId, agentId, 'error', numTurns, costUsd, durationMs, inputTokens, outputTokens, errMsg);
+            await recordAgentRunComplete(monitorRunId, agentId, 'error', numTurns, costUsd, durationMs, inputTokens, outputTokens, errMsg);
           } catch (e) { /* ignore */ }
 
           // Log error notification
-          logNotification('error', `Agent "${agentDef.title}" failed`,
+          await logNotification('error', `Agent "${agentDef.title}" failed`,
             errMsg.slice(0, 200),
             JSON.stringify({ costUsd, durationMs, error: errMsg }),
             resolvedSid, agentId);
@@ -361,11 +361,11 @@ export async function runAgent({
     if (err.name === "AbortError") {
       agentSend({ type: "agent_aborted", agentId, turn: turnCount });
       agentSend({ type: "aborted" });
-      try { recordAgentRunComplete(monitorRunId, agentId, 'aborted', turnCount, 0, 0, 0, 0, 'Aborted'); } catch (e) { /* ignore */ }
+      try { await recordAgentRunComplete(monitorRunId, agentId, 'aborted', turnCount, 0, 0, 0, 0, 'Aborted'); } catch (e) { /* ignore */ }
     } else {
       agentSend({ type: "agent_error", agentId, error: err.message, turn: turnCount });
       agentSend({ type: "error", error: err.message });
-      try { recordAgentRunComplete(monitorRunId, agentId, 'error', turnCount, 0, 0, 0, 0, err.message); } catch (e) { /* ignore */ }
+      try { await recordAgentRunComplete(monitorRunId, agentId, 'error', turnCount, 0, 0, 0, 0, err.message); } catch (e) { /* ignore */ }
     }
     throw err; // Re-throw so callers (chains, DAGs) know the agent failed
   } finally {
@@ -413,8 +413,8 @@ export async function runAgent({
     // Auto-capture memories from agent output
     if (cwd && lastAssistantText) {
       try {
-        const explicitCount = saveExplicitMemories(cwd, lastAssistantText, resolvedSid);
-        const autoCount = captureMemories(cwd, lastAssistantText, resolvedSid, agentId);
+        const explicitCount = await saveExplicitMemories(cwd, lastAssistantText, resolvedSid);
+        const autoCount = await captureMemories(cwd, lastAssistantText, resolvedSid, agentId);
         const totalCaptured = explicitCount + autoCount;
         if (totalCaptured > 0) {
           console.log(`Captured ${totalCaptured} memories (${explicitCount} explicit, ${autoCount} auto) from agent ${agentId}`);

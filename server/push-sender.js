@@ -9,7 +9,7 @@ export function initPushSender(webpush) {
 export async function sendPushNotification(title, body, tag) {
   if (!webpushInstance) return;
 
-  const subs = getAllPushSubscriptions();
+  const subs = await getAllPushSubscriptions();
   if (!subs.length) return;
 
   const payload = JSON.stringify({ title, body, tag });
@@ -23,7 +23,7 @@ export async function sendPushNotification(title, body, tag) {
         );
       } catch (err) {
         if (err.statusCode === 404 || err.statusCode === 410) {
-          deletePushSubscription(sub.endpoint);
+          await deletePushSubscription(sub.endpoint);
         }
       }
     })

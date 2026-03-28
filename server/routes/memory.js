@@ -11,11 +11,11 @@ const router = Router();
 const CATEGORIES = ["convention", "decision", "discovery", "warning"];
 
 // List memories for a project
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const { project, category } = req.query;
     if (!project) return res.status(400).json({ error: "project query param required" });
-    const memories = listMemories(project, category || null);
+    const memories = await listMemories(project, category || null);
     res.json(memories);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -23,11 +23,11 @@ router.get("/", (req, res) => {
 });
 
 // Search memories
-router.get("/search", (req, res) => {
+router.get("/search", async (req, res) => {
   try {
     const { project, q, limit } = req.query;
     if (!project || !q) return res.status(400).json({ error: "project and q required" });
-    const results = searchMemories(project, q, Number(limit) || 20);
+    const results = await searchMemories(project, q, Number(limit) || 20);
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -35,13 +35,13 @@ router.get("/search", (req, res) => {
 });
 
 // Get top relevant memories (used for prompt injection)
-router.get("/top", (req, res) => {
+router.get("/top", async (req, res) => {
   try {
     const { project, limit } = req.query;
     if (!project) return res.status(400).json({ error: "project required" });
-    const memories = getTopMemories(project, Number(limit) || 10);
+    const memories = await getTopMemories(project, Number(limit) || 10);
     // Touch each memory to boost relevance
-    for (const m of memories) touchMemory(m.id);
+    for (const m of memories) await touchMemory(m.id);
     res.json(memories);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -49,12 +49,12 @@ router.get("/top", (req, res) => {
 });
 
 // Get stats
-router.get("/stats", (req, res) => {
+router.get("/stats", async (req, res) => {
   try {
     const { project } = req.query;
     if (!project) return res.status(400).json({ error: "project required" });
-    const stats = getMemoryStats(project);
-    const counts = getMemoryCounts(project);
+    const stats = await getMemoryStats(project);
+    const counts = await getMemoryCounts(project);
     res.json({ ...stats, categories: counts });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -62,14 +62,14 @@ router.get("/stats", (req, res) => {
 });
 
 // Create a memory
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { project, category, content, sessionId, agentId } = req.body;
     if (!project || !content) {
       return res.status(400).json({ error: "project and content required" });
     }
     const cat = CATEGORIES.includes(category) ? category : "discovery";
-    const info = createMemory(project, cat, content.trim(), sessionId || null, agentId || null);
+    const info = await createMemory(project, cat, content.trim(), sessionId || null, agentId || null);
     res.json({ id: info.lastInsertRowid });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -77,13 +77,13 @@ router.post("/", (req, res) => {
 });
 
 // Update a memory
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     const { content, category } = req.body;
     if (!content) return res.status(400).json({ error: "content required" });
     const cat = CATEGORIES.includes(category) ? category : "discovery";
-    updateMemory(id, content.trim(), cat);
+    await updateMemory(id, content.trim(), cat);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -91,10 +91,10 @@ router.put("/:id", (req, res) => {
 });
 
 // Delete a memory
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    deleteMemory(id);
+    await deleteMemory(id);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -102,11 +102,11 @@ router.delete("/:id", (req, res) => {
 });
 
 // Decay old memories and clean expired
-router.post("/maintain", (req, res) => {
+router.post("/maintain", async (req, res) => {
   try {
     const { project } = req.body;
     if (!project) return res.status(400).json({ error: "project required" });
-    maintainMemories(project);
+    await maintainMemories(project);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -129,13 +129,13 @@ router.post("/optimize", async (req, res) => {
 });
 
 // Apply optimization — replace memories with optimized set
-router.post("/optimize/apply", (req, res) => {
+router.post("/optimize/apply", async (req, res) => {
   try {
     const { project, optimized } = req.body;
     if (!project || !Array.isArray(optimized)) {
       return res.status(400).json({ error: "project and optimized array required" });
     }
-    const result = applyOptimization(project, optimized);
+    const result = await applyOptimization(project, optimized);
     res.json(result);
   } catch (err) {
     console.error("Apply optimization error:", err);

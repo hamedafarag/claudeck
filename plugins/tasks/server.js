@@ -3,63 +3,63 @@ import { listTodos, createTodo, updateTodo, archiveTodo, deleteTodo, createBrag,
 
 const router = Router();
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const archived = req.query.archived === "1";
-    const todos = listTodos(archived);
+    const todos = await listTodos(archived);
     res.json(todos);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get("/counts", (req, res) => {
+router.get("/counts", async (req, res) => {
   try {
-    res.json(getTodoCounts());
+    res.json(await getTodoCounts());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { text } = req.body;
     if (!text || typeof text !== "string") {
       return res.status(400).json({ error: "text is required" });
     }
-    const info = createTodo(text.trim());
+    const info = await createTodo(text.trim());
     res.json({ id: info.lastInsertRowid });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     const { text, done, priority } = req.body;
-    updateTodo(id, text ?? null, done ?? null, priority ?? null);
+    await updateTodo(id, text ?? null, done ?? null, priority ?? null);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.put("/:id/archive", (req, res) => {
+router.put("/:id/archive", async (req, res) => {
   try {
     const id = Number(req.params.id);
     const { archived } = req.body;
-    archiveTodo(id, archived ?? true);
+    await archiveTodo(id, archived ?? true);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    deleteTodo(id);
+    await deleteTodo(id);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -67,15 +67,15 @@ router.delete("/:id", (req, res) => {
 });
 
 // ── Brags ──────────────────────────────────────────────
-router.get("/brags", (req, res) => {
+router.get("/brags", async (req, res) => {
   try {
-    res.json(listBrags());
+    res.json(await listBrags());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.post("/:id/brag", (req, res) => {
+router.post("/:id/brag", async (req, res) => {
   try {
     const todoId = Number(req.params.id);
     const { summary } = req.body;
@@ -86,27 +86,27 @@ router.post("/:id/brag", (req, res) => {
       return res.status(400).json({ error: "summary must be 500 chars or less" });
     }
     // Get the todo text before archiving
-    const todos = listTodos(false);
+    const todos = await listTodos(false);
     const todo = todos.find(t => t.id === todoId);
-    const archivedTodos = listTodos(true);
+    const archivedTodos = await listTodos(true);
     const archivedTodo = archivedTodos.find(t => t.id === todoId);
     const foundTodo = todo || archivedTodo;
     if (!foundTodo) {
       return res.status(404).json({ error: "Todo not found" });
     }
-    const info = createBrag(todoId, foundTodo.text, summary.trim());
+    const info = await createBrag(todoId, foundTodo.text, summary.trim());
     // Archive the todo
-    archiveTodo(todoId, true);
+    await archiveTodo(todoId, true);
     res.json({ id: info.lastInsertRowid });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.delete("/brags/:id", (req, res) => {
+router.delete("/brags/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    deleteBrag(id);
+    await deleteBrag(id);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

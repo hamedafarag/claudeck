@@ -2,14 +2,16 @@
 
 All notable changes to Claudeck are documented in this file.
 
-## [1.3.2] — 2026-03-27
+## [1.3.2] — 2026-03-28
 
 ### Added
 - **Message Pagination** — Cursor-based lazy loading for messages in both single and parallel modes. Initial load capped to 30 messages; older messages load on scroll-up with loading spinner. Each parallel pane tracks its own pagination cursor independently.
+- **Database Adapter Pattern** — Extracted monolithic `db.js` (1690 lines) into `db/sqlite.js` adapter behind a thin proxy. Enables future multi-database support (PostgreSQL) without changing any consumer files.
+- **Async Database Interface** — All 84 database functions are now `async`, preparing the interface for async drivers like `pg`. SQLite adapter wraps sync calls in resolved Promises with zero behavioral changes.
 
 ### Improved
 - **Parallel pane loading** — Switched from sequential to concurrent `Promise.all` for faster pane initialization
-- **Unit tests** — Added pagination tests for backend routes (6), frontend API (4), and frontend messages UI (8); 2,494 total tests passing
+- **Unit tests** — Updated ~30 files for async/await; 2,494 total tests passing
 
 ---
 

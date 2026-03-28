@@ -539,7 +539,7 @@ describe("memory-optimizer", () => {
   // applyOptimization
   // ══════════════════════════════════════════════════════════════════════════
   describe("applyOptimization", () => {
-    it("deletes existing memories and creates new ones", () => {
+    it("deletes existing memories and creates new ones", async () => {
       listMemories.mockReturnValue([
         makeMemory(1, "Old memory one"),
         makeMemory(2, "Old memory two"),
@@ -550,7 +550,7 @@ describe("memory-optimizer", () => {
         { category: "warning", content: "Do not use eval" },
       ];
 
-      const result = applyOptimization("/tmp/project", optimized);
+      const result = await applyOptimization("/tmp/project", optimized);
 
       expect(deleteMemory).toHaveBeenCalledTimes(2);
       expect(deleteMemory).toHaveBeenCalledWith(1);
@@ -563,7 +563,7 @@ describe("memory-optimizer", () => {
       expect(result).toEqual({ deleted: 2, created: 2 });
     });
 
-    it("skips empty content entries", () => {
+    it("skips empty content entries", async () => {
       listMemories.mockReturnValue([]);
 
       const optimized = [
@@ -572,40 +572,40 @@ describe("memory-optimizer", () => {
         { category: "warning", content: "   " },
       ];
 
-      const result = applyOptimization("/tmp/project", optimized);
+      const result = await applyOptimization("/tmp/project", optimized);
 
       expect(createMemory).toHaveBeenCalledTimes(1);
       expect(result.created).toBe(1);
     });
 
-    it("defaults invalid category to discovery", () => {
+    it("defaults invalid category to discovery", async () => {
       listMemories.mockReturnValue([]);
 
       const optimized = [
         { category: "bogus", content: "Some content here" },
       ];
 
-      applyOptimization("/tmp/project", optimized);
+      await applyOptimization("/tmp/project", optimized);
 
       expect(createMemory).toHaveBeenCalledWith("/tmp/project", "discovery", "Some content here", null, "optimizer");
     });
 
-    it("handles empty optimized array", () => {
+    it("handles empty optimized array", async () => {
       listMemories.mockReturnValue([
         makeMemory(1, "Old memory"),
       ]);
 
-      const result = applyOptimization("/tmp/project", []);
+      const result = await applyOptimization("/tmp/project", []);
 
       expect(deleteMemory).toHaveBeenCalledTimes(1);
       expect(createMemory).not.toHaveBeenCalled();
       expect(result).toEqual({ deleted: 1, created: 0 });
     });
 
-    it("runs within a database transaction", () => {
+    it("runs within a database transaction", async () => {
       listMemories.mockReturnValue([]);
 
-      applyOptimization("/tmp/project", [
+      await applyOptimization("/tmp/project", [
         { category: "convention", content: "Test content" },
       ]);
 
@@ -613,10 +613,10 @@ describe("memory-optimizer", () => {
       expect(mockTransaction).toHaveBeenCalledWith(expect.any(Function));
     });
 
-    it("trims whitespace from content", () => {
+    it("trims whitespace from content", async () => {
       listMemories.mockReturnValue([]);
 
-      applyOptimization("/tmp/project", [
+      await applyOptimization("/tmp/project", [
         { category: "convention", content: "  Padded content  " },
       ]);
 

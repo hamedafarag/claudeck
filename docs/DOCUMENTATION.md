@@ -43,7 +43,7 @@ On first run, Claudeck creates `~/.claudeck/` with your config files, database, 
 | Runtime   | Node.js 18+ (ESM)                                                |
 | Backend   | Express 4, WebSocket (ws 8), web-push 3, dotenv                  |
 | AI SDK    | @anthropic-ai/claude-code ^1                                     |
-| Database  | SQLite 3 via better-sqlite3 ^11, WAL mode, prepared statements   |
+| Database  | SQLite 3 via better-sqlite3 ^11, WAL mode, adapter pattern (async interface, multi-DB ready) |
 | Frontend  | Vanilla JavaScript ES modules (no bundler), CSS custom properties |
 | PWA       | Web App Manifest, Service Worker (offline fallback + push + caching), standalone display |
 | Rendering | highlight.js 11.9 (syntax), Mermaid 10 (diagrams) — both via CDN |
@@ -62,7 +62,7 @@ browser ──────── WebSocket ──────── server.js �
    │   │   │                          ├── server/agent-loop.js
    │   │   │                          ├── server/telegram-sender.js (two-way)
    │   │   ├── events.js (event bus)  ├── server/telegram-poller.js (callback listener)
-   │   │   ├── dom.js (DOM refs)      ├── db.js (SQLite)
+   │   │   ├── dom.js (DOM refs)      ├── db.js (adapter proxy → db/sqlite.js)
    │   │   ├── constants.js           ├── config/ (default configs, copied to ~/.claudeck/)
    │   │   ├── utils.js               ├── plugins/ (full-stack plugins)
    │   │   └── plugin-loader.js       │   ├── linear/ (client.js, server.js, config.json)
@@ -95,8 +95,9 @@ browser ──────── WebSocket ──────── server.js �
 - **Event bus** — decoupled cross-module communication
 - **Modular backend** — 15 Express Router modules + shared WS handler + agent loop + Telegram sender
 - **Centralized path resolution** — `server/paths.js` manages all user data paths, sync bootstrap creates dirs and copies defaults on first run
+- **Database adapter pattern** — `db.js` is a thin proxy that re-exports from `db/sqlite.js`. All 84 database functions are `async`, enabling future PostgreSQL support without changing any consumer files. See [PLAN-sqlite-adapter.md](PLAN-sqlite-adapter.md) for full architecture docs.
 - **SQLite + WAL** persists sessions, messages, costs, Claude session mappings, and persistent memories
-- **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
+- **Indexed queries** — 18 indexes for fast lookups on messages, costs, sessions, memories, notifications, worktrees
 - **Cursor-based pagination** — `getRecentMessages` / `getOlderMessages` variants for all message query types (all, by chatId, single-mode) using `WHERE id < ?` with `LIMIT` for efficient scroll-back
 - **Prepared statements** for all DB queries (no SQL injection risk)
 - **Session resumption** via stored Claude session IDs (survives page reloads)

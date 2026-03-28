@@ -46,9 +46,9 @@ function slugify(text) {
 
 // ── Agent Context (shared memory) ──
 
-router.get("/context/:runId", (req, res) => {
+router.get("/context/:runId", async (req, res) => {
   try {
-    const rows = getAllAgentContext(req.params.runId);
+    const rows = await getAllAgentContext(req.params.runId);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

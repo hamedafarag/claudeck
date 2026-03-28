@@ -247,55 +247,55 @@ describe("extractMemories", () => {
 // captureMemories
 // ---------------------------------------------------------------------------
 describe("captureMemories", () => {
-  it("returns 0 for null projectPath", () => {
-    expect(captureMemories(null, "some text")).toBe(0);
+  it("returns 0 for null projectPath", async () => {
+    expect(await captureMemories(null, "some text")).toBe(0);
   });
 
-  it("returns 0 for undefined projectPath", () => {
-    expect(captureMemories(undefined, "some text")).toBe(0);
+  it("returns 0 for undefined projectPath", async () => {
+    expect(await captureMemories(undefined, "some text")).toBe(0);
   });
 
-  it("returns 0 for null assistantText", () => {
-    expect(captureMemories("/project", null)).toBe(0);
+  it("returns 0 for null assistantText", async () => {
+    expect(await captureMemories("/project", null)).toBe(0);
   });
 
-  it("returns 0 for empty assistantText", () => {
-    expect(captureMemories("/project", "")).toBe(0);
+  it("returns 0 for empty assistantText", async () => {
+    expect(await captureMemories("/project", "")).toBe(0);
   });
 
-  it("calls createMemory for each extracted memory", () => {
+  it("calls createMemory for each extracted memory", async () => {
     const text = "We decided to use PostgreSQL for all persistent storage needs in this application.\n\nThe naming pattern is snake_case for database columns across all migration files.";
-    captureMemories("/project", text, "sess-1");
+    await captureMemories("/project", text, "sess-1");
     // Should call createMemory at least once
     expect(createMemory).toHaveBeenCalled();
   });
 
-  it("returns count of non-duplicate saves", () => {
+  it("returns count of non-duplicate saves", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
     const text = "We decided to use Redis for caching all frequently accessed queries in the backend service.";
-    const count = captureMemories("/project", text, "sess-1");
+    const count = await captureMemories("/project", text, "sess-1");
     expect(count).toBeGreaterThanOrEqual(1);
   });
 
-  it("does not count duplicates in the return value", () => {
+  it("does not count duplicates in the return value", async () => {
     createMemory.mockReturnValue({ isDuplicate: true });
     const text = "We decided to use GraphQL instead of REST for the entire frontend data layer.";
-    const count = captureMemories("/project", text, "sess-1");
+    const count = await captureMemories("/project", text, "sess-1");
     expect(count).toBe(0);
   });
 
-  it("handles createMemory errors gracefully", () => {
+  it("handles createMemory errors gracefully", async () => {
     createMemory.mockImplementation(() => { throw new Error("DB error"); });
     const text = "We decided to use SQLite because it is simpler for local development and testing workflows.";
     // Should not throw
-    const count = captureMemories("/project", text, "sess-1");
+    const count = await captureMemories("/project", text, "sess-1");
     expect(count).toBe(0);
   });
 
-  it("passes sessionId and agentId to createMemory", () => {
+  it("passes sessionId and agentId to createMemory", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
     const text = "We decided to use Vite as the build tool for faster development feedback loops in this project.";
-    captureMemories("/project", text, "sess-1", "agent-1");
+    await captureMemories("/project", text, "sess-1", "agent-1");
     if (createMemory.mock.calls.length > 0) {
       const call = createMemory.mock.calls[0];
       expect(call[0]).toBe("/project");
@@ -309,25 +309,25 @@ describe("captureMemories", () => {
 // runMaintenance
 // ---------------------------------------------------------------------------
 describe("runMaintenance", () => {
-  it("returns undefined for null projectPath", () => {
-    const result = runMaintenance(null);
+  it("returns undefined for null projectPath", async () => {
+    const result = await runMaintenance(null);
     expect(result).toBeUndefined();
     expect(maintainMemories).not.toHaveBeenCalled();
   });
 
-  it("returns undefined for undefined projectPath", () => {
-    const result = runMaintenance(undefined);
+  it("returns undefined for undefined projectPath", async () => {
+    const result = await runMaintenance(undefined);
     expect(result).toBeUndefined();
     expect(maintainMemories).not.toHaveBeenCalled();
   });
 
-  it("calls maintainMemories with the projectPath", () => {
-    runMaintenance("/my/project");
+  it("calls maintainMemories with the projectPath", async () => {
+    await runMaintenance("/my/project");
     expect(maintainMemories).toHaveBeenCalledWith("/my/project");
   });
 
-  it("handles errors gracefully without throwing", () => {
+  it("handles errors gracefully without throwing", async () => {
     maintainMemories.mockImplementation(() => { throw new Error("DB error"); });
-    expect(() => runMaintenance("/my/project")).not.toThrow();
+    await expect(runMaintenance("/my/project")).resolves.not.toThrow();
   });
 });

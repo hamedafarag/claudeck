@@ -68,10 +68,10 @@ For each sub-task you want to delegate, output a fenced code block with the lang
 ${task}`;
 }
 
-function buildOrchestratorPromptWithMemory(task, agents, cwd) {
+async function buildOrchestratorPromptWithMemory(task, agents, cwd) {
   let prompt = buildOrchestratorPrompt(task, agents);
   if (cwd) {
-    const memPrompt = buildAgentMemoryPrompt(cwd, 6);
+    const memPrompt = await buildAgentMemoryPrompt(cwd, 6);
     if (memPrompt) {
       prompt += '\n\n' + memPrompt;
     }
@@ -186,7 +186,7 @@ export async function runOrchestrator({
   orchSend({ type: "orchestrator_phase", phase: "planning" });
 
   try {
-    const prompt = buildOrchestratorPromptWithMemory(task, agents, cwd);
+    const prompt = await buildOrchestratorPromptWithMemory(task, agents, cwd);
     const q = query({ prompt, options: plannerOpts });
 
     for await (const sdkMsg of q) {
@@ -198,20 +198,20 @@ export async function runOrchestrator({
         resolvedSid = ourSid;
         sessionIds.set(ourSid, claudeSessionId);
 
-        if (!getSession(ourSid)) {
-          createSession(
+        if (!await getSession(ourSid)) {
+          await createSession(
             ourSid,
             claudeSessionId,
             projectName || "Orchestrator",
             cwd || "",
           );
-          updateSessionTitle(ourSid, `Orchestrator: ${task.slice(0, 60)}`);
+          await updateSessionTitle(ourSid, `Orchestrator: ${task.slice(0, 60)}`);
         } else {
-          updateClaudeSessionId(ourSid, claudeSessionId);
+          await updateClaudeSessionId(ourSid, claudeSessionId);
         }
 
         orchSend({ type: "session", sessionId: ourSid });
-        addMessage(
+        await addMessage(
           resolvedSid,
           "user",
           JSON.stringify({ text: `[Orchestrator] ${task}` }),
@@ -226,7 +226,7 @@ export async function runOrchestrator({
             plannerText += block.text;
             orchSend({ type: "text", text: block.text });
             if (resolvedSid) {
-              addMessage(
+              await addMessage(
                 resolvedSid,
                 "assistant",
                 JSON.stringify({ text: block.text }),
@@ -252,7 +252,7 @@ export async function runOrchestrator({
           Object.keys(sdkMsg.modelUsage || {})[0] || null;
 
         if (resolvedSid) {
-          addCost(
+          await addCost(
             resolvedSid,
             costUsd,
             durationMs,
@@ -274,7 +274,7 @@ export async function runOrchestrator({
           duration_ms: durationMs,
           num_turns: numTurns,
           cost_usd: costUsd,
-          totalCost: getTotalCost(),
+          totalCost: await getTotalCost(),
           input_tokens: inputTokens,
           output_tokens: outputTokens,
           model: resultModel,
@@ -375,7 +375,7 @@ export async function runOrchestrator({
       if (result?.claudeSessionId) chainResumeId = result.claudeSessionId;
 
       // Read context that the agent stored
-      const ctx = getAllAgentContext(runId).find(
+      const ctx = (await getAllAgentContext(runId)).find(
         (c) => c.agent_id === agentDef.id,
       );
 
@@ -439,7 +439,7 @@ export async function runOrchestrator({
             if (block.type === "text" && block.text) {
               orchSend({ type: "text", text: block.text });
               if (resolvedSid) {
-                addMessage(
+                await addMessage(
                   resolvedSid,
                   "assistant",
                   JSON.stringify({ text: block.text }),
@@ -465,7 +465,7 @@ export async function runOrchestrator({
             Object.keys(sdkMsg.modelUsage || {})[0] || null;
 
           if (resolvedSid) {
-            addCost(
+            await addCost(
               resolvedSid,
               costUsd,
               durationMs,
@@ -487,7 +487,7 @@ export async function runOrchestrator({
             duration_ms: durationMs,
             num_turns: numTurns,
             cost_usd: costUsd,
-            totalCost: getTotalCost(),
+            totalCost: await getTotalCost(),
             input_tokens: inputTokens,
             output_tokens: outputTokens,
             model: resultModel,

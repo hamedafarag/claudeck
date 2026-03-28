@@ -175,6 +175,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
                           server/utils/git-worktree.js
                           server/auth.js
                           server/memory-optimizer.js └── .env      (VAPID keys, auth token)
+                          db.js → db/sqlite.js   (adapter pattern)
                           plugins/
 ```
 
@@ -183,7 +184,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 | Runtime | Node.js 18+ (ESM) |
 | Backend | Express 4, WebSocket (ws 8), web-push 3 |
 | AI SDK | @anthropic-ai/claude-code |
-| Database | SQLite via better-sqlite3 (WAL mode) |
+| Database | SQLite via better-sqlite3 (WAL mode), adapter pattern for multi-DB support |
 | Frontend | Vanilla JS ES modules + Web Components (Light DOM), CSS custom properties |
 | Testing | Vitest + happy-dom (2,494+ unit tests, 55% coverage) + WS perf benchmarks |
 | Rendering | highlight.js, Mermaid (diagrams) — CDN |
@@ -280,6 +281,7 @@ npx skills add https://github.com/hamedafarag/claudeck-skills
 | [DOCUMENTATION.md](docs/DOCUMENTATION.md) | Full feature docs, API reference, database schema |
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | User data directory, config files, plugin system |
 | [AGENT-ARCHITECTURE.md](docs/AGENT-ARCHITECTURE.md) | How agents, chains, DAGs, and orchestrator work |
+| [PLAN-sqlite-adapter.md](docs/PLAN-sqlite-adapter.md) | Database adapter pattern, async interface, multi-DB roadmap |
 | [CROSS-PLATFORM-AUDIT.md](docs/CROSS-PLATFORM-AUDIT.md) | Windows/Linux compatibility |
 | [COMPETITIVE-ANALYSIS.md](docs/COMPETITIVE-ANALYSIS.md) | Feature comparison with similar tools |
 
