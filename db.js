@@ -296,6 +296,26 @@ const stmts = {
   getMessagesNoChatId: db.prepare(
     `SELECT * FROM messages WHERE session_id = ? AND chat_id IS NULL ORDER BY id ASC`
   ),
+  // Paginated variants — fetch last N messages (DESC then reverse client-side)
+  getRecentMessages: db.prepare(
+    `SELECT * FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?`
+  ),
+  getRecentMessagesByChatId: db.prepare(
+    `SELECT * FROM messages WHERE session_id = ? AND chat_id = ? ORDER BY id DESC LIMIT ?`
+  ),
+  getRecentMessagesNoChatId: db.prepare(
+    `SELECT * FROM messages WHERE session_id = ? AND chat_id IS NULL ORDER BY id DESC LIMIT ?`
+  ),
+  // Cursor-based: messages older than a given ID
+  getOlderMessages: db.prepare(
+    `SELECT * FROM messages WHERE session_id = ? AND id < ? ORDER BY id DESC LIMIT ?`
+  ),
+  getOlderMessagesByChatId: db.prepare(
+    `SELECT * FROM messages WHERE session_id = ? AND chat_id = ? AND id < ? ORDER BY id DESC LIMIT ?`
+  ),
+  getOlderMessagesNoChatId: db.prepare(
+    `SELECT * FROM messages WHERE session_id = ? AND chat_id IS NULL AND id < ? ORDER BY id DESC LIMIT ?`
+  ),
   getTotalCost: db.prepare(`SELECT COALESCE(SUM(cost_usd), 0) AS total FROM costs`),
   getProjectCost: db.prepare(
     `SELECT COALESCE(SUM(c.cost_usd), 0) AS total
@@ -479,6 +499,31 @@ export function getMessagesByChatId(sessionId, chatId) {
 
 export function getMessagesNoChatId(sessionId) {
   return stmts.getMessagesNoChatId.all(sessionId);
+}
+
+// Paginated message fetchers — return messages in ASC order
+export function getRecentMessages(sessionId, limit) {
+  return stmts.getRecentMessages.all(sessionId, limit).reverse();
+}
+
+export function getRecentMessagesByChatId(sessionId, chatId, limit) {
+  return stmts.getRecentMessagesByChatId.all(sessionId, chatId, limit).reverse();
+}
+
+export function getRecentMessagesNoChatId(sessionId, limit) {
+  return stmts.getRecentMessagesNoChatId.all(sessionId, limit).reverse();
+}
+
+export function getOlderMessages(sessionId, beforeId, limit) {
+  return stmts.getOlderMessages.all(sessionId, beforeId, limit).reverse();
+}
+
+export function getOlderMessagesByChatId(sessionId, chatId, beforeId, limit) {
+  return stmts.getOlderMessagesByChatId.all(sessionId, chatId, beforeId, limit).reverse();
+}
+
+export function getOlderMessagesNoChatId(sessionId, beforeId, limit) {
+  return stmts.getOlderMessagesNoChatId.all(sessionId, beforeId, limit).reverse();
 }
 
 export function setClaudeSession(sessionId, chatId, claudeSessionId) {

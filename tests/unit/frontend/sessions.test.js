@@ -139,7 +139,7 @@ describe("sessions module", () => {
     panes.set(null, mockPane);
 
     await loadMessages("test-session-id");
-    expect(api.fetchSingleMessages).toHaveBeenCalledWith("test-session-id");
+    expect(api.fetchSingleMessages).toHaveBeenCalledWith("test-session-id", { limit: 30 });
   });
 
   it("deleteSession calls deleteSessionApi", async () => {
@@ -330,7 +330,7 @@ describe("sessions module – DOM rendering", () => {
     panes.set(null, mockPane);
 
     await sessionsMod.loadMessages("test-session-id");
-    expect(apiMod.fetchSingleMessages).toHaveBeenCalledWith("test-session-id");
+    expect(apiMod.fetchSingleMessages).toHaveBeenCalledWith("test-session-id", { limit: 30 });
   });
 
   it("deleteSession calls deleteSessionApi", async () => {

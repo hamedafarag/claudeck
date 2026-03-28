@@ -2,6 +2,17 @@
 
 All notable changes to Claudeck are documented in this file.
 
+## [1.3.2] — 2026-03-27
+
+### Added
+- **Message Pagination** — Cursor-based lazy loading for messages in both single and parallel modes. Initial load capped to 30 messages; older messages load on scroll-up with loading spinner. Each parallel pane tracks its own pagination cursor independently.
+
+### Improved
+- **Parallel pane loading** — Switched from sequential to concurrent `Promise.all` for faster pane initialization
+- **Unit tests** — Added pagination tests for backend routes (6), frontend API (4), and frontend messages UI (8); 2,494 total tests passing
+
+---
+
 ## [1.3.0] — 2026-03-25
 
 ### Added

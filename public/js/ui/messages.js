@@ -443,3 +443,45 @@ function addForkButton(msgEl, messageId) {
   btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>`;
   msgEl.appendChild(btn);
 }
+
+// ── Lazy-loading helpers ────────────────────────────────
+
+export function prependOlderMessages(messages, pane) {
+  if (!messages || messages.length === 0) return;
+
+  // Render older messages into a detached container using the same rendering logic
+  const tempContainer = document.createElement("div");
+  const tempPane = { messagesDiv: tempContainer, currentAssistantMsg: null };
+  renderMessagesIntoPane(messages, tempPane);
+
+  // Capture scroll position before DOM mutation
+  const scrollHeightBefore = pane.messagesDiv.scrollHeight;
+
+  // Move all rendered nodes into the real pane
+  const fragment = document.createDocumentFragment();
+  while (tempContainer.firstChild) {
+    fragment.appendChild(tempContainer.firstChild);
+  }
+
+  // Insert after loading indicator (if present) or at the top
+  const indicator = pane.messagesDiv.querySelector(".load-more-indicator");
+  const insertRef = indicator ? indicator.nextSibling : pane.messagesDiv.firstChild;
+  pane.messagesDiv.insertBefore(fragment, insertRef);
+
+  // Restore scroll position so the user's view doesn't jump
+  const scrollHeightAfter = pane.messagesDiv.scrollHeight;
+  pane.messagesDiv.scrollTop += (scrollHeightAfter - scrollHeightBefore);
+}
+
+export function showLoadingIndicator(pane) {
+  if (pane.messagesDiv.querySelector(".load-more-indicator")) return;
+  const el = document.createElement("div");
+  el.className = "load-more-indicator";
+  el.innerHTML = '<span class="load-more-spinner"></span> Loading older messages\u2026';
+  pane.messagesDiv.prepend(el);
+}
+
+export function hideLoadingIndicator(pane) {
+  const el = pane.messagesDiv.querySelector(".load-more-indicator");
+  if (el) el.remove();
+}

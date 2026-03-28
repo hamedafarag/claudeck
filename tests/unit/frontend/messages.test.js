@@ -45,6 +45,11 @@ vi.mock("../../../public/js/ui/parallel.js", () => ({
   getPane: vi.fn(),
 }));
 
+vi.mock("../../../public/js/core/api.js", () => ({
+  fetchSingleMessages: vi.fn(() => Promise.resolve([])),
+  fetchMessagesByChatId: vi.fn(() => Promise.resolve([])),
+}));
+
 // ── Imports ──────────────────────────────────────────────────────────────────
 
 import {
@@ -61,6 +66,9 @@ import {
   appendToolIndicator,
   appendToolResult,
   renderMessagesIntoPane,
+  prependOlderMessages,
+  showLoadingIndicator,
+  hideLoadingIndicator,
 } from "../../../public/js/ui/messages.js";
 import { scrollToBottom } from "../../../public/js/core/utils.js";
 import { renderDiffView, renderAdditionsView } from "../../../public/js/ui/diff.js";
@@ -701,6 +709,93 @@ describe("messages", () => {
       expect(pane.messagesDiv.querySelectorAll(".msg-assistant").length).toBe(2);
       expect(pane.messagesDiv.querySelector(".tool-indicator")).not.toBeNull();
       expect(pane.messagesDiv.querySelector(".status")).not.toBeNull();
+    });
+  });
+
+  // ─── showLoadingIndicator / hideLoadingIndicator ────────────────────────────
+
+  describe("showLoadingIndicator", () => {
+    it("prepends a loading indicator to messagesDiv", () => {
+      showLoadingIndicator(pane);
+      const indicator = pane.messagesDiv.querySelector(".load-more-indicator");
+      expect(indicator).not.toBeNull();
+      expect(indicator.textContent).toContain("Loading older messages");
+    });
+
+    it("includes a spinner element", () => {
+      showLoadingIndicator(pane);
+      const spinner = pane.messagesDiv.querySelector(".load-more-spinner");
+      expect(spinner).not.toBeNull();
+    });
+
+    it("does not add duplicate indicators", () => {
+      showLoadingIndicator(pane);
+      showLoadingIndicator(pane);
+      const indicators = pane.messagesDiv.querySelectorAll(".load-more-indicator");
+      expect(indicators).toHaveLength(1);
+    });
+  });
+
+  describe("hideLoadingIndicator", () => {
+    it("removes the loading indicator", () => {
+      showLoadingIndicator(pane);
+      expect(pane.messagesDiv.querySelector(".load-more-indicator")).not.toBeNull();
+      hideLoadingIndicator(pane);
+      expect(pane.messagesDiv.querySelector(".load-more-indicator")).toBeNull();
+    });
+
+    it("does nothing if no indicator exists", () => {
+      expect(() => hideLoadingIndicator(pane)).not.toThrow();
+    });
+  });
+
+  // ─── prependOlderMessages ─────────────────────────────────────────────────
+
+  describe("prependOlderMessages", () => {
+    it("does nothing for empty messages", () => {
+      pane.messagesDiv.innerHTML = '<div class="msg">existing</div>';
+      prependOlderMessages([], pane);
+      expect(pane.messagesDiv.children).toHaveLength(1);
+    });
+
+    it("does nothing for null messages", () => {
+      pane.messagesDiv.innerHTML = '<div class="msg">existing</div>';
+      prependOlderMessages(null, pane);
+      expect(pane.messagesDiv.children).toHaveLength(1);
+    });
+
+    it("prepends rendered messages before existing content", () => {
+      // Add an existing message
+      const existing = document.createElement("div");
+      existing.className = "msg msg-user";
+      existing.textContent = "existing";
+      pane.messagesDiv.appendChild(existing);
+
+      const olderMessages = [
+        { role: "user", content: JSON.stringify({ text: "older message" }) },
+      ];
+      prependOlderMessages(olderMessages, pane);
+
+      // The older message should appear before the existing one
+      const children = pane.messagesDiv.children;
+      expect(children.length).toBeGreaterThan(1);
+      expect(children[children.length - 1].textContent).toContain("existing");
+    });
+
+    it("inserts after loading indicator when present", () => {
+      showLoadingIndicator(pane);
+      const existing = document.createElement("div");
+      existing.className = "msg";
+      existing.textContent = "existing";
+      pane.messagesDiv.appendChild(existing);
+
+      const olderMessages = [
+        { role: "user", content: JSON.stringify({ text: "older" }) },
+      ];
+      prependOlderMessages(olderMessages, pane);
+
+      // First child should still be the loading indicator
+      expect(pane.messagesDiv.firstChild.classList.contains("load-more-indicator")).toBe(true);
     });
   });
 

@@ -97,6 +97,7 @@ browser ──────── WebSocket ──────── server.js �
 - **Centralized path resolution** — `server/paths.js` manages all user data paths, sync bootstrap creates dirs and copies defaults on first run
 - **SQLite + WAL** persists sessions, messages, costs, Claude session mappings, and persistent memories
 - **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
+- **Cursor-based pagination** — `getRecentMessages` / `getOlderMessages` variants for all message query types (all, by chatId, single-mode) using `WHERE id < ?` with `LIMIT` for efficient scroll-back
 - **Prepared statements** for all DB queries (no SQL injection risk)
 - **Session resumption** via stored Claude session IDs (survives page reloads)
 - **Stale session auto-retry** — if a Claude session no longer exists, automatically retries without `--resume`
@@ -290,9 +291,13 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 ### Messages
 | Method | Path                              | Description                     |
 | ------ | --------------------------------- | ------------------------------- |
-| GET    | /api/sessions/:id/messages        | All messages                    |
-| GET    | /api/sessions/:id/messages/:chat  | Messages for a parallel pane    |
-| GET    | /api/sessions/:id/messages-single | Single-mode messages only       |
+| GET    | /api/sessions/:id/messages        | All messages (supports `?limit=N&before=ID` for cursor-based pagination) |
+| GET    | /api/sessions/:id/messages/:chat  | Messages for a parallel pane (supports `?limit=N&before=ID`)    |
+| GET    | /api/sessions/:id/messages-single | Single-mode messages only (supports `?limit=N&before=ID`)       |
+
+**Pagination query parameters:**
+- `limit` — max number of messages to return (default: all). When set without `before`, returns the N most recent messages.
+- `before` — cursor: return messages with `id < before`. Used with `limit` for scroll-back pagination.
 
 ### Projects & Configuration
 | Method | Path                          | Description                                  |
@@ -525,6 +530,7 @@ The default landing view before selecting a project:
 - Bidirectional WebSocket streaming with exponential backoff reconnection
 - Single-mode and parallel-mode (2x2 grid) conversations
 - Session persistence with message history
+- **Message pagination** — initial load capped to 30 messages; older messages lazy-loaded on scroll-up with cursor-based pagination (`?limit=N&before=ID`). Each parallel pane maintains its own pagination state independently. Loading spinner shown during fetch.
 - Auto-generated session titles from first message
 - Session resumption across page reloads
 - Active session persisted to `localStorage` — page refresh returns to the same session with messages auto-loaded
@@ -1479,7 +1485,7 @@ Claudeck/
 │   └── routes/
 │       ├── projects.js    Project CRUD + system prompts + commands
 │       ├── sessions.js    Session CRUD + pin/unpin
-│       ├── messages.js    Message queries (all, by chat, single-mode)
+│       ├── messages.js    Message queries (all, by chat, single-mode) with cursor-based pagination
 │       ├── prompts.js     Prompt template CRUD
 │       ├── stats.js       Cost stats + dashboard + analytics + account info
 │       ├── files.js       File listing + content + tree + search
@@ -1511,7 +1517,7 @@ Claudeck/
 ├── vitest.config.perf.js  Performance benchmark config
 ├── tests/
 │   ├── setup.js           Global test setup (temp dir for CLAUDECK_HOME)
-│   ├── unit/              2,400+ unit tests (frontend + backend)
+│   ├── unit/              2,494+ unit tests (frontend + backend)
 │   └── perf/              WebSocket performance benchmarks (4 scenarios)
 │       ├── ws-perf.test.js  Approval latency, throughput, scaling, broadcast
 │       └── helpers/         Test harness + stats utilities
