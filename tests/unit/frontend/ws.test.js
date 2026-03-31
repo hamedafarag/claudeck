@@ -25,18 +25,20 @@ let wsInstances = [];
 class MockWebSocket {
   constructor(url) {
     this.url = url;
+    this.readyState = 1;
     this.onopen = null;
     this.onmessage = null;
     this.onclose = null;
     this.onerror = null;
+    this.send = vi.fn();
     wsInstances.push(this);
   }
 }
 vi.stubGlobal("WebSocket", MockWebSocket);
 
-import { connectWebSocket } from "../../../public/js/core/ws.js";
+import { connectWebSocket, subscribeToSession } from "../../../public/js/core/ws.js";
 import { emit } from "../../../public/js/core/events.js";
-import { setState } from "../../../public/js/core/store.js";
+import { getState, setState } from "../../../public/js/core/store.js";
 import { $ } from "../../../public/js/core/dom.js";
 
 beforeEach(() => {
@@ -139,5 +141,80 @@ describe("connectWebSocket", () => {
       expect($.connectionText.textContent).toBe("disconnected");
       expect($.connectionText.className).toBe("term-status");
     });
+  });
+
+  describe("session broadcast subscribe", () => {
+    it("onopen sends subscribe when sessionId exists in state", () => {
+      vi.mocked(getState).mockImplementation((key) => {
+        if (key === "sessionId") return "active-session";
+        return undefined;
+      });
+
+      connectWebSocket();
+      const ws = wsInstances[0];
+      ws.onopen();
+
+      expect(ws.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: "subscribe", sessionId: "active-session" }),
+      );
+    });
+
+    it("onopen does not send subscribe when no sessionId", () => {
+      vi.mocked(getState).mockReturnValue(undefined);
+
+      connectWebSocket();
+      const ws = wsInstances[0];
+      ws.onopen();
+
+      expect(ws.send).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("subscribeToSession", () => {
+  it("sends subscribe message when ws is connected", () => {
+    const mockWs = { readyState: 1, send: vi.fn() };
+    vi.mocked(getState).mockImplementation((key) => {
+      if (key === "ws") return mockWs;
+      return undefined;
+    });
+
+    subscribeToSession("test-session");
+
+    expect(mockWs.send).toHaveBeenCalledWith(
+      JSON.stringify({ type: "subscribe", sessionId: "test-session" }),
+    );
+  });
+
+  it("does not send when ws is not connected", () => {
+    const mockWs = { readyState: 3, send: vi.fn() };
+    vi.mocked(getState).mockImplementation((key) => {
+      if (key === "ws") return mockWs;
+      return undefined;
+    });
+
+    subscribeToSession("test-session");
+
+    expect(mockWs.send).not.toHaveBeenCalled();
+  });
+
+  it("does not send when ws is null", () => {
+    vi.mocked(getState).mockReturnValue(null);
+    // Should not throw
+    subscribeToSession("test-session");
+  });
+
+  it("does not send when sessionId is falsy", () => {
+    const mockWs = { readyState: 1, send: vi.fn() };
+    vi.mocked(getState).mockImplementation((key) => {
+      if (key === "ws") return mockWs;
+      return undefined;
+    });
+
+    subscribeToSession(null);
+    subscribeToSession(undefined);
+    subscribeToSession("");
+
+    expect(mockWs.send).not.toHaveBeenCalled();
   });
 });

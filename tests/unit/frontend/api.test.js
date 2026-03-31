@@ -148,6 +148,20 @@ describe("Sessions", () => {
     );
   });
 
+  it("fetchMessages appends limit param", async () => {
+    await fetchMessages("s1", { limit: 30 });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `/api/sessions/${encodeURIComponent("s1")}/messages?limit=30`
+    );
+  });
+
+  it("fetchMessages appends limit and before params", async () => {
+    await fetchMessages("s1", { limit: 30, before: 100 });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `/api/sessions/${encodeURIComponent("s1")}/messages?limit=30&before=100`
+    );
+  });
+
   it("fetchMessagesByChatId encodes both params", async () => {
     await fetchMessagesByChatId("sess/1", "chat/2");
     expect(mockFetch).toHaveBeenCalledWith(
@@ -155,10 +169,24 @@ describe("Sessions", () => {
     );
   });
 
+  it("fetchMessagesByChatId appends pagination params", async () => {
+    await fetchMessagesByChatId("s1", "chat-0", { limit: 20, before: 50 });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `/api/sessions/${encodeURIComponent("s1")}/messages/${encodeURIComponent("chat-0")}?limit=20&before=50`
+    );
+  });
+
   it("fetchSingleMessages encodes sessionId", async () => {
     await fetchSingleMessages("s1");
     expect(mockFetch).toHaveBeenCalledWith(
       `/api/sessions/${encodeURIComponent("s1")}/messages-single`
+    );
+  });
+
+  it("fetchSingleMessages appends pagination params", async () => {
+    await fetchSingleMessages("s1", { limit: 30 });
+    expect(mockFetch).toHaveBeenCalledWith(
+      `/api/sessions/${encodeURIComponent("s1")}/messages-single?limit=30`
     );
   });
 

@@ -138,11 +138,9 @@ export function enterParallelMode() {
 
   const sessionId = getState("sessionId");
   if (sessionId) {
-    // Lazy import to avoid circular dependency
+    // Lazy import to avoid circular dependency — load all panes concurrently
     import('../features/sessions.js').then(({ loadPaneMessages }) => {
-      for (const chatId of CHAT_IDS) {
-        loadPaneMessages(sessionId, chatId);
-      }
+      Promise.all(CHAT_IDS.map(chatId => loadPaneMessages(sessionId, chatId)));
     });
   }
 }

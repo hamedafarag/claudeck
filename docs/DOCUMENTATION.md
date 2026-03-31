@@ -43,7 +43,7 @@ On first run, Claudeck creates `~/.claudeck/` with your config files, database, 
 | Runtime   | Node.js 18+ (ESM)                                                |
 | Backend   | Express 4, WebSocket (ws 8), web-push 3, dotenv                  |
 | AI SDK    | @anthropic-ai/claude-code ^1                                     |
-| Database  | SQLite 3 via better-sqlite3 ^11, WAL mode, prepared statements   |
+| Database  | SQLite 3 via better-sqlite3 ^11, WAL mode, adapter pattern (async interface, multi-DB ready) |
 | Frontend  | Vanilla JavaScript ES modules (no bundler), CSS custom properties |
 | PWA       | Web App Manifest, Service Worker (offline fallback + push + caching), standalone display |
 | Rendering | highlight.js 11.9 (syntax), Mermaid 10 (diagrams) — both via CDN |
@@ -62,7 +62,7 @@ browser ──────── WebSocket ──────── server.js �
    │   │   │                          ├── server/agent-loop.js
    │   │   │                          ├── server/telegram-sender.js (two-way)
    │   │   ├── events.js (event bus)  ├── server/telegram-poller.js (callback listener)
-   │   │   ├── dom.js (DOM refs)      ├── db.js (SQLite)
+   │   │   ├── dom.js (DOM refs)      ├── db.js (adapter proxy → db/sqlite.js)
    │   │   ├── constants.js           ├── config/ (default configs, copied to ~/.claudeck/)
    │   │   ├── utils.js               ├── plugins/ (full-stack plugins)
    │   │   └── plugin-loader.js       │   ├── linear/ (client.js, server.js, config.json)
@@ -95,8 +95,10 @@ browser ──────── WebSocket ──────── server.js �
 - **Event bus** — decoupled cross-module communication
 - **Modular backend** — 15 Express Router modules + shared WS handler + agent loop + Telegram sender
 - **Centralized path resolution** — `server/paths.js` manages all user data paths, sync bootstrap creates dirs and copies defaults on first run
+- **Database adapter pattern** — `db.js` is a thin proxy that re-exports from `db/sqlite.js`. All 84 database functions are `async`, enabling future PostgreSQL support without changing any consumer files. See [PLAN-sqlite-adapter.md](PLAN-sqlite-adapter.md) for full architecture docs.
 - **SQLite + WAL** persists sessions, messages, costs, Claude session mappings, and persistent memories
-- **Indexed queries** — 6 indexes for fast lookups on messages, costs, sessions
+- **Indexed queries** — 18 indexes for fast lookups on messages, costs, sessions, memories, notifications, worktrees
+- **Cursor-based pagination** — `getRecentMessages` / `getOlderMessages` variants for all message query types (all, by chatId, single-mode) using `WHERE id < ?` with `LIMIT` for efficient scroll-back
 - **Prepared statements** for all DB queries (no SQL injection risk)
 - **Session resumption** via stored Claude session IDs (survives page reloads)
 - **Stale session auto-retry** — if a Claude session no longer exists, automatically retries without `--resume`
@@ -290,9 +292,13 @@ Migrations run automatically on startup (ADD COLUMN with try/catch).
 ### Messages
 | Method | Path                              | Description                     |
 | ------ | --------------------------------- | ------------------------------- |
-| GET    | /api/sessions/:id/messages        | All messages                    |
-| GET    | /api/sessions/:id/messages/:chat  | Messages for a parallel pane    |
-| GET    | /api/sessions/:id/messages-single | Single-mode messages only       |
+| GET    | /api/sessions/:id/messages        | All messages (supports `?limit=N&before=ID` for cursor-based pagination) |
+| GET    | /api/sessions/:id/messages/:chat  | Messages for a parallel pane (supports `?limit=N&before=ID`)    |
+| GET    | /api/sessions/:id/messages-single | Single-mode messages only (supports `?limit=N&before=ID`)       |
+
+**Pagination query parameters:**
+- `limit` — max number of messages to return (default: all). When set without `before`, returns the N most recent messages.
+- `before` — cursor: return messages with `id < before`. Used with `limit` for scroll-back pagination.
 
 ### Projects & Configuration
 | Method | Path                          | Description                                  |
@@ -488,9 +494,12 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 - `{ type: "orchestrate", task, cwd, sessionId, projectName, permissionMode, model }` — run orchestrator
 - `{ type: "abort", chatId? }` — stop generation (aborts agents, chains, DAGs, and orchestrator)
 - `{ type: "permission_response", id, behavior }` — approve (`"allow"`) or deny (`"deny"`) a tool call
+- `{ type: "subscribe", sessionId }` — join session broadcast room (auto-leaves previous room). Sent on session load, switch, and WebSocket reconnect.
+- `{ type: "unsubscribe" }` — leave current session broadcast room
 
 **Incoming** (server to client):
 - `session` — session created/resumed
+- `user_message` — user's message broadcast to other clients viewing the same session (includes `text`, optional `chatId`; tagged `_broadcast: true`). The sender renders the message locally; observers render it via this event.
 - `text` — streamed assistant text
 - `tool` — tool called (id + name + input)
 - `tool_result` — tool execution result (linked to tool by id)
@@ -508,6 +517,10 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 
 All streamed messages include `sessionId` so the client can route background session messages correctly.
 
+**Multi-client broadcast:** When multiple clients view the same session, a session room registry (`Map<sessionId, Set<WebSocket>>`) tracks subscribers. All session events are broadcast to every client in the room except the sender. Broadcast messages include `_broadcast: true` so the UI can differentiate (e.g., "Live from another device"). The sender receives the original message without the flag. Room membership is cleaned up automatically on disconnect or session switch.
+
+**Cross-connection approvals:** Permission requests are broadcast to all session viewers. Any client can approve or deny — a global pending approvals registry (`globalPendingApprovals`) enables cross-connection resolution. When any client responds, `permission_response_external` is broadcast to all other clients to dismiss their modals. The sender's message text is broadcast as `user_message` so observers see it immediately.
+
 ---
 
 ## Features
@@ -524,11 +537,13 @@ The default landing view before selecting a project:
 ### 2. Real-Time Chat
 - Bidirectional WebSocket streaming with exponential backoff reconnection
 - Single-mode and parallel-mode (2x2 grid) conversations
+- **Multi-client real-time sync** — multiple browsers/devices viewing the same session receive streamed responses simultaneously via session broadcast rooms. Any viewer can approve/deny permission requests.
 - Session persistence with message history
+- **Message pagination** — initial load capped to 30 messages; older messages lazy-loaded on scroll-up with cursor-based pagination (`?limit=N&before=ID`). Each parallel pane maintains its own pagination state independently. Loading spinner shown during fetch.
 - Auto-generated session titles from first message
 - Session resumption across page reloads
 - Active session persisted to `localStorage` — page refresh returns to the same session with messages auto-loaded
-- State sync on reconnect — background sessions reconciled, streaming panes reset, messages reloaded from DB
+- State sync on reconnect — background sessions reconciled, streaming panes reset, messages reloaded from DB, session broadcast room re-joined
 
 ### 3. Per-Project System Prompts
 - Custom instructions per project (stored in folders.json)
@@ -1479,7 +1494,7 @@ Claudeck/
 │   └── routes/
 │       ├── projects.js    Project CRUD + system prompts + commands
 │       ├── sessions.js    Session CRUD + pin/unpin
-│       ├── messages.js    Message queries (all, by chat, single-mode)
+│       ├── messages.js    Message queries (all, by chat, single-mode) with cursor-based pagination
 │       ├── prompts.js     Prompt template CRUD
 │       ├── stats.js       Cost stats + dashboard + analytics + account info
 │       ├── files.js       File listing + content + tree + search
@@ -1511,7 +1526,7 @@ Claudeck/
 ├── vitest.config.perf.js  Performance benchmark config
 ├── tests/
 │   ├── setup.js           Global test setup (temp dir for CLAUDECK_HOME)
-│   ├── unit/              2,400+ unit tests (frontend + backend)
+│   ├── unit/              2,507+ unit tests (frontend + backend)
 │   └── perf/              WebSocket performance benchmarks (4 scenarios)
 │       ├── ws-perf.test.js  Approval latency, throughput, scaling, broadcast
 │       └── helpers/         Test harness + stats utilities

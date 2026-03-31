@@ -399,6 +399,10 @@ function handleServerMessage(msg) {
       showThinking("Thinking...", pane);
       break;
 
+    case "user_message":
+      addUserMessage(msg.text, pane);
+      break;
+
     case "text":
       appendAssistantText(msg.text, pane);
       break;

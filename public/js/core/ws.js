@@ -3,6 +3,12 @@ import { $ } from './dom.js';
 import { getState, setState } from './store.js';
 import { emit } from './events.js';
 
+export function subscribeToSession(sessionId) {
+  const ws = getState("ws");
+  if (!ws || ws.readyState !== 1 || !sessionId) return;
+  ws.send(JSON.stringify({ type: "subscribe", sessionId }));
+}
+
 let backoffAttempt = 0;
 let hasConnectedBefore = false;
 
@@ -36,6 +42,12 @@ export function connectWebSocket() {
     } else {
       hasConnectedBefore = true;
       emit("ws:connected");
+    }
+
+    // Subscribe to current session for multi-client broadcast
+    const currentSession = getState("sessionId");
+    if (currentSession) {
+      ws.send(JSON.stringify({ type: "subscribe", sessionId: currentSession }));
     }
   };
 

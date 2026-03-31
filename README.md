@@ -64,7 +64,9 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 ### Chat & Sessions
 
 - Real-time WebSocket streaming with session persistence
+- **Multi-client sync** — multiple browsers/devices viewing the same session see streamed responses in real time
 - **Parallel mode** — 2x2 grid of 4 independent conversations
+- **Message pagination** — lazy-loads older messages on scroll-up (cursor-based, 30 per page)
 - Background sessions that keep running when you switch away
 - Session search, pinning, auto-generated titles
 - **Session branching** — fork any conversation at an assistant message to explore alternatives
@@ -174,6 +176,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
                           server/utils/git-worktree.js
                           server/auth.js
                           server/memory-optimizer.js └── .env      (VAPID keys, auth token)
+                          db.js → db/sqlite.js   (adapter pattern)
                           plugins/
 ```
 
@@ -182,9 +185,9 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 | Runtime | Node.js 18+ (ESM) |
 | Backend | Express 4, WebSocket (ws 8), web-push 3 |
 | AI SDK | @anthropic-ai/claude-code |
-| Database | SQLite via better-sqlite3 (WAL mode) |
+| Database | SQLite via better-sqlite3 (WAL mode), adapter pattern for multi-DB support |
 | Frontend | Vanilla JS ES modules + Web Components (Light DOM), CSS custom properties |
-| Testing | Vitest + happy-dom (2,400+ unit tests, 55% coverage) + WS perf benchmarks |
+| Testing | Vitest + happy-dom (2,507+ unit tests, 55% coverage) + WS perf benchmarks |
 | Rendering | highlight.js, Mermaid (diagrams) — CDN |
 
 ---
@@ -279,6 +282,7 @@ npx skills add https://github.com/hamedafarag/claudeck-skills
 | [DOCUMENTATION.md](docs/DOCUMENTATION.md) | Full feature docs, API reference, database schema |
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | User data directory, config files, plugin system |
 | [AGENT-ARCHITECTURE.md](docs/AGENT-ARCHITECTURE.md) | How agents, chains, DAGs, and orchestrator work |
+| [PLAN-sqlite-adapter.md](docs/PLAN-sqlite-adapter.md) | Database adapter pattern, async interface, multi-DB roadmap |
 | [CROSS-PLATFORM-AUDIT.md](docs/CROSS-PLATFORM-AUDIT.md) | Windows/Linux compatibility |
 | [COMPETITIVE-ANALYSIS.md](docs/COMPETITIVE-ANALYSIS.md) | Feature comparison with similar tools |
 
@@ -287,7 +291,7 @@ npx skills add https://github.com/hamedafarag/claudeck-skills
 ## Testing
 
 ```bash
-npm test              # Run all 2,400+ tests
+npm test              # Run all 2,507+ tests
 npm test -- --coverage  # With coverage report
 npm run test:perf     # WebSocket performance benchmarks
 ```

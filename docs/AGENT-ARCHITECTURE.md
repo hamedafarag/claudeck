@@ -573,5 +573,7 @@ sendTelegramNotification(eventType, title, body, { metrics... });    // Rich Tel
 ### WebSocket Progress
 All modes send typed messages over WebSocket for real-time UI updates. Messages include `sessionId` for routing (especially important for background sessions).
 
+**Multi-client broadcast:** All session events from chat, workflow, and chain handlers are broadcast to other clients watching the same session via the session room registry (`sessionRooms` Map). Observer messages include `_broadcast: true`. The sender is excluded from broadcast to prevent double-rendering. Clients subscribe to session rooms via `{ type: "subscribe", sessionId }` on session load, switch, and reconnect.
+
 ### Permission System
-All modes respect the permission mode (`bypass`, `confirmWrites`, `confirmAll`, `plan`) via `makeCanUseTool()` callback passed to the SDK. Permission requests are also sent to Telegram with inline Approve/Deny buttons.
+All modes respect the permission mode (`bypass`, `confirmWrites`, `confirmAll`, `plan`) via `makeCanUseTool()` callback passed to the SDK. Permission requests are also sent to Telegram with inline Approve/Deny buttons. Permission requests are also broadcast to all session room observers — any client can approve or deny.

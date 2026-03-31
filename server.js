@@ -88,7 +88,7 @@ const sessionIds = new Map();
   for (const row of rows) {
     sessionIds.set(row.id, row.claude_session_id);
   }
-  const csRows = allClaudeSessions();
+  const csRows = await allClaudeSessions();
   for (const row of csRows) {
     const key = row.chat_id ? `${row.session_id}::${row.chat_id}` : row.session_id;
     sessionIds.set(key, row.claude_session_id);
@@ -214,7 +214,7 @@ ${isAuthEnabled() ? `  \x1b[2m➜  Auth:\x1b[0m    \x1b[33menabled\x1b[0m\n  \x1
 });
 
 // Purge old notifications once per day
-setInterval(() => purgeOldNotifications(90), 24 * 60 * 60 * 1000);
+setInterval(async () => { try { await purgeOldNotifications(90); } catch {} }, 24 * 60 * 60 * 1000);
 
 // Graceful shutdown
 process.on("SIGINT", () => {

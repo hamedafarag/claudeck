@@ -275,4 +275,19 @@ describe("chat module", () => {
     };
     expect(() => stopGeneration(mockPane)).not.toThrow();
   });
+
+  it("user_message type calls addUserMessage for broadcast observers", async () => {
+    const { on } = await import("../../../public/js/core/events.js");
+    const { addUserMessage } = await import("../../../public/js/ui/messages.js");
+
+    // Find the ws:message handler registered by chat.js
+    const wsMessageCall = vi.mocked(on).mock.calls.find(([event]) => event === "ws:message");
+    expect(wsMessageCall).toBeDefined();
+    const handleServerMessage = wsMessageCall[1];
+
+    // Simulate a broadcast user_message
+    handleServerMessage({ type: "user_message", text: "Hello from another client", _broadcast: true });
+
+    expect(addUserMessage).toHaveBeenCalledWith("Hello from another client", expect.anything());
+  });
 });

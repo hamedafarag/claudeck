@@ -36,18 +36,35 @@ export async function fetchActiveSessionIds() {
   return data.activeSessionIds || [];
 }
 
-export async function fetchMessages(sessionId) {
-  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages`);
+function _appendPaginationParams(url, { limit, before } = {}) {
+  const params = new URLSearchParams();
+  if (limit) params.set("limit", limit);
+  if (before) params.set("before", before);
+  const qs = params.toString();
+  return qs ? `${url}?${qs}` : url;
+}
+
+export async function fetchMessages(sessionId, opts) {
+  const url = _appendPaginationParams(
+    `/api/sessions/${encodeURIComponent(sessionId)}/messages`, opts
+  );
+  const res = await fetch(url);
   return res.json();
 }
 
-export async function fetchMessagesByChatId(sessionId, chatId) {
-  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(chatId)}`);
+export async function fetchMessagesByChatId(sessionId, chatId, opts) {
+  const url = _appendPaginationParams(
+    `/api/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(chatId)}`, opts
+  );
+  const res = await fetch(url);
   return res.json();
 }
 
-export async function fetchSingleMessages(sessionId) {
-  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages-single`);
+export async function fetchSingleMessages(sessionId, opts) {
+  const url = _appendPaginationParams(
+    `/api/sessions/${encodeURIComponent(sessionId)}/messages-single`, opts
+  );
+  const res = await fetch(url);
   return res.json();
 }
 

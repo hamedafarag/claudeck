@@ -11,6 +11,7 @@ export default defineConfig({
       reportsDirectory: "coverage",
       include: [
         "db.js",
+        "db/**/*.js",
         "server/**/*.js",
         "public/js/core/**/*.js",
         "public/js/ui/**/*.js",

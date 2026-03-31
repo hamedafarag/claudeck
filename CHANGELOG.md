@@ -2,6 +2,36 @@
 
 All notable changes to Claudeck are documented in this file.
 
+## [1.4.0] — 2026-03-31
+
+### Added
+- **Multi-Client Session Broadcast** — Real-time sync across multiple browser windows/devices viewing the same session. When one client sends a message, all other clients watching that session receive the streamed response live. Powered by a session room registry (`subscribe`/`unsubscribe` WebSocket messages) with automatic cleanup on disconnect.
+  - All session events broadcast: `text`, `tool`, `tool_result`, `result`, `error`, `aborted`, `done`, `permission_request`, workflow/agent/chain/DAG/orchestrator events, worktree events, and memory notifications
+  - Observer messages tagged with `_broadcast: true` flag for UI differentiation
+  - Sender excluded from broadcast (no double-rendering)
+  - Auto-subscribe on WebSocket connect/reconnect and session switch
+  - Permission requests broadcast to all viewers — any client can approve/deny
+- **Message Pagination** — Cursor-based lazy loading for messages in both single and parallel modes. Initial load capped to 30 messages; older messages load on scroll-up with loading spinner. Each parallel pane tracks its own pagination cursor independently.
+- **Database Adapter Pattern** — Extracted monolithic `db.js` (1690 lines) into `db/sqlite.js` adapter behind a thin proxy. Enables future multi-database support (PostgreSQL) without changing any consumer files.
+- **Async Database Interface** — All 84 database functions are now `async`, preparing the interface for async drivers like `pg`. SQLite adapter wraps sync calls in resolved Promises with zero behavioral changes.
+
+### Improved
+- **Parallel pane loading** — Switched from sequential to concurrent `Promise.all` for faster pane initialization
+- **Unit tests** — Added 17 new tests for session broadcast (11 backend, 6 frontend); updated ~30 files for async/await; 2,512 total tests passing
+
+---
+
+## [1.3.1] — 2026-03-26
+
+### Added
+- **SDK settingSources** — All Claude Code SDK queries now pass `settingSources: ["user", "project", "local"]`, enabling hooks and settings from user, project, and local config levels
+
+### Improved
+- **Landing page SEO** — New canonical URL (`claudeck.app`), expanded meta tags, OG card image (1200x630), `summary_large_image` Twitter card, FAQPage + WebSite structured data schemas, Discord button
+- **Unit tests** — 5 new tests covering `settingSources` across all query paths
+
+---
+
 ## [1.3.0] — 2026-03-25
 
 ### Added

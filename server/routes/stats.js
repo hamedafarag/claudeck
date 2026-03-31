@@ -74,15 +74,15 @@ router.get("/account", async (req, res) => {
 });
 
 // Cost dashboard
-router.get("/dashboard", (req, res) => {
+router.get("/dashboard", async (req, res) => {
   try {
     const projectPath = req.query.project_path || undefined;
-    const sessions = getSessionCosts(projectPath);
-    const timeline = getCostTimeline(projectPath);
-    const totalCost = getTotalCost();
-    const projectCost = projectPath ? getProjectCost(projectPath) : null;
-    const totalTokens = getTotalTokens();
-    const projectTokens = projectPath ? getProjectTokens(projectPath) : null;
+    const sessions = await getSessionCosts(projectPath);
+    const timeline = await getCostTimeline(projectPath);
+    const totalCost = await getTotalCost();
+    const projectCost = projectPath ? await getProjectCost(projectPath) : null;
+    const totalTokens = await getTotalTokens();
+    const projectTokens = projectPath ? await getProjectTokens(projectPath) : null;
     res.json({ sessions, timeline, totalCost, projectCost, totalTokens, projectTokens });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -90,27 +90,27 @@ router.get("/dashboard", (req, res) => {
 });
 
 // Analytics dashboard
-router.get("/analytics", (req, res) => {
+router.get("/analytics", async (req, res) => {
   try {
     const projectPath = req.query.project_path || undefined;
     res.json({
-      overview: getAnalyticsOverview(projectPath),
-      dailyBreakdown: getDailyBreakdown(projectPath),
-      hourlyActivity: getHourlyActivity(projectPath),
-      projectBreakdown: getProjectBreakdown(),
-      topSessions: getTopSessionsByCost(projectPath),
-      toolUsage: getToolUsage(projectPath),
-      toolErrors: getToolErrors(projectPath),
-      sessionDepth: getSessionDepth(projectPath),
-      msgLength: getMsgLengthDistribution(projectPath),
-      topBashCommands: getTopBashCommands(projectPath),
-      topFiles: getTopFiles(projectPath),
-      errorCategories: getErrorCategories(projectPath),
-      errorTimeline: getErrorTimeline(projectPath),
-      errorsByTool: getErrorsByTool(projectPath),
-      recentErrors: getRecentErrors(projectPath),
-      modelUsage: getModelUsage(projectPath),
-      cacheEfficiency: getCacheEfficiency(projectPath),
+      overview: await getAnalyticsOverview(projectPath),
+      dailyBreakdown: await getDailyBreakdown(projectPath),
+      hourlyActivity: await getHourlyActivity(projectPath),
+      projectBreakdown: await getProjectBreakdown(),
+      topSessions: await getTopSessionsByCost(projectPath),
+      toolUsage: await getToolUsage(projectPath),
+      toolErrors: await getToolErrors(projectPath),
+      sessionDepth: await getSessionDepth(projectPath),
+      msgLength: await getMsgLengthDistribution(projectPath),
+      topBashCommands: await getTopBashCommands(projectPath),
+      topFiles: await getTopFiles(projectPath),
+      errorCategories: await getErrorCategories(projectPath),
+      errorTimeline: await getErrorTimeline(projectPath),
+      errorsByTool: await getErrorsByTool(projectPath),
+      recentErrors: await getRecentErrors(projectPath),
+      modelUsage: await getModelUsage(projectPath),
+      cacheEfficiency: await getCacheEfficiency(projectPath),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -118,10 +118,10 @@ router.get("/analytics", (req, res) => {
 });
 
 // Home page data — yearly activity grid + overview
-router.get("/home", (req, res) => {
+router.get("/home", async (req, res) => {
   try {
-    const yearlyActivity = getYearlyActivity();
-    const overview = getAnalyticsOverview();
+    const yearlyActivity = await getYearlyActivity();
+    const overview = await getAnalyticsOverview();
     res.json({ yearlyActivity, overview });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -129,14 +129,14 @@ router.get("/home", (req, res) => {
 });
 
 // Agent monitoring dashboard
-router.get("/agent-metrics", (req, res) => {
+router.get("/agent-metrics", async (req, res) => {
   try {
     res.json({
-      overview: getAgentRunsOverview(),
-      agents: getAgentRunsSummary(),
-      byType: getAgentRunsByType(),
-      daily: getAgentRunsDaily(),
-      recent: getAgentRunsRecent(30),
+      overview: await getAgentRunsOverview(),
+      agents: await getAgentRunsSummary(),
+      byType: await getAgentRunsByType(),
+      daily: await getAgentRunsDaily(),
+      recent: await getAgentRunsRecent(30),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -144,11 +144,11 @@ router.get("/agent-metrics", (req, res) => {
 });
 
 // Stats — total cost (optionally filtered by project_path)
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const projectPath = req.query.project_path;
-    const totalCost = getTotalCost();
-    const projectCost = projectPath ? getProjectCost(projectPath) : null;
+    const totalCost = await getTotalCost();
+    const projectCost = projectPath ? await getProjectCost(projectPath) : null;
     res.json({ totalCost, projectCost });
   } catch (err) {
     res.status(500).json({ error: err.message });

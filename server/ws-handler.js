@@ -42,6 +42,37 @@ import { runAgent } from "./agent-loop.js";
 import { runOrchestrator } from "./orchestrator.js";
 import { runDag } from "./dag-executor.js";
 
+// ── Session broadcast rooms ───────────────────────────────────────────────
+// Maps sessionId → Set of WebSocket clients watching that session
+const sessionRooms = new Map();
+
+function joinRoom(sessionId, ws) {
+  if (!sessionRooms.has(sessionId)) sessionRooms.set(sessionId, new Set());
+  sessionRooms.get(sessionId).add(ws);
+}
+
+function leaveRoom(ws) {
+  for (const [sessionId, clients] of sessionRooms) {
+    clients.delete(ws);
+    if (clients.size === 0) sessionRooms.delete(sessionId);
+  }
+}
+
+function broadcastToSession(sessionId, message, excludeWs = null) {
+  const clients = sessionRooms.get(sessionId);
+  if (!clients) return;
+  const payload = JSON.stringify({ ...message, _broadcast: true });
+  for (const client of clients) {
+    if (client !== excludeWs && client.readyState === 1) {
+      client.send(payload);
+    }
+  }
+}
+
+// Global pending approvals — enables cross-connection approval (any client can approve)
+// Key: approval ID, Value: { resolve, timer, toolInput, ws, localMap, sessionId }
+const globalPendingApprovals = new Map();
+
 // Tools that are read-only and safe to auto-approve in "confirmDangerous" mode
 export const READ_ONLY_TOOLS = new Set([
   "Read", "Glob", "Grep", "WebSearch", "WebFetch", "Agent",
@@ -87,7 +118,7 @@ export function getActiveSessionIds() {
  * Creates a canUseTool callback that sends permission requests over WebSocket
  * AND Telegram (for AFK approval). Whichever channel responds first wins.
  */
-export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, sessionTitle) {
+export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, sessionTitle, getSessionId = null) {
   return async (toolName, toolInput, options) => {
     // Bypass mode — auto-approve everything
     if (permissionMode === "bypass") {
@@ -109,6 +140,8 @@ export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, ses
     }
 
     ws.send(JSON.stringify(payload));
+    const permSid = getSessionId?.();
+    if (permSid) broadcastToSession(permSid, payload, ws);
 
     // Also send to Telegram for AFK approval
     if (telegramEnabled()) {
@@ -122,8 +155,11 @@ export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, ses
     const timeoutMs = getApprovalTimeoutMs();
 
     return new Promise((resolve) => {
+      const permSidForApproval = getSessionId?.();
+
       const timer = setTimeout(() => {
         pendingApprovals.delete(id);
+        globalPendingApprovals.delete(id);
         markTelegramMessageResolved(id, "timeout").catch(() => {});
         resolve({ behavior: "deny", message: `Approval timed out (${Math.round(timeoutMs / 60000)}min)` });
       }, timeoutMs);
@@ -133,12 +169,14 @@ export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, ses
         options.signal.addEventListener("abort", () => {
           clearTimeout(timer);
           pendingApprovals.delete(id);
+          globalPendingApprovals.delete(id);
           markTelegramMessageResolved(id, "abort").catch(() => {});
           resolve({ behavior: "deny", message: "Aborted by user" });
         }, { once: true });
       }
 
       pendingApprovals.set(id, { resolve, timer, toolInput, ws });
+      globalPendingApprovals.set(id, { resolve, timer, toolInput, ws, localMap: pendingApprovals, sessionId: permSidForApproval });
     });
   };
 }
@@ -164,17 +202,17 @@ export async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, c
       const sKey = chatId ? `${ourSid}::${chatId}` : ourSid;
       sessionIds.set(sKey, claudeSessionId);
 
-      if (!getSession(ourSid)) {
-        createSession(ourSid, claudeSessionId, projectName || "Session", cwd || "");
+      if (!await getSession(ourSid)) {
+        await createSession(ourSid, claudeSessionId, projectName || "Session", cwd || "");
         if (isWorkflow) {
-          updateSessionTitle(ourSid, `Workflow: ${stepLabel}`);
+          await updateSessionTitle(ourSid, `Workflow: ${stepLabel}`);
         }
       } else {
-        updateClaudeSessionId(ourSid, claudeSessionId);
+        await updateClaudeSessionId(ourSid, claudeSessionId);
       }
 
       if (chatId) {
-        setClaudeSession(ourSid, chatId, claudeSessionId);
+        await setClaudeSession(ourSid, chatId, claudeSessionId);
       }
 
       wsSend({ type: "session", sessionId: ourSid });
@@ -185,12 +223,12 @@ export async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, c
         // user message saved by caller for chat; for workflow, save with step label
       }
       if (isWorkflow) {
-        addMessage(resolvedSid, "user", JSON.stringify({ text: msgText }), null, wfMeta);
+        await addMessage(resolvedSid, "user", JSON.stringify({ text: msgText }), null, wfMeta);
       }
 
       if (!isWorkflow) {
         // Auto-set session title from first user message
-        const existingSession = getSession(ourSid);
+        const existingSession = await getSession(ourSid);
         if (existingSession && !existingSession.title) {
           // Title is set by caller
         }
@@ -204,12 +242,12 @@ export async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, c
         if (block.type === "text" && block.text) {
           wsSend({ type: "text", text: block.text });
           if (resolvedSid) {
-            addMessage(resolvedSid, "assistant", JSON.stringify({ text: block.text }), chatId || null, wfMeta);
+            await addMessage(resolvedSid, "assistant", JSON.stringify({ text: block.text }), chatId || null, wfMeta);
           }
         } else if (block.type === "tool_use") {
           wsSend({ type: "tool", id: block.id, name: block.name, input: block.input });
           if (resolvedSid) {
-            addMessage(resolvedSid, "tool", JSON.stringify({ id: block.id, name: block.name, input: block.input }), chatId || null, wfMeta);
+            await addMessage(resolvedSid, "tool", JSON.stringify({ id: block.id, name: block.name, input: block.input }), chatId || null, wfMeta);
           }
         }
       }
@@ -231,7 +269,7 @@ export async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, c
           ([, v]) => v === claudeSessionId
         )?.[0];
         if (sid) {
-          addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: "success", isError: 0, cacheReadTokens, cacheCreationTokens });
+          await addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: "success", isError: 0, cacheReadTokens, cacheCreationTokens });
         }
 
         wsSend({
@@ -239,7 +277,7 @@ export async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, c
           duration_ms: sdkMsg.duration_ms,
           num_turns: sdkMsg.num_turns,
           cost_usd: sdkMsg.total_cost_usd,
-          totalCost: getTotalCost(),
+          totalCost: await getTotalCost(),
           input_tokens: inputTokens,
           output_tokens: outputTokens,
           cache_read_tokens: cacheReadTokens,
@@ -251,7 +289,7 @@ export async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, c
         lastMetrics = { durationMs, costUsd, inputTokens, outputTokens, model, turns: numTurns, isError: false };
 
         if (resolvedSid) {
-          addMessage(resolvedSid, "result", JSON.stringify({
+          await addMessage(resolvedSid, "result", JSON.stringify({
             duration_ms: sdkMsg.duration_ms,
             num_turns: sdkMsg.num_turns,
             cost_usd: sdkMsg.total_cost_usd,
@@ -273,8 +311,8 @@ export async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, c
           ([, v]) => v === claudeSessionId
         )?.[0];
         if (sid) {
-          addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: sdkMsg.subtype, isError: 1, cacheReadTokens, cacheCreationTokens });
-          addMessage(sid, "error", JSON.stringify({ error: errMsg, subtype: sdkMsg.subtype, duration_ms: durationMs, cost_usd: costUsd, model }), chatId || null, wfMeta);
+          await addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: sdkMsg.subtype, isError: 1, cacheReadTokens, cacheCreationTokens });
+          await addMessage(sid, "error", JSON.stringify({ error: errMsg, subtype: sdkMsg.subtype, duration_ms: durationMs, cost_usd: costUsd, model }), chatId || null, wfMeta);
         }
         lastMetrics = { durationMs, costUsd, inputTokens, outputTokens, model, turns: numTurns, isError: true, error: errMsg };
         wsSend({ type: "error", error: errMsg });
@@ -303,7 +341,7 @@ export async function processSdkStream(q, { ws, wsSend, sessionIds, clientSid, c
               content: text.slice(0, 10000),
               isError: block.is_error || false,
             };
-            addMessage(resolvedSid, "tool_result", JSON.stringify(dbPayload), chatId || null, wfMeta);
+            await addMessage(resolvedSid, "tool_result", JSON.stringify(dbPayload), chatId || null, wfMeta);
           }
         }
       }
@@ -344,6 +382,7 @@ export function handleClose({ activeQueries, pendingApprovals }) {
   for (const [id, { resolve, timer }] of pendingApprovals) {
     clearTimeout(timer);
     resolve({ behavior: "deny", message: "Client disconnected" });
+    globalPendingApprovals.delete(id);
   }
   pendingApprovals.clear();
 }
@@ -361,21 +400,48 @@ export function handleAbort(msg, { activeQueries, pendingApprovals }) {
   for (const [id, { resolve, timer }] of pendingApprovals) {
     clearTimeout(timer);
     resolve({ behavior: "deny", message: "Aborted by user" });
+    globalPendingApprovals.delete(id);
   }
   pendingApprovals.clear();
 }
 
 // ── Extracted handler: permission response ────────────────────────────────
-export function handlePermissionResponse(msg, { pendingApprovals }) {
-  const pending = pendingApprovals.get(msg.id);
+export function handlePermissionResponse(msg, { pendingApprovals, ws: responderWs }) {
+  // Check local first (same connection that initiated the request)
+  let pending = pendingApprovals.get(msg.id);
+  let isLocal = !!pending;
+
+  // If not found locally, check global (cross-connection approval from another client)
+  if (!pending) {
+    pending = globalPendingApprovals.get(msg.id);
+  }
+
   if (pending) {
+    // Get sessionId before deleting (local pending doesn't have it, global does)
+    const sessionId = pending.sessionId || globalPendingApprovals.get(msg.id)?.sessionId;
+
     clearTimeout(pending.timer);
     pendingApprovals.delete(msg.id);
+    globalPendingApprovals.delete(msg.id);
+    // Also clean up from the originating connection's local map
+    if (!isLocal && pending.localMap) pending.localMap.delete(msg.id);
+
     if (msg.behavior === "allow") {
       pending.resolve({ behavior: "allow", updatedInput: pending.toolInput });
     } else {
       pending.resolve({ behavior: "deny", message: "Denied by user" });
     }
+
+    // Broadcast permission_response_external to dismiss modals on all other clients
+    if (sessionId) {
+      broadcastToSession(sessionId, {
+        type: "permission_response_external",
+        id: msg.id,
+        behavior: msg.behavior,
+        source: "broadcast",
+      }, responderWs);
+    }
+
     // Update Telegram message to show it was resolved via web
     markTelegramMessageResolved(msg.id, msg.behavior === "allow" ? "allow" : "deny").catch(() => {});
   }
@@ -389,6 +455,7 @@ export async function handleWorkflow(msg, { ws, sessionIds, activeQueries, pendi
   function wfSend(payload) {
     if (ws.readyState !== 1) return;
     ws.send(JSON.stringify(payload));
+    if (clientSid) broadcastToSession(clientSid, payload, ws);
   }
 
   wfSend({ type: "workflow_started", workflow: { id: workflow.id, title: workflow.title, steps: workflow.steps.map((s) => s.label) } });
@@ -425,7 +492,7 @@ export async function handleWorkflow(msg, { ws, sessionIds, activeQueries, pendi
     };
 
     if (!useBypass && !usePlan) {
-      stepOpts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, null, `Workflow: ${workflow.title}`);
+      stepOpts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, null, `Workflow: ${workflow.title}`, () => clientSid);
     }
     if (wfModel) stepOpts.model = resolveModel(wfModel);
 
@@ -512,6 +579,7 @@ export async function handleAgentChain(msg, { ws, sessionIds, activeQueries, pen
   function chainSend(payload) {
     if (ws.readyState !== 1) return;
     ws.send(JSON.stringify(payload));
+    if (clientSid) broadcastToSession(clientSid, payload, ws);
   }
 
   chainSend({
@@ -628,7 +696,9 @@ export async function handleOrchestrate(msg, { ws, sessionIds, activeQueries, pe
   try {
     agents = JSON.parse(await readFile(configPath("agents.json"), "utf-8"));
   } catch {
-    ws.send(JSON.stringify({ type: "error", error: "Failed to load agents" }));
+    const errPayload = { type: "error", error: "Failed to load agents" };
+    ws.send(JSON.stringify(errPayload));
+    if (clientSid) broadcastToSession(clientSid, errPayload, ws);
     return;
   }
 
@@ -654,11 +724,13 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
 
   // Handle /remember command — save memory and respond without calling Claude
   if (message && message.trim().toLowerCase().startsWith('/remember ') && cwd) {
-    const result = parseRememberCommand(message, cwd, clientSid);
+    const result = await parseRememberCommand(message, cwd, clientSid);
     function remSend(payload) {
       if (ws.readyState !== 1) return;
       if (chatId) payload.chatId = chatId;
+      if (clientSid) payload.sessionId = clientSid;
       ws.send(JSON.stringify(payload));
+      if (clientSid) broadcastToSession(clientSid, payload, ws);
     }
     if (result) {
       remSend({ type: "text", text: result.saved
@@ -677,8 +749,8 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
   const sessionKey = chatId ? `${clientSid}::${chatId}` : clientSid;
   const resumeId = clientSid ? sessionIds.get(sessionKey) : undefined;
 
-  if (clientSid && getSession(clientSid)) {
-    touchSession(clientSid);
+  if (clientSid && await getSession(clientSid)) {
+    await touchSession(clientSid);
   }
 
   const abortController = new AbortController();
@@ -701,7 +773,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
       const wtResult = await createWorktree(cwd, branchName);
       const wtId = crypto.randomUUID();
 
-      createWorktreeRecord(wtId, clientSid || null, cwd, wtResult.worktreePath, branchName, baseBranch, (message || "").slice(0, 200));
+      await createWorktreeRecord(wtId, clientSid || null, cwd, wtResult.worktreePath, branchName, baseBranch, (message || "").slice(0, 200));
       worktreeRecord = { id: wtId, worktreePath: wtResult.worktreePath, branchName, baseBranch };
       effectiveCwd = wtResult.worktreePath;
 
@@ -710,6 +782,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
         const wtPayload = { type: "worktree_created", worktreeId: wtId, branchName, baseBranch, worktreePath: wtResult.worktreePath };
         if (chatId) wtPayload.chatId = chatId;
         ws.send(JSON.stringify(wtPayload));
+        if (clientSid) broadcastToSession(clientSid, wtPayload, ws);
       }
     } catch (err) {
       console.error("Worktree creation failed:", err.message, err.stack);
@@ -736,7 +809,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
   if (effectiveMaxTurns) opts.maxTurns = effectiveMaxTurns;
 
   if (!useBypass && !usePlan) {
-    opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, chatId, projectName || "Chat");
+    opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, chatId, projectName || "Chat", () => state.resolvedSid);
   }
   if (chatModel) opts.model = resolveModel(chatModel);
   if (Array.isArray(disabledTools) && disabledTools.length > 0) {
@@ -754,10 +827,10 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
       (opts.appendSystemPrompt ? '\n\n' : '') + systemPrompt;
   }
   // Run memory maintenance (decay stale, clean expired) on each session
-  if (cwd) runMaintenance(cwd);
+  if (cwd) await runMaintenance(cwd);
   // Inject persistent memories for this project (smart: uses user message for relevance)
   if (cwd) {
-    const { prompt: memPrompt, count: memCount, memories: memList } = buildMemoryPrompt(cwd, 10, message);
+    const { prompt: memPrompt, count: memCount, memories: memList } = await buildMemoryPrompt(cwd, 10, message);
     if (memPrompt) {
       opts.appendSystemPrompt = (opts.appendSystemPrompt || '') +
         (opts.appendSystemPrompt ? '\n\n' : '') + memPrompt;
@@ -778,6 +851,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
         const payload = { type: "memories_injected", count: memCount, memories: memList };
         if (chatId) payload.chatId = chatId;
         ws.send(JSON.stringify(payload));
+        if (clientSid) broadcastToSession(clientSid, payload, ws);
       }
     } else {
       console.log(`\n══════ MEMORY INJECTION ══════`);
@@ -795,6 +869,8 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
     if (chatId) payload.chatId = chatId;
     if (state.resolvedSid) payload.sessionId = state.resolvedSid;
     ws.send(JSON.stringify(payload));
+    // Broadcast to other clients watching this session
+    if (state.resolvedSid) broadcastToSession(state.resolvedSid, payload, ws);
   }
 
   // Register for global tracking if we already know the session
@@ -819,14 +895,14 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
         const sKey = chatId ? `${ourSid}::${chatId}` : ourSid;
         sessionIds.set(sKey, claudeSessionId);
 
-        if (!getSession(ourSid)) {
-          createSession(ourSid, claudeSessionId, projectName || "Session", cwd || "");
+        if (!await getSession(ourSid)) {
+          await createSession(ourSid, claudeSessionId, projectName || "Session", cwd || "");
         } else {
-          updateClaudeSessionId(ourSid, claudeSessionId);
+          await updateClaudeSessionId(ourSid, claudeSessionId);
         }
 
         if (chatId) {
-          setClaudeSession(ourSid, chatId, claudeSessionId);
+          await setClaudeSession(ourSid, chatId, claudeSessionId);
         }
 
         wsSend({ type: "session", sessionId: ourSid });
@@ -834,15 +910,21 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
         if (images?.length) {
           userMsgData.images = images.map(i => ({ name: i.name, data: i.data, mimeType: i.mimeType }));
         }
-        addMessage(state.resolvedSid, "user", JSON.stringify(userMsgData), chatId || null);
+        await addMessage(state.resolvedSid, "user", JSON.stringify(userMsgData), chatId || null);
+
+        // Broadcast user message to observers (sender already rendered it locally)
+        const userBroadcast = { type: "user_message", text: message, sessionId: state.resolvedSid };
+        if (chatId) userBroadcast.chatId = chatId;
+        if (images?.length) userBroadcast.images = images.map(i => ({ name: i.name, mimeType: i.mimeType }));
+        broadcastToSession(state.resolvedSid, userBroadcast, ws);
 
         // Register global query tracking now that we know the session
         if (!clientSid) registerGlobalQuery(state.resolvedSid, queryKey);
 
-        const existingSession = getSession(ourSid);
+        const existingSession = await getSession(ourSid);
         if (existingSession && !existingSession.title) {
           const title = message.slice(0, 100).split("\n")[0];
-          updateSessionTitle(ourSid, title);
+          await updateSessionTitle(ourSid, title);
         }
         continue;
       }
@@ -852,10 +934,10 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           if (block.type === "text" && block.text) {
             state.lastAssistantText += (state.lastAssistantText ? "\n\n" : "") + block.text;
             wsSend({ type: "text", text: block.text });
-            if (state.resolvedSid) addMessage(state.resolvedSid, "assistant", JSON.stringify({ text: block.text }), chatId || null);
+            if (state.resolvedSid) await addMessage(state.resolvedSid, "assistant", JSON.stringify({ text: block.text }), chatId || null);
           } else if (block.type === "tool_use") {
             wsSend({ type: "tool", id: block.id, name: block.name, input: block.input });
-            if (state.resolvedSid) addMessage(state.resolvedSid, "tool", JSON.stringify({ id: block.id, name: block.name, input: block.input }), chatId || null);
+            if (state.resolvedSid) await addMessage(state.resolvedSid, "tool", JSON.stringify({ id: block.id, name: block.name, input: block.input }), chatId || null);
           }
         }
         continue;
@@ -869,10 +951,10 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           const cacheReadTokens = sdkMsg.usage?.cache_read_input_tokens || 0;
           const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
           const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
-          if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens, { model, stopReason: "success", isError: 0, cacheReadTokens, cacheCreationTokens });
-          wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "success" });
+          if (sid) await addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens, { model, stopReason: "success", isError: 0, cacheReadTokens, cacheCreationTokens });
+          wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: await getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "success" });
           state.lastChatMetrics = { durationMs: sdkMsg.duration_ms, costUsd: sdkMsg.total_cost_usd, inputTokens, outputTokens, model, turns: sdkMsg.num_turns, isError: false };
-          if (state.resolvedSid) addMessage(state.resolvedSid, "result", JSON.stringify({ duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "success" }), chatId || null);
+          if (state.resolvedSid) await addMessage(state.resolvedSid, "result", JSON.stringify({ duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "success" }), chatId || null);
         } else if (sdkMsg.subtype === "error_max_turns") {
           // Max turns reached — treat as a normal completion with a notice
           const sid = state.resolvedSid || [...sessionIds.entries()].find(([, v]) => v === claudeSessionId)?.[0];
@@ -881,8 +963,8 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           const cacheReadTokens = sdkMsg.usage?.cache_read_input_tokens || 0;
           const cacheCreationTokens = sdkMsg.usage?.cache_creation_input_tokens || 0;
           const model = Object.keys(sdkMsg.modelUsage || {})[0] || sessionModel;
-          if (sid) addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens, { model, stopReason: "error_max_turns", isError: 0, cacheReadTokens, cacheCreationTokens });
-          wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "error_max_turns" });
+          if (sid) await addCost(sid, sdkMsg.total_cost_usd || 0, sdkMsg.duration_ms || 0, sdkMsg.num_turns || 0, inputTokens, outputTokens, { model, stopReason: "error_max_turns", isError: 0, cacheReadTokens, cacheCreationTokens });
+          wsSend({ type: "result", duration_ms: sdkMsg.duration_ms, num_turns: sdkMsg.num_turns, cost_usd: sdkMsg.total_cost_usd, totalCost: await getTotalCost(), input_tokens: inputTokens, output_tokens: outputTokens, cache_read_tokens: cacheReadTokens, cache_creation_tokens: cacheCreationTokens, model, stop_reason: "error_max_turns" });
           wsSend({ type: "error", error: `Reached max turns limit (${sdkMsg.num_turns}). Send another message to continue.` });
         } else if (sdkMsg.subtype?.startsWith("error")) {
           const errMsg = sdkMsg.errors?.join(", ") || sdkMsg.error || sdkMsg.message || "Unknown error";
@@ -898,8 +980,8 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           const sid = state.resolvedSid || [...sessionIds.entries()].find(([, v]) => v === claudeSessionId)?.[0];
           state.lastChatMetrics = { durationMs, costUsd, inputTokens, outputTokens, model, turns: numTurns, isError: true, error: errMsg };
           if (sid) {
-            addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: sdkMsg.subtype, isError: 1, cacheReadTokens, cacheCreationTokens });
-            addMessage(sid, "error", JSON.stringify({ error: errMsg, subtype: sdkMsg.subtype, duration_ms: durationMs, cost_usd: costUsd, model }), chatId || null);
+            await addCost(sid, costUsd, durationMs, numTurns, inputTokens, outputTokens, { model, stopReason: sdkMsg.subtype, isError: 1, cacheReadTokens, cacheCreationTokens });
+            await addMessage(sid, "error", JSON.stringify({ error: errMsg, subtype: sdkMsg.subtype, duration_ms: durationMs, cost_usd: costUsd, model }), chatId || null);
           }
           wsSend({ type: "error", error: errMsg });
         }
@@ -915,7 +997,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
             wsSend({ type: "tool_result", ...wirePayload });
             if (state.resolvedSid) {
               const dbPayload = { toolUseId: block.tool_use_id, content: text.slice(0, 10000), isError: block.is_error || false };
-              addMessage(state.resolvedSid, "tool_result", JSON.stringify(dbPayload), chatId || null);
+              await addMessage(state.resolvedSid, "tool_result", JSON.stringify(dbPayload), chatId || null);
             }
           }
         }
@@ -929,7 +1011,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
     wsSend({ type: "done" });
   } catch (err) {
     if (err.name === "AbortError") {
-      if (state.resolvedSid) addMessage(state.resolvedSid, "aborted", JSON.stringify({ timestamp: Date.now() }), chatId || null);
+      if (state.resolvedSid) await addMessage(state.resolvedSid, "aborted", JSON.stringify({ timestamp: Date.now() }), chatId || null);
       wsSend({ type: "aborted" });
     } else {
       const stderrOutput = stderrChunks.join("");
@@ -944,7 +1026,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           wsSend({ type: "done" });
         } catch (retryErr) {
           if (retryErr.name === "AbortError") {
-            if (state.resolvedSid) addMessage(state.resolvedSid, "aborted", JSON.stringify({ timestamp: Date.now() }), chatId || null);
+            if (state.resolvedSid) await addMessage(state.resolvedSid, "aborted", JSON.stringify({ timestamp: Date.now() }), chatId || null);
             wsSend({ type: "aborted" });
           } else {
             console.error("Query retry error:", retryErr.message);
@@ -960,7 +1042,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
     activeQueries.delete(queryKey);
     unregisterGlobalQuery(state.resolvedSid, queryKey);
     // Send push notification when query completes
-    const session = state.resolvedSid ? getSession(state.resolvedSid) : null;
+    const session = state.resolvedSid ? await getSession(state.resolvedSid) : null;
     const pushTitle = session?.title || "Session complete";
     sendPushNotification("Claudeck", pushTitle, `chat-${state.resolvedSid}`);
 
@@ -1008,10 +1090,10 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
     if (cwd && state.lastAssistantText) {
       try {
         // 1. Parse explicit ```memory blocks (Claude-requested saves)
-        const explicitCount = saveExplicitMemories(cwd, state.lastAssistantText, state.resolvedSid);
+        const explicitCount = await saveExplicitMemories(cwd, state.lastAssistantText, state.resolvedSid);
 
         // 2. Heuristic extraction from assistant text
-        const autoCount = captureMemories(cwd, state.lastAssistantText, state.resolvedSid, null);
+        const autoCount = await captureMemories(cwd, state.lastAssistantText, state.resolvedSid, null);
 
         const totalCaptured = explicitCount + autoCount;
         if (totalCaptured > 0) {
@@ -1021,6 +1103,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
             const payload = { type: "memories_captured", count: totalCaptured, explicit: explicitCount, auto: autoCount };
             if (chatId) payload.chatId = chatId;
             ws.send(JSON.stringify(payload));
+            if (state.resolvedSid) broadcastToSession(state.resolvedSid, payload, ws);
           }
         }
       } catch (e) { console.error("Memory capture error:", e.message); }
@@ -1029,13 +1112,13 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
     // Worktree post-completion: auto-commit, diff stats, notify
     if (worktreeRecord) {
       try {
-        if (state.resolvedSid) updateWorktreeSession(worktreeRecord.id, state.resolvedSid);
+        if (state.resolvedSid) await updateWorktreeSession(worktreeRecord.id, state.resolvedSid);
 
         const commitMsg = `claudeck: ${(message || "worktree changes").slice(0, 72)}`;
         await autoCommitWorktree(worktreeRecord.worktreePath, commitMsg);
 
         const stats = await getWorktreeDiffStats(worktreeRecord.worktreePath, worktreeRecord.baseBranch);
-        updateWorktreeStatus(worktreeRecord.id, "completed");
+        await updateWorktreeStatus(worktreeRecord.id, "completed");
 
         if (ws.readyState === 1) {
           const wtPayload = {
@@ -1046,9 +1129,10 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           };
           if (chatId) wtPayload.chatId = chatId;
           ws.send(JSON.stringify(wtPayload));
+          if (state.resolvedSid) broadcastToSession(state.resolvedSid, wtPayload, ws);
         }
 
-        logNotification(
+        await logNotification(
           "worktree",
           `Worktree "${worktreeRecord.branchName}" ready`,
           `+${stats.insertions} -${stats.deletions} lines in ${stats.files} file(s)`,
@@ -1068,11 +1152,25 @@ export function setupWebSocket(wss, sessionIds) {
   wss.on("connection", (ws) => {
     const ctx = { ws, sessionIds, activeQueries: new Map(), pendingApprovals: new Map() };
 
-    ws.on("close", () => handleClose(ctx));
+    ws.on("close", () => {
+      leaveRoom(ws);
+      handleClose(ctx);
+    });
 
     ws.on("message", async (raw) => {
       let msg;
       try { msg = JSON.parse(raw); } catch { return; }
+
+      // Session broadcast: subscribe/unsubscribe
+      if (msg.type === "subscribe") {
+        leaveRoom(ws); // leave any previous room first
+        if (msg.sessionId) joinRoom(msg.sessionId, ws);
+        return;
+      }
+      if (msg.type === "unsubscribe") {
+        leaveRoom(ws);
+        return;
+      }
 
       if (msg.type === "abort") return handleAbort(msg, ctx);
       if (msg.type === "permission_response") return handlePermissionResponse(msg, ctx);

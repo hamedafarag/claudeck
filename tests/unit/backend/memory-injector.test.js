@@ -27,118 +27,118 @@ beforeEach(() => {
 // buildMemoryPrompt
 // ---------------------------------------------------------------------------
 describe("buildMemoryPrompt", () => {
-  it("returns { prompt: null, count: 0 } for null projectPath", () => {
-    expect(buildMemoryPrompt(null)).toEqual({ prompt: null, count: 0 });
+  it("returns { prompt: null, count: 0 } for null projectPath", async () => {
+    expect(await buildMemoryPrompt(null)).toEqual({ prompt: null, count: 0 });
   });
 
-  it("returns { prompt: null, count: 0 } for undefined projectPath", () => {
-    expect(buildMemoryPrompt(undefined)).toEqual({ prompt: null, count: 0 });
+  it("returns { prompt: null, count: 0 } for undefined projectPath", async () => {
+    expect(await buildMemoryPrompt(undefined)).toEqual({ prompt: null, count: 0 });
   });
 
-  it("returns { prompt: null, count: 0 } when no memories exist", () => {
+  it("returns { prompt: null, count: 0 } when no memories exist", async () => {
     getTopMemories.mockReturnValue([]);
-    const result = buildMemoryPrompt("/project");
+    const result = await buildMemoryPrompt("/project");
     expect(result.prompt).toBeNull();
     expect(result.count).toBe(0);
   });
 
-  it("returns formatted prompt when memories exist", () => {
+  it("returns formatted prompt when memories exist", async () => {
     getTopMemories.mockReturnValue([
       { id: 1, category: "convention", content: "Use camelCase" },
     ]);
-    const result = buildMemoryPrompt("/project");
+    const result = await buildMemoryPrompt("/project");
     expect(result.prompt).toContain("Project Memory");
     expect(result.prompt).toContain("Use camelCase");
     expect(result.count).toBe(1);
   });
 
-  it("includes category labels in prompt", () => {
+  it("includes category labels in prompt", async () => {
     getTopMemories.mockReturnValue([
       { id: 1, category: "convention", content: "Use ESLint" },
       { id: 2, category: "decision", content: "Chose PostgreSQL" },
       { id: 3, category: "warning", content: "Avoid global state" },
       { id: 4, category: "discovery", content: "Config loaded from env" },
     ]);
-    const result = buildMemoryPrompt("/project");
+    const result = await buildMemoryPrompt("/project");
     expect(result.prompt).toContain("[Convention]");
     expect(result.prompt).toContain("[Decision]");
     expect(result.prompt).toContain("[Warning]");
     expect(result.prompt).toContain("[Discovery]");
   });
 
-  it("calls touchMemory for each memory", () => {
+  it("calls touchMemory for each memory", async () => {
     getTopMemories.mockReturnValue([
       { id: 10, category: "convention", content: "Always lint" },
       { id: 20, category: "decision", content: "Use Vite" },
     ]);
-    buildMemoryPrompt("/project");
+    await buildMemoryPrompt("/project");
     expect(touchMemory).toHaveBeenCalledTimes(2);
     expect(touchMemory).toHaveBeenCalledWith(10);
     expect(touchMemory).toHaveBeenCalledWith(20);
   });
 
-  it("includes the saving memories instructions", () => {
+  it("includes the saving memories instructions", async () => {
     getTopMemories.mockReturnValue([
       { id: 1, category: "discovery", content: "Test content" },
     ]);
-    const result = buildMemoryPrompt("/project");
+    const result = await buildMemoryPrompt("/project");
     expect(result.prompt).toContain("Saving Memories");
     expect(result.prompt).toContain("```memory");
   });
 
-  it("returns memories array in result", () => {
+  it("returns memories array in result", async () => {
     getTopMemories.mockReturnValue([
       { id: 1, category: "convention", content: "Use tabs", extraField: "ignored" },
     ]);
-    const result = buildMemoryPrompt("/project");
+    const result = await buildMemoryPrompt("/project");
     expect(result.memories).toEqual([
       { id: 1, category: "convention", content: "Use tabs" },
     ]);
   });
 
   describe("query-relevant memories via userMessage", () => {
-    it("merges query-relevant memories from searchMemories", () => {
+    it("merges query-relevant memories from searchMemories", async () => {
       getTopMemories.mockReturnValue([
         { id: 1, category: "convention", content: "Use ESLint" },
       ]);
       searchMemories.mockReturnValue([
         { id: 2, category: "discovery", content: "Database uses SQLite" },
       ]);
-      const result = buildMemoryPrompt("/project", 10, "tell me about database setup");
+      const result = await buildMemoryPrompt("/project", 10, "tell me about database setup");
       expect(result.count).toBe(2);
       expect(result.prompt).toContain("Database uses SQLite");
     });
 
-    it("deduplicates merged memories by id", () => {
+    it("deduplicates merged memories by id", async () => {
       const sharedMemory = { id: 1, category: "convention", content: "Use ESLint" };
       getTopMemories.mockReturnValue([sharedMemory]);
       searchMemories.mockReturnValue([sharedMemory]);
-      const result = buildMemoryPrompt("/project", 10, "tell me about linting rules");
+      const result = await buildMemoryPrompt("/project", 10, "tell me about linting rules");
       expect(result.count).toBe(1);
     });
 
-    it("does not call searchMemories when userMessage is too short", () => {
+    it("does not call searchMemories when userMessage is too short", async () => {
       getTopMemories.mockReturnValue([
         { id: 1, category: "convention", content: "Use ESLint" },
       ]);
-      buildMemoryPrompt("/project", 10, "short");
+      await buildMemoryPrompt("/project", 10, "short");
       expect(searchMemories).not.toHaveBeenCalled();
     });
 
-    it("does not call searchMemories when userMessage is null", () => {
+    it("does not call searchMemories when userMessage is null", async () => {
       getTopMemories.mockReturnValue([
         { id: 1, category: "convention", content: "Use ESLint" },
       ]);
-      buildMemoryPrompt("/project", 10, null);
+      await buildMemoryPrompt("/project", 10, null);
       expect(searchMemories).not.toHaveBeenCalled();
     });
 
-    it("extracts keywords from userMessage skipping stop words", () => {
+    it("extracts keywords from userMessage skipping stop words", async () => {
       getTopMemories.mockReturnValue([
         { id: 1, category: "convention", content: "Something" },
       ]);
       searchMemories.mockReturnValue([]);
-      buildMemoryPrompt("/project", 10, "what is the database configuration for this project");
+      await buildMemoryPrompt("/project", 10, "what is the database configuration for this project");
       // Should have called searchMemories with keywords (no stop words)
       expect(searchMemories).toHaveBeenCalledTimes(1);
       const query = searchMemories.mock.calls[0][1];
@@ -152,21 +152,21 @@ describe("buildMemoryPrompt", () => {
       expect(query).toContain("project");
     });
 
-    it("does not call searchMemories when all words are stop words", () => {
+    it("does not call searchMemories when all words are stop words", async () => {
       getTopMemories.mockReturnValue([
         { id: 1, category: "convention", content: "Something" },
       ]);
-      buildMemoryPrompt("/project", 10, "what is the it");
+      await buildMemoryPrompt("/project", 10, "what is the it");
       // All words are stop words or too short, so no search
       expect(searchMemories).not.toHaveBeenCalled();
     });
 
-    it("handles searchMemories errors gracefully", () => {
+    it("handles searchMemories errors gracefully", async () => {
       getTopMemories.mockReturnValue([
         { id: 1, category: "convention", content: "Use ESLint" },
       ]);
       searchMemories.mockImplementation(() => { throw new Error("FTS error"); });
-      const result = buildMemoryPrompt("/project", 10, "tell me about database setup");
+      const result = await buildMemoryPrompt("/project", 10, "tell me about database setup");
       // Should still return top memories
       expect(result.count).toBe(1);
       expect(result.prompt).toContain("Use ESLint");
@@ -174,14 +174,14 @@ describe("buildMemoryPrompt", () => {
   });
 
   describe("caps to limit", () => {
-    it("caps returned memories to the specified limit", () => {
+    it("caps returned memories to the specified limit", async () => {
       const manyMemories = Array.from({ length: 20 }, (_, i) => ({
         id: i + 1,
         category: "discovery",
         content: `Memory number ${i + 1}`,
       }));
       getTopMemories.mockReturnValue(manyMemories);
-      const result = buildMemoryPrompt("/project", 5);
+      const result = await buildMemoryPrompt("/project", 5);
       expect(result.count).toBe(5);
       expect(touchMemory).toHaveBeenCalledTimes(5);
     });
@@ -192,55 +192,55 @@ describe("buildMemoryPrompt", () => {
 // buildAgentMemoryPrompt
 // ---------------------------------------------------------------------------
 describe("buildAgentMemoryPrompt", () => {
-  it("returns null for null projectPath", () => {
-    expect(buildAgentMemoryPrompt(null)).toBeNull();
+  it("returns null for null projectPath", async () => {
+    expect(await buildAgentMemoryPrompt(null)).toBeNull();
   });
 
-  it("returns null for undefined projectPath", () => {
-    expect(buildAgentMemoryPrompt(undefined)).toBeNull();
+  it("returns null for undefined projectPath", async () => {
+    expect(await buildAgentMemoryPrompt(undefined)).toBeNull();
   });
 
-  it("returns null when no memories exist", () => {
+  it("returns null when no memories exist", async () => {
     getTopMemories.mockReturnValue([]);
-    expect(buildAgentMemoryPrompt("/project")).toBeNull();
+    expect(await buildAgentMemoryPrompt("/project")).toBeNull();
   });
 
-  it("returns null when memories is null", () => {
+  it("returns null when memories is null", async () => {
     getTopMemories.mockReturnValue(null);
-    expect(buildAgentMemoryPrompt("/project")).toBeNull();
+    expect(await buildAgentMemoryPrompt("/project")).toBeNull();
   });
 
-  it("returns formatted prompt with shorter format", () => {
+  it("returns formatted prompt with shorter format", async () => {
     getTopMemories.mockReturnValue([
       { id: 1, category: "convention", content: "Use tabs" },
     ]);
-    const result = buildAgentMemoryPrompt("/project");
+    const result = await buildAgentMemoryPrompt("/project");
     expect(result).toContain("Prior Knowledge");
     expect(result).toContain("[convention] Use tabs");
     // Should NOT contain the full buildMemoryPrompt format
     expect(result).not.toContain("Saving Memories");
   });
 
-  it("calls touchMemory for each memory", () => {
+  it("calls touchMemory for each memory", async () => {
     getTopMemories.mockReturnValue([
       { id: 5, category: "warning", content: "Watch out for X" },
       { id: 6, category: "discovery", content: "Y depends on Z" },
     ]);
-    buildAgentMemoryPrompt("/project");
+    await buildAgentMemoryPrompt("/project");
     expect(touchMemory).toHaveBeenCalledTimes(2);
     expect(touchMemory).toHaveBeenCalledWith(5);
     expect(touchMemory).toHaveBeenCalledWith(6);
   });
 
-  it("passes limit to getTopMemories", () => {
+  it("passes limit to getTopMemories", async () => {
     getTopMemories.mockReturnValue([]);
-    buildAgentMemoryPrompt("/project", 3);
+    await buildAgentMemoryPrompt("/project", 3);
     expect(getTopMemories).toHaveBeenCalledWith("/project", 3);
   });
 
-  it("uses default limit of 8", () => {
+  it("uses default limit of 8", async () => {
     getTopMemories.mockReturnValue([]);
-    buildAgentMemoryPrompt("/project");
+    await buildAgentMemoryPrompt("/project");
     expect(getTopMemories).toHaveBeenCalledWith("/project", 8);
   });
 });
@@ -337,31 +337,31 @@ describe("parseMemoryBlocks", () => {
 // saveExplicitMemories
 // ---------------------------------------------------------------------------
 describe("saveExplicitMemories", () => {
-  it("returns 0 for null projectPath", () => {
-    expect(saveExplicitMemories(null, "text")).toBe(0);
+  it("returns 0 for null projectPath", async () => {
+    expect(await saveExplicitMemories(null, "text")).toBe(0);
   });
 
-  it("returns 0 for null assistantText", () => {
-    expect(saveExplicitMemories("/project", null)).toBe(0);
+  it("returns 0 for null assistantText", async () => {
+    expect(await saveExplicitMemories("/project", null)).toBe(0);
   });
 
-  it("returns 0 for empty assistantText", () => {
-    expect(saveExplicitMemories("/project", "")).toBe(0);
+  it("returns 0 for empty assistantText", async () => {
+    expect(await saveExplicitMemories("/project", "")).toBe(0);
   });
 
-  it("returns 0 when text has no memory blocks", () => {
-    expect(saveExplicitMemories("/project", "Just normal text")).toBe(0);
+  it("returns 0 when text has no memory blocks", async () => {
+    expect(await saveExplicitMemories("/project", "Just normal text")).toBe(0);
   });
 
-  it("saves parsed memory blocks", () => {
+  it("saves parsed memory blocks", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
     const text = '```memory\n{"category": "convention", "content": "Always use strict mode"}\n```';
-    const count = saveExplicitMemories("/project", text, "sess-1");
+    const count = await saveExplicitMemories("/project", text, "sess-1");
     expect(count).toBe(1);
     expect(createMemory).toHaveBeenCalledWith("/project", "convention", "Always use strict mode", "sess-1", null);
   });
 
-  it("returns count of non-duplicates", () => {
+  it("returns count of non-duplicates", async () => {
     createMemory
       .mockReturnValueOnce({ isDuplicate: false, lastInsertRowid: 1 })
       .mockReturnValueOnce({ isDuplicate: true });
@@ -373,15 +373,15 @@ describe("saveExplicitMemories", () => {
       '{"category": "warning", "content": "Avoid globals"}',
       "```",
     ].join("\n");
-    const count = saveExplicitMemories("/project", text);
+    const count = await saveExplicitMemories("/project", text);
     expect(count).toBe(1);
   });
 
-  it("handles createMemory errors gracefully", () => {
+  it("handles createMemory errors gracefully", async () => {
     createMemory.mockImplementation(() => { throw new Error("DB error"); });
     const text = '```memory\n{"category": "discovery", "content": "Test content"}\n```';
-    expect(() => saveExplicitMemories("/project", text)).not.toThrow();
-    expect(saveExplicitMemories("/project", text)).toBe(0);
+    await expect(saveExplicitMemories("/project", text)).resolves.not.toThrow();
+    expect(await saveExplicitMemories("/project", text)).toBe(0);
   });
 });
 
@@ -389,85 +389,85 @@ describe("saveExplicitMemories", () => {
 // parseRememberCommand
 // ---------------------------------------------------------------------------
 describe("parseRememberCommand", () => {
-  it("returns null for null message", () => {
-    expect(parseRememberCommand(null, "/project")).toBeNull();
+  it("returns null for null message", async () => {
+    expect(await parseRememberCommand(null, "/project")).toBeNull();
   });
 
-  it("returns null for null projectPath", () => {
-    expect(parseRememberCommand("/remember something important", null)).toBeNull();
+  it("returns null for null projectPath", async () => {
+    expect(await parseRememberCommand("/remember something important", null)).toBeNull();
   });
 
-  it("returns null for non-/remember messages", () => {
-    expect(parseRememberCommand("hello world", "/project")).toBeNull();
+  it("returns null for non-/remember messages", async () => {
+    expect(await parseRememberCommand("hello world", "/project")).toBeNull();
   });
 
-  it("returns null for empty /remember command", () => {
-    expect(parseRememberCommand("/remember ", "/project")).toBeNull();
+  it("returns null for empty /remember command", async () => {
+    expect(await parseRememberCommand("/remember ", "/project")).toBeNull();
   });
 
-  it("returns null for text shorter than 5 chars after /remember", () => {
-    expect(parseRememberCommand("/remember hi", "/project")).toBeNull();
+  it("returns null for text shorter than 5 chars after /remember", async () => {
+    expect(await parseRememberCommand("/remember hi", "/project")).toBeNull();
   });
 
-  it("parses basic /remember command with discovery category", () => {
+  it("parses basic /remember command with discovery category", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
-    const result = parseRememberCommand("/remember this project uses GraphQL for the API", "/project");
+    const result = await parseRememberCommand("/remember this project uses GraphQL for the API", "/project");
     expect(result).not.toBeNull();
     expect(result.category).toBe("discovery");
     expect(result.content).toBe("this project uses GraphQL for the API");
     expect(result.saved).toBe(true);
   });
 
-  it("parses [convention] prefix", () => {
+  it("parses [convention] prefix", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
-    const result = parseRememberCommand("/remember [convention] always use semicolons in JavaScript", "/project");
+    const result = await parseRememberCommand("/remember [convention] always use semicolons in JavaScript", "/project");
     expect(result.category).toBe("convention");
     expect(result.content).toBe("always use semicolons in JavaScript");
   });
 
-  it("parses [warning] prefix", () => {
+  it("parses [warning] prefix", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
-    const result = parseRememberCommand("/remember [warning] never run migrations without backup", "/project");
+    const result = await parseRememberCommand("/remember [warning] never run migrations without backup", "/project");
     expect(result.category).toBe("warning");
     expect(result.content).toBe("never run migrations without backup");
   });
 
-  it("parses [decision] prefix", () => {
+  it("parses [decision] prefix", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
-    const result = parseRememberCommand("/remember [decision] switched to PostgreSQL for better perf", "/project");
+    const result = await parseRememberCommand("/remember [decision] switched to PostgreSQL for better perf", "/project");
     expect(result.category).toBe("decision");
     expect(result.content).toBe("switched to PostgreSQL for better perf");
   });
 
-  it("parses [discovery] prefix", () => {
+  it("parses [discovery] prefix", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
-    const result = parseRememberCommand("/remember [discovery] config loaded from YAML files at boot", "/project");
+    const result = await parseRememberCommand("/remember [discovery] config loaded from YAML files at boot", "/project");
     expect(result.category).toBe("discovery");
     expect(result.content).toBe("config loaded from YAML files at boot");
   });
 
-  it("parses case-insensitive category prefix", () => {
+  it("parses case-insensitive category prefix", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
-    const result = parseRememberCommand("/remember [WARNING] never do this dangerous thing", "/project");
+    const result = await parseRememberCommand("/remember [WARNING] never do this dangerous thing", "/project");
     expect(result.category).toBe("warning");
   });
 
-  it("truncates content to 300 chars", () => {
+  it("truncates content to 300 chars", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
     const longText = "A".repeat(400);
-    const result = parseRememberCommand(`/remember ${longText}`, "/project");
+    const result = await parseRememberCommand(`/remember ${longText}`, "/project");
     expect(result.content.length).toBe(300);
   });
 
-  it("reports saved: false for duplicate", () => {
+  it("reports saved: false for duplicate", async () => {
     createMemory.mockReturnValue({ isDuplicate: true });
-    const result = parseRememberCommand("/remember this project uses GraphQL for the API", "/project");
+    const result = await parseRememberCommand("/remember this project uses GraphQL for the API", "/project");
     expect(result.saved).toBe(false);
   });
 
-  it("passes sessionId to createMemory", () => {
+  it("passes sessionId to createMemory", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
-    parseRememberCommand("/remember this is a test of session tracking", "/project", "sess-42");
+    await parseRememberCommand("/remember this is a test of session tracking", "/project", "sess-42");
     expect(createMemory).toHaveBeenCalledWith(
       "/project",
       "discovery",
@@ -477,15 +477,15 @@ describe("parseRememberCommand", () => {
     );
   });
 
-  it("returns null when createMemory throws", () => {
+  it("returns null when createMemory throws", async () => {
     createMemory.mockImplementation(() => { throw new Error("DB error"); });
-    const result = parseRememberCommand("/remember this project uses GraphQL for the API", "/project");
+    const result = await parseRememberCommand("/remember this project uses GraphQL for the API", "/project");
     expect(result).toBeNull();
   });
 
-  it("trims leading/trailing whitespace from message", () => {
+  it("trims leading/trailing whitespace from message", async () => {
     createMemory.mockReturnValue({ isDuplicate: false, lastInsertRowid: 1 });
-    const result = parseRememberCommand("  /remember this project uses GraphQL for API  ", "/project");
+    const result = await parseRememberCommand("  /remember this project uses GraphQL for API  ", "/project");
     expect(result).not.toBeNull();
     expect(result.content).toBe("this project uses GraphQL for API");
   });

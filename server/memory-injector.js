@@ -36,11 +36,11 @@ function dedup(memories) {
  * @param {string|null} userMessage - Current user message for relevance matching
  * @returns {{ prompt: string|null, count: number }}
  */
-export function buildMemoryPrompt(projectPath, limit = 10, userMessage = null) {
+export async function buildMemoryPrompt(projectPath, limit = 10, userMessage = null) {
   if (!projectPath) return { prompt: null, count: 0 };
 
   // Get top memories by relevance score
-  let memories = getTopMemories(projectPath, limit);
+  let memories = await getTopMemories(projectPath, limit);
 
   // If we have a user message, also search for query-relevant memories
   if (userMessage && userMessage.length > 10) {
@@ -53,7 +53,7 @@ export function buildMemoryPrompt(projectPath, limit = 10, userMessage = null) {
         .filter(w => w.length > 2 && !stopWords.has(w));
 
       if (keywords.length > 0) {
-        const queryRelevant = searchMemories(projectPath, keywords.join(' '), limit);
+        const queryRelevant = await searchMemories(projectPath, keywords.join(' '), limit);
         memories = dedup([...memories, ...queryRelevant]);
       }
     } catch {
@@ -68,7 +68,7 @@ export function buildMemoryPrompt(projectPath, limit = 10, userMessage = null) {
 
   // Touch each memory to boost relevance on access
   for (const m of memories) {
-    touchMemory(m.id);
+    await touchMemory(m.id);
   }
 
   let prompt = `## Project Memory (persistent knowledge from previous sessions)\n`;
@@ -100,14 +100,14 @@ export function buildMemoryPrompt(projectPath, limit = 10, userMessage = null) {
 /**
  * Build a shorter memory section for agent prompts (tighter budget).
  */
-export function buildAgentMemoryPrompt(projectPath, limit = 8) {
+export async function buildAgentMemoryPrompt(projectPath, limit = 8) {
   if (!projectPath) return null;
 
-  const memories = getTopMemories(projectPath, limit);
+  const memories = await getTopMemories(projectPath, limit);
   if (!memories || memories.length === 0) return null;
 
   for (const m of memories) {
-    touchMemory(m.id);
+    await touchMemory(m.id);
   }
 
   let prompt = `## Prior Knowledge\n`;
@@ -157,7 +157,7 @@ export function parseMemoryBlocks(text) {
  * @param {string|null} sessionId
  * @returns {number} count of saved memories
  */
-export function saveExplicitMemories(projectPath, assistantText, sessionId = null) {
+export async function saveExplicitMemories(projectPath, assistantText, sessionId = null) {
   if (!projectPath || !assistantText) return 0;
 
   const blocks = parseMemoryBlocks(assistantText);
@@ -165,7 +165,7 @@ export function saveExplicitMemories(projectPath, assistantText, sessionId = nul
 
   for (const { category, content } of blocks) {
     try {
-      const result = createMemory(projectPath, category, content, sessionId, null);
+      const result = await createMemory(projectPath, category, content, sessionId, null);
       if (!result.isDuplicate) saved++;
     } catch {
       // Ignore individual save errors
@@ -188,7 +188,7 @@ export function saveExplicitMemories(projectPath, assistantText, sessionId = nul
  * @param {string|null} sessionId
  * @returns {{ saved: boolean, content: string, category: string }|null}
  */
-export function parseRememberCommand(message, projectPath, sessionId = null) {
+export async function parseRememberCommand(message, projectPath, sessionId = null) {
   if (!message || !projectPath) return null;
 
   const trimmed = message.trim();
@@ -213,7 +213,7 @@ export function parseRememberCommand(message, projectPath, sessionId = null) {
   const content = text.slice(0, 300);
 
   try {
-    const result = createMemory(projectPath, category, content, sessionId, null);
+    const result = await createMemory(projectPath, category, content, sessionId, null);
     return { saved: !result.isDuplicate, content, category };
   } catch {
     return null;

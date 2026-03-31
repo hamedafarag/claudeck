@@ -22,10 +22,10 @@ export function setSessionIds(map) {
 }
 
 // List sessions (optionally filtered by project_path)
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const projectPath = req.query.project_path || undefined;
-    const sessions = listSessions(20, projectPath);
+    const sessions = await listSessions(20, projectPath);
     res.json(sessions);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -33,11 +33,11 @@ router.get("/", (req, res) => {
 });
 
 // Search sessions
-router.get("/search", (req, res) => {
+router.get("/search", async (req, res) => {
   try {
     const q = req.query.q || "";
     const projectPath = req.query.project_path || undefined;
-    const sessions = searchSessions(q, 20, projectPath);
+    const sessions = await searchSessions(q, 20, projectPath);
     res.json(sessions);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -54,10 +54,10 @@ router.get("/active", (req, res) => {
 });
 
 // Delete a session
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    dbDeleteSession(id);
+    await dbDeleteSession(id);
     // Clean up sessionIds map entries for this session
     for (const [key] of sessionIds) {
       if (key === id || key.startsWith(id + "::")) {
@@ -71,13 +71,13 @@ router.delete("/:id", (req, res) => {
 });
 
 // Update session title
-router.put("/:id/title", (req, res) => {
+router.put("/:id/title", async (req, res) => {
   try {
     const { title } = req.body;
     if (typeof title !== "string") {
       return res.status(400).json({ error: "title is required" });
     }
-    updateSessionTitle(req.params.id, title.slice(0, 200));
+    await updateSessionTitle(req.params.id, title.slice(0, 200));
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -85,9 +85,9 @@ router.put("/:id/title", (req, res) => {
 });
 
 // Toggle session pin
-router.put("/:id/pin", (req, res) => {
+router.put("/:id/pin", async (req, res) => {
   try {
-    toggleSessionPin(req.params.id);
+    await toggleSessionPin(req.params.id);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -107,15 +107,15 @@ router.post("/:id/summary", async (req, res) => {
 // ── Session Branching / Forking ─────────────────────────
 
 // Fork a session at a given message
-router.post("/:id/fork", (req, res) => {
+router.post("/:id/fork", async (req, res) => {
   try {
     const { messageId } = req.body || {};
-    const session = getSession(req.params.id);
+    const session = await getSession(req.params.id);
     if (!session) return res.status(404).json({ error: "Session not found" });
     if (messageId != null && (typeof messageId !== "number" || messageId < 1)) {
       return res.status(400).json({ error: "Invalid messageId" });
     }
-    const forked = dbForkSession(req.params.id, messageId || null);
+    const forked = await dbForkSession(req.params.id, messageId || null);
     res.json(forked);
   } catch (err) {
     const status = err.message === "No messages to fork" || err.message === "Session not found" ? 400 : 500;
@@ -124,18 +124,18 @@ router.post("/:id/fork", (req, res) => {
 });
 
 // List direct child forks of a session
-router.get("/:id/branches", (req, res) => {
+router.get("/:id/branches", async (req, res) => {
   try {
-    res.json(getSessionBranches(req.params.id));
+    res.json(await getSessionBranches(req.params.id));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // Get full ancestor chain + siblings
-router.get("/:id/lineage", (req, res) => {
+router.get("/:id/lineage", async (req, res) => {
   try {
-    res.json(getSessionLineage(req.params.id));
+    res.json(await getSessionLineage(req.params.id));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

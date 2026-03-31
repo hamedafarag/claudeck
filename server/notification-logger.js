@@ -14,14 +14,14 @@ function broadcast(payload) {
   }
 }
 
-export function logNotification(type, title, body = null, metadata = null, sourceSessionId = null, sourceAgentId = null) {
-  const notification = createNotification(type, title, body, metadata, sourceSessionId, sourceAgentId);
-  const unreadCount = getUnreadNotificationCount();
+export async function logNotification(type, title, body = null, metadata = null, sourceSessionId = null, sourceAgentId = null) {
+  const notification = await createNotification(type, title, body, metadata, sourceSessionId, sourceAgentId);
+  const unreadCount = await getUnreadNotificationCount();
   broadcast({ type: "notification:new", notification, unreadCount });
   return notification;
 }
 
-export function broadcastReadUpdate(ids) {
-  const unreadCount = getUnreadNotificationCount();
+export async function broadcastReadUpdate(ids) {
+  const unreadCount = await getUnreadNotificationCount();
   broadcast({ type: "notification:read", ids, unreadCount });
 }

@@ -163,7 +163,7 @@ function parseOptimizerOutput(text) {
  */
 export async function optimizeMemories(projectPath, onProgress = () => {}) {
   // 1. Load all memories
-  const allMemories = listMemories(projectPath);
+  const allMemories = await listMemories(projectPath);
   if (!allMemories.length) {
     return { preview: { before: 0, after: 0, summary: "No memories to optimize." } };
   }
@@ -251,7 +251,7 @@ export async function optimizeMemories(projectPath, onProgress = () => {}) {
  * @param {Array<{category: string, content: string}>} optimized
  * @returns {{ deleted: number, created: number }}
  */
-export function applyOptimization(projectPath, optimized) {
+export async function applyOptimization(projectPath, optimized) {
   const db = getDb();
 
   // Run in a transaction for atomicity

@@ -107,7 +107,7 @@ export function extractMemories(text) {
  * @param {string|null} agentId - Source agent ID (for agent runs)
  * @returns {number} Number of new memories saved
  */
-export function captureMemories(projectPath, assistantText, sessionId = null, agentId = null) {
+export async function captureMemories(projectPath, assistantText, sessionId = null, agentId = null) {
   if (!projectPath || !assistantText) return 0;
 
   const extracted = extractMemories(assistantText);
@@ -115,7 +115,7 @@ export function captureMemories(projectPath, assistantText, sessionId = null, ag
 
   for (const { category, content } of extracted) {
     try {
-      const result = createMemory(projectPath, category, content, sessionId, agentId);
+      const result = await createMemory(projectPath, category, content, sessionId, agentId);
       if (!result.isDuplicate) saved++;
     } catch {
       // Ignore individual save errors
@@ -129,10 +129,10 @@ export function captureMemories(projectPath, assistantText, sessionId = null, ag
  * Run memory maintenance for a project.
  * Call this on session start to decay stale memories and clean expired ones.
  */
-export function runMaintenance(projectPath) {
+export async function runMaintenance(projectPath) {
   if (!projectPath) return;
   try {
-    maintainMemories(projectPath);
+    await maintainMemories(projectPath);
   } catch {
     // Non-critical — don't break session startup
   }

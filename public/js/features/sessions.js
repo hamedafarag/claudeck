@@ -5,8 +5,12 @@ import { CHAT_IDS } from '../core/constants.js';
 import { escapeHtml } from '../core/utils.js';
 import * as api from '../core/api.js';
 import { panes, enterParallelMode, exitParallelMode } from '../ui/parallel.js';
-import { renderMessagesIntoPane, showWhalyPlaceholder } from '../ui/messages.js';
+import { renderMessagesIntoPane, prependOlderMessages, showWhalyPlaceholder, showLoadingIndicator, hideLoadingIndicator } from '../ui/messages.js';
 import { loadContextGauge } from '../ui/context-gauge.js';
+import { subscribeToSession } from '../core/ws.js';
+
+const MESSAGE_PAGE_SIZE = 30;
+const SCROLL_LOAD_THRESHOLD = 150; // px from top to trigger load more
 
 const SESSION_STORAGE_KEY = "claudeck-session-id";
 
@@ -14,6 +18,7 @@ const SESSION_STORAGE_KEY = "claudeck-session-id";
 onState("sessionId", (val) => {
   if (val) {
     localStorage.setItem(SESSION_STORAGE_KEY, val);
+    subscribeToSession(val);
   } else {
     localStorage.removeItem(SESSION_STORAGE_KEY);
   }
@@ -228,16 +233,16 @@ export async function deleteSession(id) {
 
 export async function loadMessages(sid) {
   if (getState("parallelMode")) {
-    for (const chatId of CHAT_IDS) {
-      loadPaneMessages(sid, chatId);
-    }
+    // Load all panes concurrently instead of sequentially
+    await Promise.all(CHAT_IDS.map(chatId => loadPaneMessages(sid, chatId)));
     return;
   }
 
   const pane = panes.get(null);
   try {
-    const messages = await api.fetchSingleMessages(sid);
+    const messages = await api.fetchSingleMessages(sid, { limit: MESSAGE_PAGE_SIZE });
     renderMessagesIntoPane(messages, pane);
+    _initPanePagination(pane, messages, "single");
     loadContextGauge(sid);
   } catch (err) {
     console.error("Failed to load messages:", err);
@@ -248,19 +253,106 @@ export async function loadPaneMessages(sid, chatId) {
   const pane = panes.get(chatId);
   if (!pane) return;
   try {
-    let messages = await api.fetchMessagesByChatId(sid, chatId);
-
+    let messages;
     // For Chat 1 (chat-0): also load single-mode messages as fallback
     if (chatId === CHAT_IDS[0]) {
-      const singleMessages = await api.fetchSingleMessages(sid);
-      if (singleMessages.length > 0) {
-        messages = [...singleMessages, ...messages].sort((a, b) => a.id - b.id);
+      const [chatMsgs, singleMsgs] = await Promise.all([
+        api.fetchMessagesByChatId(sid, chatId, { limit: MESSAGE_PAGE_SIZE }),
+        api.fetchSingleMessages(sid, { limit: MESSAGE_PAGE_SIZE }),
+      ]);
+      if (singleMsgs.length > 0) {
+        messages = [...singleMsgs, ...chatMsgs].sort((a, b) => a.id - b.id);
+      } else {
+        messages = chatMsgs;
       }
+    } else {
+      messages = await api.fetchMessagesByChatId(sid, chatId, { limit: MESSAGE_PAGE_SIZE });
     }
 
     renderMessagesIntoPane(messages, pane);
+    _initPanePagination(pane, messages, chatId === CHAT_IDS[0] ? "chat0" : "chat");
   } catch (err) {
     console.error(`Failed to load messages for ${chatId}:`, err);
+  }
+}
+
+// ── Lazy-load pagination ────────────────────────────────
+
+function _initPanePagination(pane, messages, mode) {
+  pane._hasMore = messages.length >= MESSAGE_PAGE_SIZE;
+  pane._oldestMessageId = messages.length > 0 ? messages[0].id : null;
+  pane._loadingMore = false;
+  pane._paginationMode = mode; // "single" | "chat" | "chat0"
+
+  // Remove any existing scroll listener
+  if (pane._scrollHandler) {
+    pane.messagesDiv.removeEventListener("scroll", pane._scrollHandler);
+  }
+
+  if (pane._hasMore) {
+    pane._scrollHandler = () => _onPaneScroll(pane);
+    pane.messagesDiv.addEventListener("scroll", pane._scrollHandler, { passive: true });
+  }
+}
+
+function _onPaneScroll(pane) {
+  if (
+    pane.messagesDiv.scrollTop < SCROLL_LOAD_THRESHOLD &&
+    pane._hasMore &&
+    !pane._loadingMore
+  ) {
+    _loadMoreMessages(pane);
+  }
+}
+
+async function _loadMoreMessages(pane) {
+  pane._loadingMore = true;
+  showLoadingIndicator(pane);
+
+  const sid = getState("sessionId");
+  const before = pane._oldestMessageId;
+  const opts = { limit: MESSAGE_PAGE_SIZE, before };
+
+  try {
+    let olderMessages;
+
+    switch (pane._paginationMode) {
+      case "single":
+        olderMessages = await api.fetchSingleMessages(sid, opts);
+        break;
+      case "chat0": {
+        // Chat 1 merges chatId + single messages
+        const [chatMsgs, singleMsgs] = await Promise.all([
+          api.fetchMessagesByChatId(sid, pane.chatId, opts),
+          api.fetchSingleMessages(sid, opts),
+        ]);
+        olderMessages = singleMsgs.length > 0
+          ? [...singleMsgs, ...chatMsgs].sort((a, b) => a.id - b.id)
+          : chatMsgs;
+        break;
+      }
+      default:
+        olderMessages = await api.fetchMessagesByChatId(sid, pane.chatId, opts);
+    }
+
+    if (olderMessages.length === 0) {
+      pane._hasMore = false;
+    } else {
+      pane._oldestMessageId = olderMessages[0].id;
+      pane._hasMore = olderMessages.length >= MESSAGE_PAGE_SIZE;
+      prependOlderMessages(olderMessages, pane);
+    }
+  } catch (err) {
+    console.error("Failed to load more messages:", err);
+  } finally {
+    hideLoadingIndicator(pane);
+    pane._loadingMore = false;
+
+    // Detach scroll listener if no more messages
+    if (!pane._hasMore && pane._scrollHandler) {
+      pane.messagesDiv.removeEventListener("scroll", pane._scrollHandler);
+      pane._scrollHandler = null;
+    }
   }
 }
 
