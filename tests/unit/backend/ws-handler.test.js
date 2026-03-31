@@ -2442,7 +2442,7 @@ describe("ws-handler", () => {
 
       handlePermissionResponse(
         { id: "perm-1", behavior: "allow" },
-        { pendingApprovals },
+        { pendingApprovals, ws: createMockWs() },
       );
 
       expect(resolveFn).toHaveBeenCalledWith({
@@ -2461,7 +2461,7 @@ describe("ws-handler", () => {
 
       handlePermissionResponse(
         { id: "perm-2", behavior: "deny" },
-        { pendingApprovals },
+        { pendingApprovals, ws: createMockWs() },
       );
 
       expect(resolveFn).toHaveBeenCalledWith({
@@ -2477,7 +2477,7 @@ describe("ws-handler", () => {
       // Should not throw
       handlePermissionResponse(
         { id: "unknown-id", behavior: "allow" },
-        { pendingApprovals },
+        { pendingApprovals, ws: createMockWs() },
       );
 
       expect(pendingApprovals.size).toBe(0);
@@ -2492,7 +2492,7 @@ describe("ws-handler", () => {
 
       handlePermissionResponse(
         { id: "perm-tg", behavior: "allow" },
-        { pendingApprovals },
+        { pendingApprovals, ws: createMockWs() },
       );
 
       expect(markTelegramMessageResolved).toHaveBeenCalledWith("perm-tg", "allow");
@@ -4154,6 +4154,181 @@ describe("ws-handler", () => {
         pending.resolve({ behavior: "deny", message: "test cleanup" });
       }
       await permPromise;
+    });
+
+    it("observer can approve permission request from another connection", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const sender = createMockWs();
+      const observer = createMockWs();
+      wss._emit("connection", sender);
+      wss._emit("connection", observer);
+
+      const senderOnMsg = getOnMessage(sender);
+      const observerOnMsg = getOnMessage(observer);
+
+      // Both subscribe to same session
+      await senderOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-xperm" }));
+      await observerOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-xperm" }));
+
+      // Create permission request from sender's connection
+      const pendingApprovals = new Map();
+      const canUseTool = makeCanUseTool(sender, pendingApprovals, "confirmAll", null, "Test", () => "sess-xperm");
+
+      const permPromise = canUseTool("Edit", { file: "/tmp/x" }, {});
+
+      // Sender and observer both received the permission_request
+      const approvalId = sender.messages[0].id;
+      expect(observer.messages[0].type).toBe("permission_request");
+
+      // Clear messages to track new ones
+      sender.messages.length = 0;
+      observer.messages.length = 0;
+
+      // Observer approves via their own connection's message handler
+      await observerOnMsg(JSON.stringify({
+        type: "permission_response",
+        id: approvalId,
+        behavior: "allow",
+      }));
+
+      // The promise should resolve with allow
+      const result = await permPromise;
+      expect(result.behavior).toBe("allow");
+      expect(result.updatedInput).toEqual({ file: "/tmp/x" });
+
+      // Sender should receive permission_response_external to dismiss its modal
+      const senderDismiss = sender.messages.find((m) => m.type === "permission_response_external");
+      expect(senderDismiss).toBeDefined();
+      expect(senderDismiss.id).toBe(approvalId);
+      expect(senderDismiss.behavior).toBe("allow");
+      expect(senderDismiss.source).toBe("broadcast");
+    });
+
+    it("cross-connection deny resolves with deny and dismisses sender modal", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const sender = createMockWs();
+      const observer = createMockWs();
+      wss._emit("connection", sender);
+      wss._emit("connection", observer);
+
+      const senderOnMsg = getOnMessage(sender);
+      const observerOnMsg = getOnMessage(observer);
+
+      await senderOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-xdeny" }));
+      await observerOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-xdeny" }));
+
+      const pendingApprovals = new Map();
+      const canUseTool = makeCanUseTool(sender, pendingApprovals, "confirmAll", null, "Test", () => "sess-xdeny");
+
+      const permPromise = canUseTool("Bash", { command: "rm -rf" }, {});
+      const approvalId = sender.messages[0].id;
+      sender.messages.length = 0;
+
+      // Observer denies
+      await observerOnMsg(JSON.stringify({
+        type: "permission_response",
+        id: approvalId,
+        behavior: "deny",
+      }));
+
+      const result = await permPromise;
+      expect(result.behavior).toBe("deny");
+
+      // Sender gets dismissal
+      const senderDismiss = sender.messages.find((m) => m.type === "permission_response_external");
+      expect(senderDismiss).toBeDefined();
+      expect(senderDismiss.behavior).toBe("deny");
+    });
+
+    it("local approval dismisses observer modal via permission_response_external", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const sender = createMockWs();
+      const observer = createMockWs();
+      wss._emit("connection", sender);
+      wss._emit("connection", observer);
+
+      const senderOnMsg = getOnMessage(sender);
+      const observerOnMsg = getOnMessage(observer);
+
+      await senderOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-local" }));
+      await observerOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-local" }));
+
+      const pendingApprovals = new Map();
+      const canUseTool = makeCanUseTool(sender, pendingApprovals, "confirmAll", null, "Test", () => "sess-local");
+
+      const permPromise = canUseTool("Write", { file: "/tmp/out" }, {});
+      const approvalId = sender.messages[0].id;
+      sender.messages.length = 0;
+      observer.messages.length = 0;
+
+      // Sender approves locally via their own connection
+      await senderOnMsg(JSON.stringify({
+        type: "permission_response",
+        id: approvalId,
+        behavior: "allow",
+      }));
+
+      const result = await permPromise;
+      expect(result.behavior).toBe("allow");
+
+      // Observer should receive permission_response_external to dismiss its modal
+      const observerDismiss = observer.messages.find((m) => m.type === "permission_response_external");
+      expect(observerDismiss).toBeDefined();
+      expect(observerDismiss.id).toBe(approvalId);
+      expect(observerDismiss.behavior).toBe("allow");
+      expect(observerDismiss.source).toBe("broadcast");
+    });
+
+    it("user message is broadcast to observers on chat init", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const sender = createMockWs();
+      const observer = createMockWs();
+      wss._emit("connection", sender);
+      wss._emit("connection", observer);
+
+      const senderOnMsg = getOnMessage(sender);
+      const observerOnMsg = getOnMessage(observer);
+
+      await senderOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-umsg" }));
+      await observerOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-umsg" }));
+
+      vi.mocked(query).mockReturnValueOnce(
+        (async function* () {
+          yield { type: "system", subtype: "init", session_id: "c-umsg", model: "claude-sonnet-4-6" };
+          yield { type: "assistant", message: { content: [{ type: "text", text: "Got it" }] } };
+          yield { type: "result", subtype: "success", total_cost_usd: 0, duration_ms: 0, num_turns: 1, usage: {}, modelUsage: {} };
+        })(),
+      );
+
+      await senderOnMsg(JSON.stringify({
+        type: "chat",
+        message: "Hello from sender",
+        cwd: "/tmp",
+        sessionId: "sess-umsg",
+        projectName: "Test",
+      }));
+
+      // Observer should receive user_message broadcast
+      const userMsg = observer.messages.find((m) => m.type === "user_message");
+      expect(userMsg).toBeDefined();
+      expect(userMsg.text).toBe("Hello from sender");
+      expect(userMsg._broadcast).toBe(true);
+
+      // Sender should NOT receive user_message (they rendered it locally)
+      const senderUserMsg = sender.messages.find((m) => m.type === "user_message");
+      expect(senderUserMsg).toBeUndefined();
     });
   });
 });

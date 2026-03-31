@@ -279,18 +279,24 @@ Also test:
 - Broadcast added to all send functions: `wsSend` (chat), `wfSend` (workflow), `chainSend` (chain), `remSend` (/remember)
 - Broadcast added to direct `ws.send` calls: `worktree_created`, `memories_injected`, `memories_captured`, `worktree_completed`, orchestrate errors
 - `makeCanUseTool` extended with optional `getSessionId` parameter for broadcasting `permission_request` to observers
+- `globalPendingApprovals` Map enables cross-connection approval — any client can approve/deny
+- `handlePermissionResponse` checks local map then global; broadcasts `permission_response_external` to dismiss modals on all other clients
+- User message broadcast (`user_message` type) sent to observers on chat init so they see the user's message immediately
 - All broadcast messages include `_broadcast: true` flag; sender is excluded via `excludeWs`
 
 **Client (`public/js/core/ws.js`):**
 - `subscribeToSession(sessionId)` exported function — sends subscribe message if WS is open
 - Auto-subscribe on `ws.onopen` (connect and reconnect) using current `sessionId` from store
 
+**Client (`public/js/features/chat.js`):**
+- Added `user_message` case in `handleServerMessage` switch — calls `addUserMessage()` to render the user's message bubble for broadcast observers
+
 **Client (`public/js/features/sessions.js`):**
 - `subscribeToSession` called in `onState("sessionId")` listener — any session change (click, new session, restore) triggers subscription
 
-### Test Coverage (13 new tests)
+### Test Coverage (17 new tests)
 
-**Backend (7 tests):**
+**Backend — ws-handler.test.js (11 tests):**
 1. Subscribe/unsubscribe room management
 2. Room switching on re-subscribe
 3. Broadcast delivery with `_broadcast: true` to observers
@@ -298,8 +304,12 @@ Also test:
 5. Disconnect cleanup
 6. Subscribe without sessionId
 7. Permission request broadcast
+8. Cross-connection approval (observer approves, sender's modal dismissed)
+9. Cross-connection deny (observer denies, sender's modal dismissed)
+10. Local approval dismisses observer's modal via `permission_response_external`
+11. User message broadcast to observers on chat init
 
-**Frontend (6 tests):**
+**Frontend — ws.test.js (6 tests):**
 1. Auto-subscribe on connect with active session
 2. No subscribe when no session
 3. `subscribeToSession` — connected

@@ -69,6 +69,10 @@ function broadcastToSession(sessionId, message, excludeWs = null) {
   }
 }
 
+// Global pending approvals — enables cross-connection approval (any client can approve)
+// Key: approval ID, Value: { resolve, timer, toolInput, ws, localMap, sessionId }
+const globalPendingApprovals = new Map();
+
 // Tools that are read-only and safe to auto-approve in "confirmDangerous" mode
 export const READ_ONLY_TOOLS = new Set([
   "Read", "Glob", "Grep", "WebSearch", "WebFetch", "Agent",
@@ -151,8 +155,11 @@ export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, ses
     const timeoutMs = getApprovalTimeoutMs();
 
     return new Promise((resolve) => {
+      const permSidForApproval = getSessionId?.();
+
       const timer = setTimeout(() => {
         pendingApprovals.delete(id);
+        globalPendingApprovals.delete(id);
         markTelegramMessageResolved(id, "timeout").catch(() => {});
         resolve({ behavior: "deny", message: `Approval timed out (${Math.round(timeoutMs / 60000)}min)` });
       }, timeoutMs);
@@ -162,12 +169,14 @@ export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, ses
         options.signal.addEventListener("abort", () => {
           clearTimeout(timer);
           pendingApprovals.delete(id);
+          globalPendingApprovals.delete(id);
           markTelegramMessageResolved(id, "abort").catch(() => {});
           resolve({ behavior: "deny", message: "Aborted by user" });
         }, { once: true });
       }
 
       pendingApprovals.set(id, { resolve, timer, toolInput, ws });
+      globalPendingApprovals.set(id, { resolve, timer, toolInput, ws, localMap: pendingApprovals, sessionId: permSidForApproval });
     });
   };
 }
@@ -373,6 +382,7 @@ export function handleClose({ activeQueries, pendingApprovals }) {
   for (const [id, { resolve, timer }] of pendingApprovals) {
     clearTimeout(timer);
     resolve({ behavior: "deny", message: "Client disconnected" });
+    globalPendingApprovals.delete(id);
   }
   pendingApprovals.clear();
 }
@@ -390,21 +400,48 @@ export function handleAbort(msg, { activeQueries, pendingApprovals }) {
   for (const [id, { resolve, timer }] of pendingApprovals) {
     clearTimeout(timer);
     resolve({ behavior: "deny", message: "Aborted by user" });
+    globalPendingApprovals.delete(id);
   }
   pendingApprovals.clear();
 }
 
 // ── Extracted handler: permission response ────────────────────────────────
-export function handlePermissionResponse(msg, { pendingApprovals }) {
-  const pending = pendingApprovals.get(msg.id);
+export function handlePermissionResponse(msg, { pendingApprovals, ws: responderWs }) {
+  // Check local first (same connection that initiated the request)
+  let pending = pendingApprovals.get(msg.id);
+  let isLocal = !!pending;
+
+  // If not found locally, check global (cross-connection approval from another client)
+  if (!pending) {
+    pending = globalPendingApprovals.get(msg.id);
+  }
+
   if (pending) {
+    // Get sessionId before deleting (local pending doesn't have it, global does)
+    const sessionId = pending.sessionId || globalPendingApprovals.get(msg.id)?.sessionId;
+
     clearTimeout(pending.timer);
     pendingApprovals.delete(msg.id);
+    globalPendingApprovals.delete(msg.id);
+    // Also clean up from the originating connection's local map
+    if (!isLocal && pending.localMap) pending.localMap.delete(msg.id);
+
     if (msg.behavior === "allow") {
       pending.resolve({ behavior: "allow", updatedInput: pending.toolInput });
     } else {
       pending.resolve({ behavior: "deny", message: "Denied by user" });
     }
+
+    // Broadcast permission_response_external to dismiss modals on all other clients
+    if (sessionId) {
+      broadcastToSession(sessionId, {
+        type: "permission_response_external",
+        id: msg.id,
+        behavior: msg.behavior,
+        source: "broadcast",
+      }, responderWs);
+    }
+
     // Update Telegram message to show it was resolved via web
     markTelegramMessageResolved(msg.id, msg.behavior === "allow" ? "allow" : "deny").catch(() => {});
   }
@@ -874,6 +911,12 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           userMsgData.images = images.map(i => ({ name: i.name, data: i.data, mimeType: i.mimeType }));
         }
         await addMessage(state.resolvedSid, "user", JSON.stringify(userMsgData), chatId || null);
+
+        // Broadcast user message to observers (sender already rendered it locally)
+        const userBroadcast = { type: "user_message", text: message, sessionId: state.resolvedSid };
+        if (chatId) userBroadcast.chatId = chatId;
+        if (images?.length) userBroadcast.images = images.map(i => ({ name: i.name, mimeType: i.mimeType }));
+        broadcastToSession(state.resolvedSid, userBroadcast, ws);
 
         // Register global query tracking now that we know the session
         if (!clientSid) registerGlobalQuery(state.resolvedSid, queryKey);

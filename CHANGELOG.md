@@ -17,7 +17,7 @@ All notable changes to Claudeck are documented in this file.
 
 ### Improved
 - **Parallel pane loading** — Switched from sequential to concurrent `Promise.all` for faster pane initialization
-- **Unit tests** — Added 13 new tests for session broadcast (7 backend, 6 frontend); updated ~30 files for async/await; 2,507 total tests passing
+- **Unit tests** — Added 17 new tests for session broadcast (11 backend, 6 frontend); updated ~30 files for async/await; 2,512 total tests passing
 
 ---
 

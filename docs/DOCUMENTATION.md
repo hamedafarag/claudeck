@@ -499,6 +499,7 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 
 **Incoming** (server to client):
 - `session` — session created/resumed
+- `user_message` — user's message broadcast to other clients viewing the same session (includes `text`, optional `chatId`; tagged `_broadcast: true`). The sender renders the message locally; observers render it via this event.
 - `text` — streamed assistant text
 - `tool` — tool called (id + name + input)
 - `tool_result` — tool execution result (linked to tool by id)
@@ -517,6 +518,8 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 All streamed messages include `sessionId` so the client can route background session messages correctly.
 
 **Multi-client broadcast:** When multiple clients view the same session, a session room registry (`Map<sessionId, Set<WebSocket>>`) tracks subscribers. All session events are broadcast to every client in the room except the sender. Broadcast messages include `_broadcast: true` so the UI can differentiate (e.g., "Live from another device"). The sender receives the original message without the flag. Room membership is cleaned up automatically on disconnect or session switch.
+
+**Cross-connection approvals:** Permission requests are broadcast to all session viewers. Any client can approve or deny — a global pending approvals registry (`globalPendingApprovals`) enables cross-connection resolution. When any client responds, `permission_response_external` is broadcast to all other clients to dismiss their modals. The sender's message text is broadcast as `user_message` so observers see it immediately.
 
 ---
 
