@@ -602,17 +602,6 @@ describe("memory-optimizer", () => {
       expect(result).toEqual({ deleted: 1, created: 0 });
     });
 
-    it("runs within a database transaction", async () => {
-      listMemories.mockReturnValue([]);
-
-      await applyOptimization("/tmp/project", [
-        { category: "convention", content: "Test content" },
-      ]);
-
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
-      expect(mockTransaction).toHaveBeenCalledWith(expect.any(Function));
-    });
-
     it("trims whitespace from content", async () => {
       listMemories.mockReturnValue([]);
 
@@ -621,6 +610,35 @@ describe("memory-optimizer", () => {
       ]);
 
       expect(createMemory).toHaveBeenCalledWith("/tmp/project", "convention", "Padded content", null, "optimizer");
+    });
+
+    it("works with async (Promise-returning) mocks", async () => {
+      listMemories.mockResolvedValue([
+        makeMemory(1, "Old memory"),
+      ]);
+      deleteMemory.mockResolvedValue(undefined);
+      createMemory.mockResolvedValue({ lastInsertRowid: 2 });
+
+      const result = await applyOptimization("/tmp/project", [
+        { category: "convention", content: "New memory" },
+      ]);
+
+      expect(deleteMemory).toHaveBeenCalledWith(1);
+      expect(createMemory).toHaveBeenCalledWith("/tmp/project", "convention", "New memory", null, "optimizer");
+      expect(result).toEqual({ deleted: 1, created: 1 });
+    });
+
+    it("propagates errors from listMemories", async () => {
+      listMemories.mockRejectedValue(new Error("db read failed"));
+
+      await expect(applyOptimization("/tmp/project", [])).rejects.toThrow("db read failed");
+    });
+
+    it("propagates errors from deleteMemory", async () => {
+      listMemories.mockResolvedValue([makeMemory(1, "Old")]);
+      deleteMemory.mockRejectedValue(new Error("db delete failed"));
+
+      await expect(applyOptimization("/tmp/project", [])).rejects.toThrow("db delete failed");
     });
   });
 });

@@ -7,7 +7,7 @@
  */
 import { query } from "@anthropic-ai/claude-code";
 import { execPath } from "process";
-import { listMemories, createMemory, deleteMemory, getDb } from "../db.js";
+import { listMemories, createMemory, deleteMemory } from "../db.js";
 
 const VALID_CATEGORIES = new Set(["convention", "decision", "discovery", "warning"]);
 
@@ -252,28 +252,21 @@ export async function optimizeMemories(projectPath, onProgress = () => {}) {
  * @returns {{ deleted: number, created: number }}
  */
 export async function applyOptimization(projectPath, optimized) {
-  const db = getDb();
+  // 1. Delete all existing memories for this project
+  const existing = await listMemories(projectPath);
+  for (const m of existing) {
+    await deleteMemory(m.id);
+  }
 
-  // Run in a transaction for atomicity
-  const apply = db.transaction(() => {
-    // 1. Delete all existing memories for this project
-    const existing = listMemories(projectPath);
-    for (const m of existing) {
-      deleteMemory(m.id);
+  // 2. Insert optimized memories
+  let created = 0;
+  for (const { category, content } of optimized) {
+    if (content && content.trim()) {
+      const cat = VALID_CATEGORIES.has(category) ? category : "discovery";
+      await createMemory(projectPath, cat, content.trim(), null, "optimizer");
+      created++;
     }
+  }
 
-    // 2. Insert optimized memories
-    let created = 0;
-    for (const { category, content } of optimized) {
-      if (content && content.trim()) {
-        const cat = VALID_CATEGORIES.has(category) ? category : "discovery";
-        createMemory(projectPath, cat, content.trim(), null, "optimizer");
-        created++;
-      }
-    }
-
-    return { deleted: existing.length, created };
-  });
-
-  return apply();
+  return { deleted: existing.length, created };
 }
