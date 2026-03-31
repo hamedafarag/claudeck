@@ -64,6 +64,7 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 ### Chat & Sessions
 
 - Real-time WebSocket streaming with session persistence
+- **Multi-client sync** — multiple browsers/devices viewing the same session see streamed responses in real time
 - **Parallel mode** — 2x2 grid of 4 independent conversations
 - **Message pagination** — lazy-loads older messages on scroll-up (cursor-based, 30 per page)
 - Background sessions that keep running when you switch away
@@ -186,7 +187,7 @@ browser ──── WebSocket ──── server.js ──── Claude Code S
 | AI SDK | @anthropic-ai/claude-code |
 | Database | SQLite via better-sqlite3 (WAL mode), adapter pattern for multi-DB support |
 | Frontend | Vanilla JS ES modules + Web Components (Light DOM), CSS custom properties |
-| Testing | Vitest + happy-dom (2,494+ unit tests, 55% coverage) + WS perf benchmarks |
+| Testing | Vitest + happy-dom (2,507+ unit tests, 55% coverage) + WS perf benchmarks |
 | Rendering | highlight.js, Mermaid (diagrams) — CDN |
 
 ---
@@ -290,7 +291,7 @@ npx skills add https://github.com/hamedafarag/claudeck-skills
 ## Testing
 
 ```bash
-npm test              # Run all 2,494+ tests
+npm test              # Run all 2,507+ tests
 npm test -- --coverage  # With coverage report
 npm run test:perf     # WebSocket performance benchmarks
 ```

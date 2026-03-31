@@ -494,6 +494,8 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 - `{ type: "orchestrate", task, cwd, sessionId, projectName, permissionMode, model }` — run orchestrator
 - `{ type: "abort", chatId? }` — stop generation (aborts agents, chains, DAGs, and orchestrator)
 - `{ type: "permission_response", id, behavior }` — approve (`"allow"`) or deny (`"deny"`) a tool call
+- `{ type: "subscribe", sessionId }` — join session broadcast room (auto-leaves previous room). Sent on session load, switch, and WebSocket reconnect.
+- `{ type: "unsubscribe" }` — leave current session broadcast room
 
 **Incoming** (server to client):
 - `session` — session created/resumed
@@ -514,6 +516,8 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 
 All streamed messages include `sessionId` so the client can route background session messages correctly.
 
+**Multi-client broadcast:** When multiple clients view the same session, a session room registry (`Map<sessionId, Set<WebSocket>>`) tracks subscribers. All session events are broadcast to every client in the room except the sender. Broadcast messages include `_broadcast: true` so the UI can differentiate (e.g., "Live from another device"). The sender receives the original message without the flag. Room membership is cleaned up automatically on disconnect or session switch.
+
 ---
 
 ## Features
@@ -530,12 +534,13 @@ The default landing view before selecting a project:
 ### 2. Real-Time Chat
 - Bidirectional WebSocket streaming with exponential backoff reconnection
 - Single-mode and parallel-mode (2x2 grid) conversations
+- **Multi-client real-time sync** — multiple browsers/devices viewing the same session receive streamed responses simultaneously via session broadcast rooms. Any viewer can approve/deny permission requests.
 - Session persistence with message history
 - **Message pagination** — initial load capped to 30 messages; older messages lazy-loaded on scroll-up with cursor-based pagination (`?limit=N&before=ID`). Each parallel pane maintains its own pagination state independently. Loading spinner shown during fetch.
 - Auto-generated session titles from first message
 - Session resumption across page reloads
 - Active session persisted to `localStorage` — page refresh returns to the same session with messages auto-loaded
-- State sync on reconnect — background sessions reconciled, streaming panes reset, messages reloaded from DB
+- State sync on reconnect — background sessions reconciled, streaming panes reset, messages reloaded from DB, session broadcast room re-joined
 
 ### 3. Per-Project System Prompts
 - Custom instructions per project (stored in folders.json)
@@ -1518,7 +1523,7 @@ Claudeck/
 ├── vitest.config.perf.js  Performance benchmark config
 ├── tests/
 │   ├── setup.js           Global test setup (temp dir for CLAUDECK_HOME)
-│   ├── unit/              2,494+ unit tests (frontend + backend)
+│   ├── unit/              2,507+ unit tests (frontend + backend)
 │   └── perf/              WebSocket performance benchmarks (4 scenarios)
 │       ├── ws-perf.test.js  Approval latency, throughput, scaling, broadcast
 │       └── helpers/         Test harness + stats utilities

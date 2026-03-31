@@ -42,6 +42,33 @@ import { runAgent } from "./agent-loop.js";
 import { runOrchestrator } from "./orchestrator.js";
 import { runDag } from "./dag-executor.js";
 
+// ── Session broadcast rooms ───────────────────────────────────────────────
+// Maps sessionId → Set of WebSocket clients watching that session
+const sessionRooms = new Map();
+
+function joinRoom(sessionId, ws) {
+  if (!sessionRooms.has(sessionId)) sessionRooms.set(sessionId, new Set());
+  sessionRooms.get(sessionId).add(ws);
+}
+
+function leaveRoom(ws) {
+  for (const [sessionId, clients] of sessionRooms) {
+    clients.delete(ws);
+    if (clients.size === 0) sessionRooms.delete(sessionId);
+  }
+}
+
+function broadcastToSession(sessionId, message, excludeWs = null) {
+  const clients = sessionRooms.get(sessionId);
+  if (!clients) return;
+  const payload = JSON.stringify({ ...message, _broadcast: true });
+  for (const client of clients) {
+    if (client !== excludeWs && client.readyState === 1) {
+      client.send(payload);
+    }
+  }
+}
+
 // Tools that are read-only and safe to auto-approve in "confirmDangerous" mode
 export const READ_ONLY_TOOLS = new Set([
   "Read", "Glob", "Grep", "WebSearch", "WebFetch", "Agent",
@@ -87,7 +114,7 @@ export function getActiveSessionIds() {
  * Creates a canUseTool callback that sends permission requests over WebSocket
  * AND Telegram (for AFK approval). Whichever channel responds first wins.
  */
-export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, sessionTitle) {
+export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, sessionTitle, getSessionId = null) {
   return async (toolName, toolInput, options) => {
     // Bypass mode — auto-approve everything
     if (permissionMode === "bypass") {
@@ -109,6 +136,8 @@ export function makeCanUseTool(ws, pendingApprovals, permissionMode, chatId, ses
     }
 
     ws.send(JSON.stringify(payload));
+    const permSid = getSessionId?.();
+    if (permSid) broadcastToSession(permSid, payload, ws);
 
     // Also send to Telegram for AFK approval
     if (telegramEnabled()) {
@@ -389,6 +418,7 @@ export async function handleWorkflow(msg, { ws, sessionIds, activeQueries, pendi
   function wfSend(payload) {
     if (ws.readyState !== 1) return;
     ws.send(JSON.stringify(payload));
+    if (clientSid) broadcastToSession(clientSid, payload, ws);
   }
 
   wfSend({ type: "workflow_started", workflow: { id: workflow.id, title: workflow.title, steps: workflow.steps.map((s) => s.label) } });
@@ -425,7 +455,7 @@ export async function handleWorkflow(msg, { ws, sessionIds, activeQueries, pendi
     };
 
     if (!useBypass && !usePlan) {
-      stepOpts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, null, `Workflow: ${workflow.title}`);
+      stepOpts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, null, `Workflow: ${workflow.title}`, () => clientSid);
     }
     if (wfModel) stepOpts.model = resolveModel(wfModel);
 
@@ -512,6 +542,7 @@ export async function handleAgentChain(msg, { ws, sessionIds, activeQueries, pen
   function chainSend(payload) {
     if (ws.readyState !== 1) return;
     ws.send(JSON.stringify(payload));
+    if (clientSid) broadcastToSession(clientSid, payload, ws);
   }
 
   chainSend({
@@ -628,7 +659,9 @@ export async function handleOrchestrate(msg, { ws, sessionIds, activeQueries, pe
   try {
     agents = JSON.parse(await readFile(configPath("agents.json"), "utf-8"));
   } catch {
-    ws.send(JSON.stringify({ type: "error", error: "Failed to load agents" }));
+    const errPayload = { type: "error", error: "Failed to load agents" };
+    ws.send(JSON.stringify(errPayload));
+    if (clientSid) broadcastToSession(clientSid, errPayload, ws);
     return;
   }
 
@@ -658,7 +691,9 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
     function remSend(payload) {
       if (ws.readyState !== 1) return;
       if (chatId) payload.chatId = chatId;
+      if (clientSid) payload.sessionId = clientSid;
       ws.send(JSON.stringify(payload));
+      if (clientSid) broadcastToSession(clientSid, payload, ws);
     }
     if (result) {
       remSend({ type: "text", text: result.saved
@@ -710,6 +745,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
         const wtPayload = { type: "worktree_created", worktreeId: wtId, branchName, baseBranch, worktreePath: wtResult.worktreePath };
         if (chatId) wtPayload.chatId = chatId;
         ws.send(JSON.stringify(wtPayload));
+        if (clientSid) broadcastToSession(clientSid, wtPayload, ws);
       }
     } catch (err) {
       console.error("Worktree creation failed:", err.message, err.stack);
@@ -736,7 +772,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
   if (effectiveMaxTurns) opts.maxTurns = effectiveMaxTurns;
 
   if (!useBypass && !usePlan) {
-    opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, chatId, projectName || "Chat");
+    opts.canUseTool = makeCanUseTool(ws, pendingApprovals, effectivePermMode, chatId, projectName || "Chat", () => state.resolvedSid);
   }
   if (chatModel) opts.model = resolveModel(chatModel);
   if (Array.isArray(disabledTools) && disabledTools.length > 0) {
@@ -778,6 +814,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
         const payload = { type: "memories_injected", count: memCount, memories: memList };
         if (chatId) payload.chatId = chatId;
         ws.send(JSON.stringify(payload));
+        if (clientSid) broadcastToSession(clientSid, payload, ws);
       }
     } else {
       console.log(`\n══════ MEMORY INJECTION ══════`);
@@ -795,6 +832,8 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
     if (chatId) payload.chatId = chatId;
     if (state.resolvedSid) payload.sessionId = state.resolvedSid;
     ws.send(JSON.stringify(payload));
+    // Broadcast to other clients watching this session
+    if (state.resolvedSid) broadcastToSession(state.resolvedSid, payload, ws);
   }
 
   // Register for global tracking if we already know the session
@@ -1021,6 +1060,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
             const payload = { type: "memories_captured", count: totalCaptured, explicit: explicitCount, auto: autoCount };
             if (chatId) payload.chatId = chatId;
             ws.send(JSON.stringify(payload));
+            if (state.resolvedSid) broadcastToSession(state.resolvedSid, payload, ws);
           }
         }
       } catch (e) { console.error("Memory capture error:", e.message); }
@@ -1046,6 +1086,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           };
           if (chatId) wtPayload.chatId = chatId;
           ws.send(JSON.stringify(wtPayload));
+          if (state.resolvedSid) broadcastToSession(state.resolvedSid, wtPayload, ws);
         }
 
         await logNotification(
@@ -1068,11 +1109,25 @@ export function setupWebSocket(wss, sessionIds) {
   wss.on("connection", (ws) => {
     const ctx = { ws, sessionIds, activeQueries: new Map(), pendingApprovals: new Map() };
 
-    ws.on("close", () => handleClose(ctx));
+    ws.on("close", () => {
+      leaveRoom(ws);
+      handleClose(ctx);
+    });
 
     ws.on("message", async (raw) => {
       let msg;
       try { msg = JSON.parse(raw); } catch { return; }
+
+      // Session broadcast: subscribe/unsubscribe
+      if (msg.type === "subscribe") {
+        leaveRoom(ws); // leave any previous room first
+        if (msg.sessionId) joinRoom(msg.sessionId, ws);
+        return;
+      }
+      if (msg.type === "unsubscribe") {
+        leaveRoom(ws);
+        return;
+      }
 
       if (msg.type === "abort") return handleAbort(msg, ctx);
       if (msg.type === "permission_response") return handlePermissionResponse(msg, ctx);

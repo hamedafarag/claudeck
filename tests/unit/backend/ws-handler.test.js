@@ -3877,4 +3877,283 @@ describe("ws-handler", () => {
       expect(updateClaudeSessionId).toHaveBeenCalledWith("stream-sid", "ps-existing");
     });
   });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  describe("session broadcast", () => {
+    function getOnMessage(ws) {
+      return ws.on.mock.calls.find((c) => c[0] === "message")[1];
+    }
+
+    it("subscribe adds ws to session room and unsubscribe removes it", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const ws1 = createMockWs();
+      const ws2 = createMockWs();
+      wss._emit("connection", ws1);
+      wss._emit("connection", ws2);
+
+      const onMsg1 = getOnMessage(ws1);
+      const onMsg2 = getOnMessage(ws2);
+
+      // Both subscribe to same session
+      await onMsg1(JSON.stringify({ type: "subscribe", sessionId: "sess-1" }));
+      await onMsg2(JSON.stringify({ type: "subscribe", sessionId: "sess-1" }));
+
+      // No messages sent back for subscribe
+      expect(ws1.send).not.toHaveBeenCalled();
+      expect(ws2.send).not.toHaveBeenCalled();
+
+      // Unsubscribe ws1
+      await onMsg1(JSON.stringify({ type: "unsubscribe" }));
+
+      // Still no messages — unsubscribe is silent
+      expect(ws1.send).not.toHaveBeenCalled();
+    });
+
+    it("subscribe switches room — leaves previous room automatically", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const ws1 = createMockWs();
+      const ws2 = createMockWs();
+      wss._emit("connection", ws1);
+      wss._emit("connection", ws2);
+
+      const onMsg1 = getOnMessage(ws1);
+      const onMsg2 = getOnMessage(ws2);
+
+      // ws1 subscribes to sess-1, ws2 subscribes to sess-1
+      await onMsg1(JSON.stringify({ type: "subscribe", sessionId: "sess-1" }));
+      await onMsg2(JSON.stringify({ type: "subscribe", sessionId: "sess-1" }));
+
+      // Now ws1 switches to sess-2
+      await onMsg1(JSON.stringify({ type: "subscribe", sessionId: "sess-2" }));
+
+      // Chat on sess-1 should only broadcast to ws2, not ws1
+      vi.mocked(query).mockReturnValueOnce(
+        (async function* () {
+          yield { type: "system", subtype: "init", session_id: "c1", model: "claude-sonnet-4-6" };
+          yield { type: "assistant", message: { content: [{ type: "text", text: "Hello" }] } };
+          yield { type: "result", subtype: "success", total_cost_usd: 0, duration_ms: 0, num_turns: 1, usage: {}, modelUsage: {} };
+        })(),
+      );
+
+      // ws2 sends a chat message on sess-1
+      await onMsg2(JSON.stringify({
+        type: "chat",
+        message: "test",
+        cwd: "/tmp",
+        sessionId: "sess-1",
+        projectName: "Test",
+      }));
+
+      // ws2 gets direct messages (session, text, result, done)
+      const ws2Types = ws2.messages.map((m) => m.type);
+      expect(ws2Types).toContain("text");
+      expect(ws2Types).toContain("done");
+
+      // ws1 should NOT have received broadcast (it left sess-1)
+      expect(ws1.send).not.toHaveBeenCalled();
+    });
+
+    it("chat messages are broadcast to other subscribers with _broadcast flag", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const sender = createMockWs();
+      const observer = createMockWs();
+      wss._emit("connection", sender);
+      wss._emit("connection", observer);
+
+      const senderOnMsg = getOnMessage(sender);
+      const observerOnMsg = getOnMessage(observer);
+
+      // Both subscribe to same session
+      await observerOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-bc" }));
+      await senderOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-bc" }));
+
+      vi.mocked(query).mockReturnValueOnce(
+        (async function* () {
+          yield { type: "system", subtype: "init", session_id: "c-bc", model: "claude-sonnet-4-6" };
+          yield { type: "assistant", message: { content: [{ type: "text", text: "Broadcast test" }] } };
+          yield { type: "result", subtype: "success", total_cost_usd: 0.01, duration_ms: 100, num_turns: 1, usage: { input_tokens: 10, output_tokens: 5 }, modelUsage: { "claude-sonnet-4-6": {} } };
+        })(),
+      );
+
+      // Sender sends chat
+      await senderOnMsg(JSON.stringify({
+        type: "chat",
+        message: "hello",
+        cwd: "/tmp",
+        sessionId: "sess-bc",
+        projectName: "Test",
+      }));
+
+      // Observer should receive broadcast messages
+      const observerMsgs = observer.messages;
+      expect(observerMsgs.length).toBeGreaterThan(0);
+
+      // All observer messages should have _broadcast: true
+      for (const msg of observerMsgs) {
+        expect(msg._broadcast).toBe(true);
+      }
+
+      // Observer should receive text and result and done
+      const observerTypes = observerMsgs.map((m) => m.type);
+      expect(observerTypes).toContain("session");
+      expect(observerTypes).toContain("text");
+      expect(observerTypes).toContain("result");
+      expect(observerTypes).toContain("done");
+
+      // Sender should NOT have _broadcast flag on their messages
+      const senderMsgs = sender.messages;
+      for (const msg of senderMsgs) {
+        expect(msg._broadcast).toBeUndefined();
+      }
+    });
+
+    it("observer with closed readyState does not receive broadcast", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const sender = createMockWs();
+      const observer = createMockWs();
+      wss._emit("connection", sender);
+      wss._emit("connection", observer);
+
+      const senderOnMsg = getOnMessage(sender);
+      const observerOnMsg = getOnMessage(observer);
+
+      await observerOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-closed" }));
+      await senderOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-closed" }));
+
+      // Observer disconnects (readyState changes)
+      observer.readyState = 3; // CLOSED
+
+      vi.mocked(query).mockReturnValueOnce(
+        (async function* () {
+          yield { type: "system", subtype: "init", session_id: "c-closed", model: "claude-sonnet-4-6" };
+          yield { type: "assistant", message: { content: [{ type: "text", text: "test" }] } };
+          yield { type: "result", subtype: "success", total_cost_usd: 0, duration_ms: 0, num_turns: 1, usage: {}, modelUsage: {} };
+        })(),
+      );
+
+      await senderOnMsg(JSON.stringify({
+        type: "chat",
+        message: "test",
+        cwd: "/tmp",
+        sessionId: "sess-closed",
+        projectName: "Test",
+      }));
+
+      // Observer should NOT receive any messages (closed)
+      expect(observer.send).not.toHaveBeenCalled();
+    });
+
+    it("disconnect cleans up session room membership", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const ws1 = createMockWs();
+      const ws2 = createMockWs();
+      wss._emit("connection", ws1);
+      wss._emit("connection", ws2);
+
+      const onMsg1 = getOnMessage(ws1);
+      const onMsg2 = getOnMessage(ws2);
+
+      // Both subscribe
+      await onMsg1(JSON.stringify({ type: "subscribe", sessionId: "sess-dc" }));
+      await onMsg2(JSON.stringify({ type: "subscribe", sessionId: "sess-dc" }));
+
+      // ws1 disconnects
+      ws1._emit("close");
+
+      // Chat on sess-dc via ws2 should not try to broadcast to ws1
+      vi.mocked(query).mockReturnValueOnce(
+        (async function* () {
+          yield { type: "system", subtype: "init", session_id: "c-dc", model: "claude-sonnet-4-6" };
+          yield { type: "assistant", message: { content: [{ type: "text", text: "After disconnect" }] } };
+          yield { type: "result", subtype: "success", total_cost_usd: 0, duration_ms: 0, num_turns: 1, usage: {}, modelUsage: {} };
+        })(),
+      );
+
+      await onMsg2(JSON.stringify({
+        type: "chat",
+        message: "test",
+        cwd: "/tmp",
+        sessionId: "sess-dc",
+        projectName: "Test",
+      }));
+
+      // ws1 should not receive anything after disconnect
+      expect(ws1.send).not.toHaveBeenCalled();
+    });
+
+    it("subscribe without sessionId only leaves current room", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const ws = createMockWs();
+      wss._emit("connection", ws);
+      const onMsg = getOnMessage(ws);
+
+      // Subscribe then subscribe with no sessionId
+      await onMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-x" }));
+      await onMsg(JSON.stringify({ type: "subscribe" }));
+
+      // Should not throw
+      expect(ws.send).not.toHaveBeenCalled();
+    });
+
+    it("permission_request is broadcast to session observers", async () => {
+      const wss = createMockWss();
+      const sessionIds = new Map();
+      setupWebSocket(wss, sessionIds);
+
+      const sender = createMockWs();
+      const observer = createMockWs();
+      wss._emit("connection", sender);
+      wss._emit("connection", observer);
+
+      const senderOnMsg = getOnMessage(sender);
+      const observerOnMsg = getOnMessage(observer);
+
+      // Both subscribe to same session
+      await observerOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-perm" }));
+      await senderOnMsg(JSON.stringify({ type: "subscribe", sessionId: "sess-perm" }));
+
+      // Use makeCanUseTool with getSessionId
+      const pendingApprovals = new Map();
+      const canUseTool = makeCanUseTool(sender, pendingApprovals, "confirmAll", null, "Test", () => "sess-perm");
+
+      // Trigger permission request (don't await — it waits for response)
+      const permPromise = canUseTool("Read", { path: "/test" }, {});
+
+      // Sender should get the direct permission_request
+      expect(sender.messages.length).toBe(1);
+      expect(sender.messages[0].type).toBe("permission_request");
+
+      // Observer should get broadcast permission_request
+      expect(observer.messages.length).toBe(1);
+      expect(observer.messages[0].type).toBe("permission_request");
+      expect(observer.messages[0]._broadcast).toBe(true);
+
+      // Clean up: resolve the pending approval
+      const approvalId = sender.messages[0].id;
+      const pending = pendingApprovals.get(approvalId);
+      if (pending) {
+        clearTimeout(pending.timer);
+        pending.resolve({ behavior: "deny", message: "test cleanup" });
+      }
+      await permPromise;
+    });
+  });
 });

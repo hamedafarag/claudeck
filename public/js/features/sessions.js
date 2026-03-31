@@ -7,6 +7,7 @@ import * as api from '../core/api.js';
 import { panes, enterParallelMode, exitParallelMode } from '../ui/parallel.js';
 import { renderMessagesIntoPane, prependOlderMessages, showWhalyPlaceholder, showLoadingIndicator, hideLoadingIndicator } from '../ui/messages.js';
 import { loadContextGauge } from '../ui/context-gauge.js';
+import { subscribeToSession } from '../core/ws.js';
 
 const MESSAGE_PAGE_SIZE = 30;
 const SCROLL_LOAD_THRESHOLD = 150; // px from top to trigger load more
@@ -17,6 +18,7 @@ const SESSION_STORAGE_KEY = "claudeck-session-id";
 onState("sessionId", (val) => {
   if (val) {
     localStorage.setItem(SESSION_STORAGE_KEY, val);
+    subscribeToSession(val);
   } else {
     localStorage.removeItem(SESSION_STORAGE_KEY);
   }
