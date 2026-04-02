@@ -109,6 +109,7 @@ function renderMemories() {
       try {
         await fetchApi(`/${m.id}`, { method: 'DELETE' });
         memories = memories.filter(x => x.id !== m.id);
+        if ($.memoryTitle) $.memoryTitle.textContent = `Memory (${memories.length})`;
         renderMemories();
         loadStats();
       } catch { /* ignore */ }

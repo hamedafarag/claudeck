@@ -5,11 +5,13 @@ import { $ } from '../core/dom.js';
 const sbGaugeSep = document.getElementById("sb-gauge-sep");
 
 const MODEL_LIMITS = {
+  opus: 1_000_000,
   default: 200_000,
 };
 
 function getLimit() {
-  return MODEL_LIMITS.default;
+  const model = $.modelSelect?.value || '';
+  return MODEL_LIMITS[model] || MODEL_LIMITS.default;
 }
 
 function formatTokens(n) {
@@ -72,6 +74,13 @@ export function resetContextGauge() {
   if ($.contextGauge) $.contextGauge.classList.add('hidden');
   if (sbGaugeSep) sbGaugeSep.classList.add('hidden');
 }
+
+// Re-render gauge when model changes (limit may differ)
+$.modelSelect?.addEventListener('change', () => {
+  const tokens = getState('sessionTokens');
+  const total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheCreation;
+  if (total > 0) renderGauge(tokens);
+});
 
 export async function loadContextGauge(sessionId) {
   if (!sessionId) return;

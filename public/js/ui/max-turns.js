@@ -12,6 +12,7 @@ function init() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved && $.maxTurnsSelect) {
     $.maxTurnsSelect.value = saved;
+    $.maxTurnsSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
   $.maxTurnsSelect?.addEventListener('change', () => {
     localStorage.setItem(STORAGE_KEY, $.maxTurnsSelect.value);

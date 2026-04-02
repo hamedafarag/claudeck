@@ -70,3 +70,33 @@ document.addEventListener("keydown", (e) => {
     document.querySelectorAll(".header-dropdown.open").forEach((d) => d.classList.remove("open"));
   }
 });
+
+// Sync header dropdown display when hidden selects change programmatically
+function syncDropdownDisplay(selectId) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+
+  function sync() {
+    const val = select.value;
+    const items = document.querySelectorAll(`.header-submenu-item[data-target="${selectId}"]`);
+    let matchedText = null;
+    items.forEach((item) => {
+      const isMatch = item.dataset.value === val;
+      item.classList.toggle("active", isMatch);
+      if (isMatch) matchedText = item.textContent.trim();
+    });
+    if (matchedText) {
+      const parent = items[0]?.closest(".header-dropdown-item");
+      const display = parent?.querySelector(".header-dropdown-item-value");
+      if (display) display.textContent = matchedText;
+    }
+  }
+
+  select.addEventListener("change", sync);
+  // Initial sync for values restored from localStorage
+  sync();
+}
+
+syncDropdownDisplay("model-select");
+syncDropdownDisplay("perm-mode-select");
+syncDropdownDisplay("max-turns-select");

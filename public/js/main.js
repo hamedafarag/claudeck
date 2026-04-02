@@ -18,6 +18,7 @@ import './components/permission-modal.js';
 import './components/linear-create-modal.js';
 import './components/telegram-modal.js';
 import './components/mcp-modal.js';
+import './components/settings-modal.js';
 import './components/add-project-modal.js';
 import './components/status-bar.js';
 

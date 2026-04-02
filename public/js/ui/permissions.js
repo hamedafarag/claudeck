@@ -153,6 +153,7 @@ function initPermissions() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved && $.permModeSelect) {
     $.permModeSelect.value = saved;
+    $.permModeSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   // Persist mode changes

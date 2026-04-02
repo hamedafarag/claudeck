@@ -895,10 +895,14 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
         const sKey = chatId ? `${ourSid}::${chatId}` : ourSid;
         sessionIds.set(sKey, claudeSessionId);
 
-        if (!await getSession(ourSid)) {
-          await createSession(ourSid, claudeSessionId, projectName || "Session", cwd || "");
-        } else {
-          await updateClaudeSessionId(ourSid, claudeSessionId);
+        const isBotChat = chatId === 'assistant-bot';
+
+        if (!isBotChat) {
+          if (!await getSession(ourSid)) {
+            await createSession(ourSid, claudeSessionId, projectName || "Session", cwd || "");
+          } else {
+            await updateClaudeSessionId(ourSid, claudeSessionId);
+          }
         }
 
         if (chatId) {
@@ -906,17 +910,20 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
         }
 
         wsSend({ type: "session", sessionId: ourSid });
-        const userMsgData = { text: message };
-        if (images?.length) {
-          userMsgData.images = images.map(i => ({ name: i.name, data: i.data, mimeType: i.mimeType }));
-        }
-        await addMessage(state.resolvedSid, "user", JSON.stringify(userMsgData), chatId || null);
 
-        // Broadcast user message to observers (sender already rendered it locally)
-        const userBroadcast = { type: "user_message", text: message, sessionId: state.resolvedSid };
-        if (chatId) userBroadcast.chatId = chatId;
-        if (images?.length) userBroadcast.images = images.map(i => ({ name: i.name, mimeType: i.mimeType }));
-        broadcastToSession(state.resolvedSid, userBroadcast, ws);
+        if (!isBotChat) {
+          const userMsgData = { text: message };
+          if (images?.length) {
+            userMsgData.images = images.map(i => ({ name: i.name, data: i.data, mimeType: i.mimeType }));
+          }
+          await addMessage(state.resolvedSid, "user", JSON.stringify(userMsgData), chatId || null);
+
+          // Broadcast user message to observers (sender already rendered it locally)
+          const userBroadcast = { type: "user_message", text: message, sessionId: state.resolvedSid };
+          if (chatId) userBroadcast.chatId = chatId;
+          if (images?.length) userBroadcast.images = images.map(i => ({ name: i.name, mimeType: i.mimeType }));
+          broadcastToSession(state.resolvedSid, userBroadcast, ws);
+        }
 
         // Register global query tracking now that we know the session
         if (!clientSid) registerGlobalQuery(state.resolvedSid, queryKey);

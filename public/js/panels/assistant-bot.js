@@ -6,6 +6,7 @@ import { renderMarkdown, highlightCodeBlocks, addCopyButtons } from '../ui/forma
 import * as api from '../core/api.js';
 import { getSelectedModel } from '../ui/model-selector.js';
 import { $ } from '../core/dom.js';
+import { getSetting } from '../components/settings-modal.js';
 
 const SESSIONS_KEY = 'claudeck-bot-sessions';
 let panel, messagesDiv, inputEl, sendBtn, stopBtn, settingsOverlay, promptTextarea;
@@ -433,12 +434,27 @@ function newBotSession() {
   showBotWhaly();
 }
 
+// ── Visibility ──────────────────────────────────────────
+
+let bubble; // reference set in createBotDOM
+
+function setBotVisible(visible) {
+  if (!bubble) return;
+  bubble.style.display = visible ? '' : 'none';
+  if (!visible && panel) closePanel();
+}
+
 // ── Init ────────────────────────────────────────────────
 
 function init() {
   createBotDOM();
+  bubble = document.querySelector('.bot-bubble');
   on('ws:message', handleBotWsMessage);
   fetchSystemPrompt();
+
+  // Respect enable/disable setting
+  setBotVisible(getSetting('assistantBot', true));
+  window.addEventListener('setting:assistantBot', (e) => setBotVisible(e.detail));
 }
 
 // Run on import
