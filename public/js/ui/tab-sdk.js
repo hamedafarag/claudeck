@@ -215,11 +215,14 @@ export function reRegisterTab(tabId) {
 export function unregisterTab(id) {
   const tab = registeredTabs.get(id);
   if (!tab) return;
-  if (tab.onDestroy) tab.onDestroy(tab._ctx);
-  if (tab._ctx) tab._ctx.dispose(); // auto-cleanup all event/state subscriptions
-  if (tab._btnEl) tab._btnEl.remove();
-  if (tab._paneEl) tab._paneEl.remove();
-  registeredTabs.delete(id);
+  try {
+    if (tab.onDestroy) tab.onDestroy(tab._ctx);
+  } finally {
+    if (tab._ctx) tab._ctx.dispose(); // auto-cleanup all event/state subscriptions
+    if (tab._btnEl) tab._btnEl.remove();
+    if (tab._paneEl) tab._paneEl.remove();
+    registeredTabs.delete(id);
+  }
 }
 
 /**
@@ -650,7 +653,7 @@ function openMarketplace() {
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'marketplace-btn marketplace-btn-cancel';
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', () => overlay.remove());
+    cancelBtn.addEventListener('click', () => closeMarketplace());
 
     const applyBtn = document.createElement('button');
     applyBtn.className = 'marketplace-btn marketplace-btn-apply';
@@ -675,7 +678,7 @@ function openMarketplace() {
       }
 
       reorderPluginTabs(newEnabled);
-      overlay.remove();
+      closeMarketplace();
     });
 
     footer.appendChild(cancelBtn);
@@ -697,7 +700,7 @@ function openMarketplace() {
     const closeBtn = document.createElement('button');
     closeBtn.className = 'marketplace-btn marketplace-btn-cancel';
     closeBtn.textContent = 'Close';
-    closeBtn.addEventListener('click', () => overlay.remove());
+    closeBtn.addEventListener('click', () => closeMarketplace());
     footer.appendChild(closeBtn);
 
     const registry = await fetchMarketplace(true);
@@ -816,16 +819,21 @@ function openMarketplace() {
     tabContent.appendChild(list);
   }
 
+  const closeMarketplace = () => {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  };
+
   // Initial render
   renderInstalledTab();
 
   overlay.appendChild(popup);
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) closeMarketplace();
   });
 
   const onKey = (e) => {
-    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); }
+    if (e.key === 'Escape') closeMarketplace();
   };
   document.addEventListener('keydown', onKey);
 

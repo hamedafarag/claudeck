@@ -905,7 +905,7 @@ export async function handleChat(msg, { ws, sessionIds, activeQueries, pendingAp
           }
         }
 
-        if (chatId) {
+        if (chatId && !isBotChat) {
           await setClaudeSession(ourSid, chatId, claudeSessionId);
         }
 
