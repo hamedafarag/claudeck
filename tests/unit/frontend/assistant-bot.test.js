@@ -42,6 +42,11 @@ vi.mock("../../../public/js/core/dom.js", () => ({
   },
 }));
 
+const mockGetSetting = vi.fn(() => true);
+vi.mock("../../../public/js/components/settings-modal.js", () => ({
+  getSetting: (...args) => mockGetSetting(...args),
+}));
+
 // ── Tests ───────────────────────────────────────────────
 
 beforeEach(async () => {
@@ -52,6 +57,8 @@ beforeEach(async () => {
   mockHighlightCodeBlocks.mockClear();
   mockAddCopyButtons.mockClear();
   mockGetSelectedModel.mockClear();
+  mockGetSetting.mockClear();
+  mockGetSetting.mockReturnValue(true);
   document.body.innerHTML = "";
   localStorage.clear();
 
@@ -87,6 +94,9 @@ beforeEach(async () => {
     $: {
       projectSelect: { value: "/tmp/test-project" },
     },
+  }));
+  vi.doMock("../../../public/js/components/settings-modal.js", () => ({
+    getSetting: (...args) => mockGetSetting(...args),
   }));
 
   await import("../../../public/js/panels/assistant-bot.js");

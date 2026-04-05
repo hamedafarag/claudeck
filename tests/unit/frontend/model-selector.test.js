@@ -6,6 +6,7 @@ const STORAGE_KEY = "claudeck-model";
 const mockModelSelect = {
   value: "",
   addEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
 };
 
 vi.mock("../../../public/js/core/dom.js", () => ({
@@ -21,6 +22,7 @@ beforeEach(async () => {
   localStorage.clear();
   mockModelSelect.value = "";
   mockModelSelect.addEventListener = vi.fn();
+  mockModelSelect.dispatchEvent = vi.fn();
 
   vi.doMock("../../../public/js/core/dom.js", () => ({
     $: {
@@ -56,6 +58,7 @@ describe("model-selector", () => {
       localStorage.setItem(STORAGE_KEY, "claude-sonnet-4-20250514");
       mockModelSelect.value = "";
       mockModelSelect.addEventListener = vi.fn();
+      mockModelSelect.dispatchEvent = vi.fn();
 
       vi.doMock("../../../public/js/core/dom.js", () => ({
         $: {
