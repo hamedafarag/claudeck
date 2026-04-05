@@ -67,10 +67,9 @@ browser ──────── WebSocket ──────── server.js �
    │   │   ├── utils.js               ├── plugins/ (full-stack plugins)
    │   │   └── plugin-loader.js       │   ├── linear/ (client.js, server.js, config.json)
    │   ├── components/ (Web Components) │   ├── repos/ (client.js, server.js)
-   │   ├── ui/   (shared UI modules)  │   ├── tasks/ (client.js, server.js)
-   │   ├── features/ (chat, voice, welcome, tour) │   ├── claude-editor/ (client.js, client.css)
-   │   │                              │   ├── event-stream/ (client.js, client.css)
-   │   └── panels/  (bot, tips, docs) │   └── ... (tic-tac-toe, sudoku)
+   │   ├── ui/   (shared UI modules)  │   ├── claude-editor/ (client.js, client.css)
+   │   ├── features/ (chat, voice, welcome, tour) │   └── (community plugins via marketplace)
+   │   └── panels/  (bot, tips, docs) │
    ├── css/
    │   ├── core/       (variables, reset, responsive)
    │   ├── ui/         (messages, sessions, layout)
@@ -447,6 +446,14 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 | ------ | -------------------- | ---------------------------------------- |
 | GET    | /api/plugins         | Auto-discover plugins from built-in + user directories |
 
+### Marketplace
+| Method | Path                         | Description                              |
+| ------ | ---------------------------- | ---------------------------------------- |
+| GET    | /api/marketplace             | Fetch community plugin registry (cached 5 min, `?refresh=true` to bypass) |
+| GET    | /api/marketplace/installed   | List installed community plugins (those with `.marketplace` marker) |
+| POST   | /api/marketplace/install     | Install a community plugin (`{id, repo?, source?}`) |
+| POST   | /api/marketplace/uninstall   | Uninstall a community plugin (`{id}`) |
+
 ### Telegram
 | Method | Path                    | Description                              |
 | ------ | ----------------------- | ---------------------------------------- |
@@ -794,23 +801,25 @@ Side panel for viewing and creating Linear issues directly from the app:
 
 ### 26. Tabbed Right Panel (with Tab SDK)
 The right side of the UI hosts a resizable tabbed panel with built-in and plugin tabs:
-- **Tasks** — split view with Linear issues (top) and local Todo list (bottom), separated by a draggable resize handle
 - **Files** — file explorer
 - **Git** — git integration
-- **Repos** — repository management
-- **Events** — structured activity log (plugin tab via Tab SDK)
-- **"+" button** — opens Plugin Marketplace for enabling, disabling, and reordering plugins
+- **Repos** — repository management (built-in plugin)
+- **Linear** — issue tracking (built-in plugin)
+- **Claude Editor** — CLAUDE.md editor (built-in plugin)
+- **"+" button** — opens Plugin Marketplace (Installed tab for enable/disable/reorder, Community tab for browse/install/update)
 
 **Tab SDK plugin system** — developers can register new tabs with a single `registerTab()` call in a JS module, with no HTML or `dom.js` changes required:
-- `registerTab({ id, title, icon, init(ctx) })` — creates tab button and pane dynamically
-- **Context object (ctx)** — provides event bus (`on`/`emit`), reactive store (`getState`/`onState`), API module, badge/title helpers, `getProjectPath()`, and `on('projectChanged', fn)` event
-- **Lifecycle hooks** — `onActivate`, `onDeactivate`, `onDestroy`
+- `registerTab({ id, title, icon, lazy, init(ctx), onActivate(ctx), onDeactivate(ctx), onDestroy(ctx) })` — creates tab button and pane dynamically
+- **Context object (ctx)** — provides `pluginId`, event bus (`on`/`off`/`emit` with unsubscribe handles), reactive store (`getState`/`onState` with unsubscribe handles), API module, `getTheme()`, `storage` (namespaced localStorage), `toast()` notifications, badge/title helpers, `getProjectPath()`, `getSessionId()`, and `dispose()` for cleanup
+- **Lifecycle hooks** — `onActivate(ctx)`, `onDeactivate(ctx)`, `onDestroy(ctx)` — all receive the context object
+- **Auto-cleanup** — all event/state subscriptions registered via `ctx.on()`/`ctx.onState()` are automatically unsubscribed when the plugin is destroyed
 - **Lazy initialization** — `lazy: true` defers `init()` until the tab is first opened
 - **Positional insert** — `position` option to control tab order
 - **Auto-discovery** — full-stack plugins live in `plugins/<name>/` (with `client.js`, optional `server.js`, `client.css`, `config.json`). User plugins go in `~/.claudeck/plugins/`. All discovered via `GET /api/plugins`
+- **Community marketplace** — browse, install, update, and uninstall community plugins from the [claudeck-marketplace](https://github.com/hamedafarag/claudeck-marketplace) registry via the Community tab
 - **Plugin creator skill** — install via `npx skills add https://github.com/hamedafarag/claudeck-skills`, then run `/claudeck-plugin-create <name> <description>` in Claude Code to scaffold plugins automatically
-- **Plugin marketplace** — enable/disable/reorder plugins from the "+" button; state persisted to `localStorage`
-- **Built-in plugins**: Linear (issues + settings), Tasks (todo + brags), Repos, Events, CLAUDE.md Editor, Sudoku, Tic-Tac-Toe
+- **Built-in plugins**: Claude Editor, Linear, Repos. Community plugins (Tasks, Event Stream, Sudoku, Tic-Tac-Toe) available via marketplace.
+- See [TAB-SDK.md](TAB-SDK.md) for the full SDK reference (ctx API, events, state keys, CSS tokens, examples).
 
 Panel state (open/closed), active tab, and width are persisted to `localStorage`. Resizable by dragging the left edge. Toggle via header button or `Cmd+B`.
 
@@ -1002,26 +1011,21 @@ Inline tips panel that sits side-by-side with chat messages to help sharpen AI s
 - RSS proxy via `GET /api/tips/rss?url=<encoded>` with regex XML parser (no dependencies)
 
 ### 35. Context Gauge
-A progress bar in the header showing cumulative session token usage against the model's context window (200k default):
+A progress bar in the header showing cumulative session token usage against the model's context window:
+- Model-aware limits: 1M tokens for Opus, 200k for other models
 - Tracks input, output, cache read, and cache creation tokens across all queries in a session
 - Color-coded: green (normal), yellow (>50%), red (>80%)
 - Hover tooltip shows token breakdown by category
 - Resets on new session, loads from history when switching sessions
 - Auto-hidden when no tokens recorded
 
-### 36. Event Stream Panel (Tab SDK Plugin)
-A structured activity log registered as a plugin tab via the Tab SDK (`plugins/event-stream/client.js`):
+### 36. Event Stream Panel (Community Plugin)
+A structured activity log available via the community marketplace:
 - Logs all tool calls, results, errors, and completion events in real time
 - Each event shows timestamp, type badge (TOOL/OK/ERR/DONE), and summary
 - Click to expand and see full event details (JSON input, full output)
 - Filter by type: All, Tools, Errors, Results
-- Search across event text
-- Auto-scroll toggle to follow latest events
-- Clear button to reset the log
-- Loads historical events when switching sessions
-- Badge count on tab button showing total events
-- Fully self-contained — all DOM built in `init(ctx)`, no HTML template needed
-- Open via `Cmd+Shift+V` or `/events`
+- Install from the Plugin Marketplace → Community tab
 
 ### 37. AI-Generated Session Summaries
 After a query completes, Claude Haiku automatically generates a 1-sentence summary of the conversation:
@@ -1037,6 +1041,7 @@ A floating chat bubble widget (bottom-left corner) that provides a personal AI a
 - **Chat bubble** — 48px circle featuring the Whaly mascot (pixel-art whale), click to expand the bot panel
 - **Independent session** — separate from the main chat, per-project session stored in `localStorage`
 - **Linked / Free toggle** — switch between "Linked" mode (uses project context, session, and permission mode) and "Free" mode (no project context, bypass permissions, just answers questions)
+- **Enable/disable** — toggle via Settings modal; hidden when disabled (bubble + panel removed from DOM)
 - **Custom system prompt** — editable via gear icon in the bot header; stored server-side in `~/.claudeck/config/bot-prompt.json`; default is an expert prompt engineering assistant
 - **Streaming responses** — uses the same WebSocket infrastructure with `chatId: 'assistant-bot'`; main chat ignores bot messages via early return filter
 - **Markdown rendering** — full markdown support with merged ordered lists, syntax highlighting, copy buttons
@@ -1142,12 +1147,14 @@ A 24px footer bar at the bottom of the page showing key information at a glance:
 
 ### 47. Plugin Marketplace
 A built-in marketplace UI for managing tab-sdk plugins:
-- **Auto-discovery** — server scans built-in plugins (`plugins/`) and user plugins (`~/.claudeck/plugins/`), merges results with `source: "builtin"` or `source: "user"` field
-- **Marketplace panel** — accessible from the "+" button in the right panel tab bar
-- **Enable/disable** — toggle plugins on/off; state persisted to `localStorage`
-- **Reorder tabs** — drag handle to reorder plugin tabs; order persisted to `localStorage`
-- **Built-in plugins**: Linear (issues + settings), Tasks (todo + brags), Repos, Events, CLAUDE.md Editor, Sudoku, Tic-Tac-Toe
-- **Hot reload** — enable a plugin and it loads immediately without page refresh; disable removes the tab
+- **Auto-discovery** — server scans built-in plugins (`plugins/`) and user plugins (`~/.claudeck/plugins/`), merges results with `source: "builtin"` or `source: "user"` field. Community-installed plugins are tagged via `.marketplace` metadata file.
+- **Installed tab** — enable/disable toggle, drag-to-reorder, community badge on marketplace-installed plugins, apply/cancel
+- **Community tab** — browse, install, update, and uninstall plugins from the [claudeck-marketplace](https://github.com/hamedafarag/claudeck-marketplace) registry. Built-in plugins show "Built-in" label. Server plugins prompt a confirmation dialog. Auto-enables and loads plugins after install.
+- **Registry proxy** — `GET /api/marketplace` fetches `marketplace.json` from GitHub with 5-minute cache, enriches with `isBuiltin`, `installed`, `installedVersion`, `updateAvailable` fields
+- **Install flow** — downloads GitHub tarball, extracts, patches server.js imports, writes `.marketplace` marker, hot-mounts server routes via wrapper pattern
+- **Uninstall flow** — removes plugin directory, disables server route wrapper, removes from enabled list, cleans up CSS/state
+- **Security** — plugin IDs validated against `/^[a-z0-9][a-z0-9-]*$/`, tar extraction with `--no-same-owner --no-same-permissions`, HTML-escaped metadata rendering, semver-aware version comparison
+- **Built-in plugins**: Claude Editor, Linear, Repos. Community plugins available via marketplace.
 
 ### 48. Mobile Responsive Layout
 Full mobile and tablet responsiveness with two breakpoints (CSS-first approach):
@@ -1195,10 +1202,15 @@ Cross-session project knowledge that survives server restarts and upgrades:
 - **Categories**: convention, decision, discovery, warning
 - **Relevance scoring** — accessed memories get a 0.1 boost (capped at 2.0); idle memories decay by 5% over configurable period
 
-### 52. Tab SDK `projectChanged` Event
+### 52. Tab SDK `projectChanged` Event and Enhanced Context
 - Centralizes project-select change handling in the Tab SDK
 - Plugins use `ctx.on('projectChanged', fn)` and `ctx.getProjectPath()` instead of accessing the DOM element directly
-- Updated plugin scaffold and claude-editor plugin follow the new pattern
+- `ctx.on()` and `ctx.onState()` return unsubscribe functions; all auto-cleaned on tab destroy via `ctx.dispose()`
+- `onActivate(ctx)`, `onDeactivate(ctx)`, `onDestroy(ctx)` lifecycle hooks now receive `ctx`
+- `ctx.pluginId` — plugin's ID string
+- `ctx.getTheme()` — returns current theme (`'dark'` or `'light'`)
+- `ctx.storage.get/set/remove` — namespaced localStorage scoped to the plugin ID
+- `ctx.toast(msg, opts)` — temporary notification with type (`info`/`success`/`error`) and duration
 
 ### 53. Git Worktree Support
 Run any chat or agent task in an isolated git worktree without touching the working branch:
@@ -1549,7 +1561,7 @@ Claudeck/
     │   └── tips.json      20 curated tips + RSS feed definitions
     └── js/
         ├── main.js        Entry point — imports components then all modules
-        ├── components/    19 Web Components (Light DOM Custom Elements for modals + sections)
+        ├── components/    20 Web Components (Light DOM Custom Elements for modals + sections)
         ├── core/          store, dom, constants, events, utils, api, ws, plugin-loader
         ├── ui/            messages, formatting, diff, export, theme, commands, parallel, etc.
         ├── features/      chat, sessions, projects, input-history, home, welcome, tour, attachments, voice-input, easter-egg, etc.
@@ -1557,11 +1569,10 @@ Claudeck/
 plugins/                   Full-stack plugins (client.js, server.js, config.json)
     ├── linear/            Issues + settings with server-side API routes
     ├── repos/             Repository management with server-side routes
-    ├── tasks/             Todo + brags with server-side routes
     ├── claude-editor/     CLAUDE.md editor (client-only)
-    ├── event-stream/      WebSocket event viewer (client-only)
-    ├── tic-tac-toe/       Tic-tac-toe game (client-only)
-    └── sudoku/            Sudoku game (client-only)
+    ├── linear/            Linear issue tracking (full-stack)
+    └── repos/             Repository management (full-stack)
+    # Additional plugins available via community marketplace
 ```
 
 ---

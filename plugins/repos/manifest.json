@@ -1,0 +1,10 @@
+{
+  "id": "repos",
+  "name": "Repos",
+  "version": "1.0.0",
+  "description": "Git repository and group management with tree view",
+  "author": "claudeck",
+  "icon": "📁",
+  "hasServer": true,
+  "minClaudeckVersion": "1.4.0"
+}

@@ -53,18 +53,26 @@
 //   config.onDeactivate {function} Optional. Called each time tab is hidden
 //   config.onDestroy    {function} Optional. Called when tab is unregistered
 //
-// ── Context object (ctx) — passed to init() ─────────────────────
+// ── Context object (ctx) — passed to init(), onActivate, onDeactivate, onDestroy
 //
-//   ctx.on(event, fn)         Subscribe to the app event bus
+//   ctx.pluginId              Your plugin's ID string
+//   ctx.on(event, fn)         Subscribe to event bus (returns unsubscribe fn)
+//   ctx.off(event, fn)        Remove an event listener
 //   ctx.emit(event, data)     Publish to the app event bus
 //   ctx.getState(key)         Read from the reactive store
-//   ctx.onState(key, fn)      Subscribe to store changes
+//   ctx.onState(key, fn)      Subscribe to store changes (returns unsubscribe fn)
 //   ctx.api                   The full API module (fetch helpers)
 //   ctx.getProjectPath()      Current project path
 //   ctx.getSessionId()        Current session ID
+//   ctx.getTheme()            Current theme: 'dark' or 'light'
+//   ctx.storage.get(key)      Read from plugin-scoped localStorage
+//   ctx.storage.set(key, val) Write to plugin-scoped localStorage
+//   ctx.storage.remove(key)   Remove from plugin-scoped localStorage
+//   ctx.toast(msg, opts)      Show a temporary notification (opts: {duration, type})
 //   ctx.showBadge(count)      Show a number badge on the tab button
 //   ctx.clearBadge()          Hide the badge
 //   ctx.setTitle(text)        Update the tab button label at runtime
+//   ctx.dispose()             Unsubscribe all event/state listeners (auto-called on destroy)
 //
 // ── Other exports ───────────────────────────────────────────────
 //
@@ -82,13 +90,12 @@
 //
 //   • Use lazy:true for heavy tabs — init runs only on first open
 //   • Build all DOM in init(); no index.html edits needed
-//   • ALWAYS use ctx.getProjectPath() to read the current project path.
-//     NEVER use document.getElementById('project-select') directly.
-//   • Use ctx.on('projectChanged', fn) to reload data on project switch.
-//     NEVER add your own change listener to the project select element.
-//   • Use ctx.onState('sessionId', fn) to reload on session switch
-//   • Existing shortcuts (e.g. openRightPanel('my-tab')) work automatically
-//   • See plugins/event-stream/client.js for a full working example
+//   • ctx.on/onState return unsubscribe fns; all auto-cleaned on tab destroy
+//   • onActivate(ctx), onDeactivate(ctx), onDestroy(ctx) all receive ctx
+//   • Use ctx.storage for persistent data (scoped to your plugin ID)
+//   • ALWAYS use ctx.getProjectPath() to read the current project path
+//   • Use ctx.on('projectChanged', fn) to reload data on project switch
+//   • See plugins/claude-editor/client.js for a full working example
 //
 // ── Project-aware plugin example ────────────────────────────────
 //
@@ -115,15 +122,23 @@
 // ════════════════════════════════════════════════════════════════
 
 import { $ } from '../core/dom.js';
-import { emit, on } from '../core/events.js';
-import { getState, on as onState } from '../core/store.js';
+import { emit, on, off } from '../core/events.js';
+import { getState, on as onState, off as offState } from '../core/store.js';
 import * as api from '../core/api.js';
 import {
   getAvailablePlugins, getEnabledPluginNames, setEnabledPluginNames,
   getPluginMeta, loadPluginByName, isPluginLoaded,
   trackPluginTab, getPluginTabId, getPluginTabMap,
   setTabIdResolver, getSortedPlugins, setPluginOrder,
+  fetchMarketplace, installMarketplacePlugin, uninstallMarketplacePlugin,
 } from '../core/plugin-loader.js';
+
+/** Escape HTML to prevent XSS when rendering user-supplied plugin metadata */
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
 
 const registeredTabs = new Map();
 const unregisteredConfigs = new Map(); // stores configs for re-registration
@@ -200,7 +215,8 @@ export function reRegisterTab(tabId) {
 export function unregisterTab(id) {
   const tab = registeredTabs.get(id);
   if (!tab) return;
-  if (tab.onDestroy) tab.onDestroy();
+  if (tab.onDestroy) tab.onDestroy(tab._ctx);
+  if (tab._ctx) tab._ctx.dispose(); // auto-cleanup all event/state subscriptions
   if (tab._btnEl) tab._btnEl.remove();
   if (tab._paneEl) tab._paneEl.remove();
   registeredTabs.delete(id);
@@ -216,14 +232,29 @@ export function getRegisteredTabs() {
 // ── Internal ────────────────────────────────────────────
 
 function buildCtx(tab) {
-  return {
-    // Event bus
-    on,
+  // Track subscriptions for cleanup on destroy
+  const _unsubs = [];
+
+  const ctx = {
+    // Plugin identity
+    pluginId: tab.id,
+
+    // Event bus (returns unsubscribe handle)
+    on(event, fn) {
+      const unsub = on(event, fn);
+      _unsubs.push(unsub);
+      return unsub;
+    },
+    off,
     emit,
 
-    // State
+    // State (returns unsubscribe handle)
     getState,
-    onState,
+    onState(key, fn) {
+      const unsub = onState(key, fn);
+      _unsubs.push(unsub);
+      return unsub;
+    },
 
     // API
     api,
@@ -231,6 +262,43 @@ function buildCtx(tab) {
     // Convenience
     getProjectPath: () => $.projectSelect?.value || '',
     getSessionId: () => getState('sessionId'),
+
+    // Theme
+    getTheme: () => document.documentElement.getAttribute('data-theme') || 'dark',
+
+    // Namespaced localStorage
+    storage: {
+      get(key) {
+        try { return JSON.parse(localStorage.getItem(`claudeck-plugin-${tab.id}-${key}`)); }
+        catch { return null; }
+      },
+      set(key, value) {
+        localStorage.setItem(`claudeck-plugin-${tab.id}-${key}`, JSON.stringify(value));
+      },
+      remove(key) {
+        localStorage.removeItem(`claudeck-plugin-${tab.id}-${key}`);
+      },
+    },
+
+    // Toast notifications
+    toast(message, opts = {}) {
+      const { duration = 3000, type = 'info' } = opts;
+      const el = document.createElement('div');
+      el.className = `claudeck-toast claudeck-toast-${type}`;
+      el.textContent = message;
+      el.style.cssText = `
+        position:fixed;bottom:24px;right:24px;z-index:99999;
+        padding:10px 20px;border-radius:8px;font-size:13px;
+        font-family:var(--font-sans);color:#fff;pointer-events:auto;
+        animation:claudeck-toast-in .3s ease;
+        background:${type === 'error' ? 'var(--error,#e54)' : type === 'success' ? 'var(--success,#33d17a)' : 'var(--bg-elevated,#333)'};
+        border:1px solid ${type === 'error' ? 'var(--error,#e54)' : type === 'success' ? 'var(--success,#33d17a)' : 'var(--border,#444)'};
+        box-shadow:var(--shadow-md,0 4px 12px rgba(0,0,0,.3));
+      `;
+      document.body.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, duration - 300);
+      setTimeout(() => el.remove(), duration);
+    },
 
     // Tab-specific
     showBadge(count) {
@@ -261,7 +329,15 @@ function buildCtx(tab) {
         else tab._btnEl.childNodes[tab._btnEl.childNodes.length - 1].textContent = text;
       }
     },
+
+    /** Unsubscribe all event/state listeners registered via this ctx */
+    dispose() {
+      _unsubs.forEach(fn => fn());
+      _unsubs.length = 0;
+    },
   };
+
+  return ctx;
 }
 
 function mountTab(tab) {
@@ -339,6 +415,7 @@ function initTabContent(tab) {
   tab._initialized = true;
 
   const ctx = buildCtx(tab);
+  tab._ctx = ctx; // store for lifecycle hooks and cleanup
   const el = tab.init(ctx);
   if (el instanceof HTMLElement) {
     tab._paneEl.appendChild(el);
@@ -357,9 +434,9 @@ function onTabActivated(tabId) {
   for (const [id, tab] of registeredTabs) {
     if (id === tabId) {
       ensureInit(tab);
-      if (tab.onActivate) tab.onActivate();
+      if (tab.onActivate) tab.onActivate(tab._ctx);
     } else {
-      if (tab._initialized && tab.onDeactivate) tab.onDeactivate();
+      if (tab._initialized && tab.onDeactivate) tab.onDeactivate(tab._ctx);
     }
   }
 }
@@ -415,9 +492,6 @@ function openMarketplace() {
   // Don't open multiple
   if (document.querySelector('.marketplace-overlay')) return;
 
-  const plugins = getSortedPlugins();
-  const enabled = new Set(getEnabledPluginNames());
-
   // Overlay
   const overlay = document.createElement('div');
   overlay.className = 'marketplace-overlay';
@@ -426,195 +500,330 @@ function openMarketplace() {
   const popup = document.createElement('div');
   popup.className = 'marketplace-popup';
 
-  // Header
+  // Header with tabs
   const header = document.createElement('div');
   header.className = 'marketplace-header';
   header.innerHTML = `
     <h3>Plugin Marketplace</h3>
-    <span class="marketplace-subtitle">${plugins.length} plugin${plugins.length !== 1 ? 's' : ''} available · drag to reorder</span>
+    <div class="marketplace-tabs">
+      <button class="marketplace-tab active" data-marketplace-tab="installed">Installed</button>
+      <button class="marketplace-tab" data-marketplace-tab="community">Community</button>
+    </div>
   `;
   popup.appendChild(header);
 
-  // Plugin list
-  const list = document.createElement('div');
-  list.className = 'marketplace-list';
+  // Tab content container
+  const tabContent = document.createElement('div');
+  tabContent.className = 'marketplace-tab-content';
+  popup.appendChild(tabContent);
 
-  if (!plugins.length) {
-    list.innerHTML = '<div class="marketplace-empty">No plugins available.<br>Drop files into <code>plugins/</code> to get started.</div>';
-  }
-
-  // Track pending selections (start from current state)
-  const pending = new Set(enabled);
-
-  // ── Drag state ──
-  let dragItem = null;
-  let dragPlaceholder = null;
-
-  for (const plugin of plugins) {
-    const meta = getPluginMeta(plugin.name);
-    const tabId = getPluginTabId(plugin.name);
-    const loaded = tabId && registeredTabs.has(tabId);
-
-    const item = document.createElement('div');
-    item.className = 'marketplace-item';
-    item.dataset.plugin = plugin.name;
-    item.draggable = true;
-    if (pending.has(plugin.name)) item.classList.add('selected');
-
-    item.innerHTML = `
-      <div class="marketplace-drag-handle" title="Drag to reorder">⠿</div>
-      <div class="marketplace-item-icon">${meta.icon}</div>
-      <div class="marketplace-item-info">
-        <div class="marketplace-item-name">${formatPluginName(plugin.name)}</div>
-        <div class="marketplace-item-desc">${meta.description}</div>
-      </div>
-      <div class="marketplace-item-status">
-        ${loaded ? '<span class="marketplace-loaded">loaded</span>' : ''}
-      </div>
-      <div class="marketplace-item-toggle">
-        <div class="marketplace-checkbox ${pending.has(plugin.name) ? 'checked' : ''}"></div>
-      </div>
-    `;
-
-    // Toggle selection (ignore clicks on drag handle)
-    item.addEventListener('click', (e) => {
-      if (e.target.closest('.marketplace-drag-handle')) return;
-      const cb = item.querySelector('.marketplace-checkbox');
-      if (pending.has(plugin.name)) {
-        pending.delete(plugin.name);
-        cb.classList.remove('checked');
-        item.classList.remove('selected');
-      } else {
-        pending.add(plugin.name);
-        cb.classList.add('checked');
-        item.classList.add('selected');
-      }
-    });
-
-    // ── Drag events ──
-    item.addEventListener('dragstart', (e) => {
-      dragItem = item;
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-
-      // Create placeholder
-      dragPlaceholder = document.createElement('div');
-      dragPlaceholder.className = 'marketplace-drop-indicator';
-
-      requestAnimationFrame(() => { item.style.opacity = '0.4'; });
-    });
-
-    item.addEventListener('dragend', () => {
-      if (dragItem) {
-        dragItem.classList.remove('dragging');
-        dragItem.style.opacity = '';
-      }
-      if (dragPlaceholder && dragPlaceholder.parentNode) {
-        dragPlaceholder.remove();
-      }
-      dragItem = null;
-      dragPlaceholder = null;
-    });
-
-    item.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      if (!dragItem || dragItem === item) return;
-
-      const rect = item.getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
-      const after = e.clientY > midY;
-
-      if (after) {
-        item.after(dragPlaceholder);
-      } else {
-        item.before(dragPlaceholder);
-      }
-    });
-
-    item.addEventListener('drop', (e) => {
-      e.preventDefault();
-      if (!dragItem || dragItem === item) return;
-
-      // Insert dragged item where the placeholder is
-      if (dragPlaceholder && dragPlaceholder.parentNode) {
-        dragPlaceholder.before(dragItem);
-        dragPlaceholder.remove();
-      }
-
-      dragItem.classList.remove('dragging');
-      dragItem.style.opacity = '';
-      dragItem = null;
-      dragPlaceholder = null;
-    });
-
-    list.appendChild(item);
-  }
-
-  popup.appendChild(list);
-
-  // Footer with Apply / Cancel
+  // Footer (shared by both tabs)
   const footer = document.createElement('div');
   footer.className = 'marketplace-footer';
+  popup.appendChild(footer);
 
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'marketplace-btn marketplace-btn-cancel';
-  cancelBtn.textContent = 'Cancel';
-  cancelBtn.addEventListener('click', () => overlay.remove());
-
-  const applyBtn = document.createElement('button');
-  applyBtn.className = 'marketplace-btn marketplace-btn-apply';
-  applyBtn.textContent = 'Apply';
-  applyBtn.addEventListener('click', async () => {
-    // Read order from current DOM positions
-    const orderedNames = [...list.querySelectorAll('.marketplace-item')]
-      .map(el => el.dataset.plugin)
-      .filter(Boolean);
-
-    setPluginOrder(orderedNames);
-
-    // Only enabled in the order they appear
-    const newEnabled = orderedNames.filter(n => pending.has(n));
-    setEnabledPluginNames(newEnabled);
-
-    // Unload (hide) disabled plugins first
-    for (const [id] of [...registeredTabs]) {
-      if (!isPluginTab(id)) continue;
-      const belongsToAny = newEnabled.some(n => getPluginTabId(n) === id);
-      if (!belongsToAny) {
-        unregisterTab(id);
-      }
-    }
-
-    // Load newly enabled plugins in order
-    for (const name of newEnabled) {
-      const existingTabId = getPluginTabId(name);
-
-      if (existingTabId && registeredTabs.has(existingTabId)) continue;
-
-      if (existingTabId && reRegisterTab(existingTabId)) continue;
-
-      if (!isPluginLoaded(name)) {
-        await loadPluginByName(name);
-      }
-    }
-
-    // Reorder tab buttons & panes in the DOM to match marketplace order
-    reorderPluginTabs(newEnabled);
-
-    overlay.remove();
+  // ── Tab switching ──
+  let activeTab = 'installed';
+  const tabBtns = header.querySelectorAll('.marketplace-tab');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeTab = btn.dataset.marketplaceTab;
+      if (activeTab === 'installed') renderInstalledTab();
+      else renderCommunityTab();
+    });
   });
 
-  footer.appendChild(cancelBtn);
-  footer.appendChild(applyBtn);
-  popup.appendChild(footer);
+  // ── Installed tab ──
+  function renderInstalledTab() {
+    const plugins = getSortedPlugins();
+    const enabled = new Set(getEnabledPluginNames());
+    const pending = new Set(enabled);
+
+    tabContent.innerHTML = '';
+    footer.innerHTML = '';
+
+    const subtitle = document.createElement('div');
+    subtitle.className = 'marketplace-subtitle';
+    subtitle.textContent = `${plugins.length} plugin${plugins.length !== 1 ? 's' : ''} available · drag to reorder`;
+    tabContent.appendChild(subtitle);
+
+    const list = document.createElement('div');
+    list.className = 'marketplace-list';
+
+    if (!plugins.length) {
+      list.innerHTML = '<div class="marketplace-empty">No plugins available.<br>Drop files into <code>plugins/</code> to get started.</div>';
+    }
+
+    let dragItem = null;
+    let dragPlaceholder = null;
+
+    for (const plugin of plugins) {
+      const meta = getPluginMeta(plugin.name);
+      const tabId = getPluginTabId(plugin.name);
+      const loaded = tabId && registeredTabs.has(tabId);
+
+      const item = document.createElement('div');
+      item.className = 'marketplace-item';
+      item.dataset.plugin = plugin.name;
+      item.draggable = true;
+      if (pending.has(plugin.name)) item.classList.add('selected');
+
+      const sourceLabel = plugin.fromMarketplace ? '<span class="marketplace-source community">community</span>' : '';
+
+      item.innerHTML = `
+        <div class="marketplace-drag-handle" title="Drag to reorder">⠿</div>
+        <div class="marketplace-item-icon">${esc(meta.icon)}</div>
+        <div class="marketplace-item-info">
+          <div class="marketplace-item-name">${esc(formatPluginName(plugin.name))} ${sourceLabel}</div>
+          <div class="marketplace-item-desc">${esc(meta.description)}</div>
+        </div>
+        <div class="marketplace-item-status">
+          ${loaded ? '<span class="marketplace-loaded">loaded</span>' : ''}
+        </div>
+        <div class="marketplace-item-toggle">
+          <div class="marketplace-checkbox ${pending.has(plugin.name) ? 'checked' : ''}"></div>
+        </div>
+      `;
+
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.marketplace-drag-handle')) return;
+        const cb = item.querySelector('.marketplace-checkbox');
+        if (pending.has(plugin.name)) {
+          pending.delete(plugin.name);
+          cb.classList.remove('checked');
+          item.classList.remove('selected');
+        } else {
+          pending.add(plugin.name);
+          cb.classList.add('checked');
+          item.classList.add('selected');
+        }
+      });
+
+      // Drag events
+      item.addEventListener('dragstart', (e) => {
+        dragItem = item;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        dragPlaceholder = document.createElement('div');
+        dragPlaceholder.className = 'marketplace-drop-indicator';
+        requestAnimationFrame(() => { item.style.opacity = '0.4'; });
+      });
+
+      item.addEventListener('dragend', () => {
+        if (dragItem) { dragItem.classList.remove('dragging'); dragItem.style.opacity = ''; }
+        if (dragPlaceholder?.parentNode) dragPlaceholder.remove();
+        dragItem = null;
+        dragPlaceholder = null;
+      });
+
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (!dragItem || dragItem === item) return;
+        const rect = item.getBoundingClientRect();
+        const after = e.clientY > rect.top + rect.height / 2;
+        if (after) item.after(dragPlaceholder);
+        else item.before(dragPlaceholder);
+      });
+
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (!dragItem || dragItem === item) return;
+        if (dragPlaceholder?.parentNode) {
+          dragPlaceholder.before(dragItem);
+          dragPlaceholder.remove();
+        }
+        dragItem.classList.remove('dragging');
+        dragItem.style.opacity = '';
+        dragItem = null;
+        dragPlaceholder = null;
+      });
+
+      list.appendChild(item);
+    }
+
+    tabContent.appendChild(list);
+
+    // Footer buttons
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'marketplace-btn marketplace-btn-cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'marketplace-btn marketplace-btn-apply';
+    applyBtn.textContent = 'Apply';
+    applyBtn.addEventListener('click', async () => {
+      const orderedNames = [...list.querySelectorAll('.marketplace-item')]
+        .map(el => el.dataset.plugin).filter(Boolean);
+      setPluginOrder(orderedNames);
+      const newEnabled = orderedNames.filter(n => pending.has(n));
+      setEnabledPluginNames(newEnabled);
+
+      for (const [id] of [...registeredTabs]) {
+        if (!isPluginTab(id)) continue;
+        if (!newEnabled.some(n => getPluginTabId(n) === id)) unregisterTab(id);
+      }
+
+      for (const name of newEnabled) {
+        const existingTabId = getPluginTabId(name);
+        if (existingTabId && registeredTabs.has(existingTabId)) continue;
+        if (existingTabId && reRegisterTab(existingTabId)) continue;
+        if (!isPluginLoaded(name)) await loadPluginByName(name);
+      }
+
+      reorderPluginTabs(newEnabled);
+      overlay.remove();
+    });
+
+    footer.appendChild(cancelBtn);
+    footer.appendChild(applyBtn);
+  }
+
+  // ── Community tab ──
+  async function renderCommunityTab() {
+    tabContent.innerHTML = '';
+    footer.innerHTML = '';
+
+    // Loading state
+    const loading = document.createElement('div');
+    loading.className = 'marketplace-loading';
+    loading.innerHTML = '<div class="marketplace-spinner"></div><span>Loading community plugins...</span>';
+    tabContent.appendChild(loading);
+
+    // Close button in footer
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'marketplace-btn marketplace-btn-cancel';
+    closeBtn.textContent = 'Close';
+    closeBtn.addEventListener('click', () => overlay.remove());
+    footer.appendChild(closeBtn);
+
+    const registry = await fetchMarketplace(true);
+    tabContent.innerHTML = '';
+
+    if (!registry || !registry.plugins?.length) {
+      tabContent.innerHTML = `
+        <div class="marketplace-empty">
+          No community plugins available yet.<br>
+          <a href="https://github.com/hamedafarag/claudeck-marketplace" target="_blank" rel="noopener">
+            Submit your plugin →
+          </a>
+        </div>
+      `;
+      return;
+    }
+
+    const subtitle = document.createElement('div');
+    subtitle.className = 'marketplace-subtitle';
+    subtitle.textContent = `${registry.plugins.length} community plugin${registry.plugins.length !== 1 ? 's' : ''} available`;
+    tabContent.appendChild(subtitle);
+
+    const list = document.createElement('div');
+    list.className = 'marketplace-list';
+
+    for (const plugin of registry.plugins) {
+      const item = document.createElement('div');
+      item.className = 'marketplace-item marketplace-community-item';
+      item.dataset.plugin = plugin.id;
+
+      const icon = plugin.icon || '🧩';
+      const hasServer = plugin.hasServer;
+      const serverBadge = hasServer ? '<span class="marketplace-source server" title="This plugin includes server-side code">server</span>' : '';
+
+      let actionHtml;
+      if (plugin.isBuiltin) {
+        actionHtml = `<span class="marketplace-action-btn" style="opacity:.5;cursor:default;border:none;">Built-in</span>`;
+      } else if (plugin.updateAvailable) {
+        actionHtml = `<button class="marketplace-action-btn marketplace-update-btn" data-action="update">Update</button>`;
+      } else if (plugin.installed) {
+        actionHtml = `<button class="marketplace-action-btn marketplace-uninstall-btn" data-action="uninstall">Uninstall</button>`;
+      } else {
+        actionHtml = `<button class="marketplace-action-btn marketplace-install-btn" data-action="install">Install</button>`;
+      }
+
+      item.innerHTML = `
+        <div class="marketplace-item-icon">${esc(icon)}</div>
+        <div class="marketplace-item-info">
+          <div class="marketplace-item-name">
+            ${esc(plugin.name || formatPluginName(plugin.id))} ${serverBadge}
+          </div>
+          <div class="marketplace-item-desc">${esc(plugin.description || '')}</div>
+          <div class="marketplace-item-meta">
+            <span class="marketplace-author">by ${esc(plugin.author || 'unknown')}</span>
+            <span class="marketplace-version">v${esc(plugin.version || '0.0.0')}</span>
+            ${plugin.installedVersion && plugin.updateAvailable ? `<span class="marketplace-version-old">installed: v${esc(plugin.installedVersion)}</span>` : ''}
+          </div>
+        </div>
+        <div class="marketplace-item-actions">${actionHtml}</div>
+      `;
+
+      // Action button handler (skip built-in plugins which have no interactive action)
+      const actionBtn = item.querySelector('.marketplace-action-btn');
+      if (!plugin.isBuiltin) actionBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const action = actionBtn.dataset.action;
+        actionBtn.disabled = true;
+        actionBtn.textContent = action === 'uninstall' ? 'Removing...' : 'Installing...';
+
+        try {
+          if (action === 'uninstall') {
+            // Unregister tab if loaded
+            const tabId = getPluginTabId(plugin.id);
+            if (tabId) unregisterTab(tabId);
+            await uninstallMarketplacePlugin(plugin.id);
+            plugin.installed = false;
+            plugin.installedVersion = null;
+            plugin.updateAvailable = false;
+            actionBtn.textContent = 'Install';
+            actionBtn.className = 'marketplace-action-btn marketplace-install-btn';
+            actionBtn.dataset.action = 'install';
+          } else {
+            // Install or update
+            if (hasServer) {
+              const pluginLabel = plugin.name || plugin.id;
+              const proceed = confirm(
+                `"${pluginLabel}" includes server-side code that will run on your machine.\n\nServer plugins require CLAUDECK_USER_SERVER_PLUGINS=true to enable server routes.\n\nContinue with installation?`
+              );
+              if (!proceed) {
+                actionBtn.disabled = false;
+                actionBtn.textContent = action === 'update' ? 'Update' : 'Install';
+                return;
+              }
+            }
+            await installMarketplacePlugin(plugin);
+            plugin.installed = true;
+            plugin.installedVersion = plugin.version;
+            plugin.updateAvailable = false;
+            actionBtn.textContent = 'Uninstall';
+            actionBtn.className = 'marketplace-action-btn marketplace-uninstall-btn';
+            actionBtn.dataset.action = 'uninstall';
+          }
+        } catch (err) {
+          actionBtn.textContent = 'Error';
+          console.error(`Marketplace ${action} failed:`, err);
+          setTimeout(() => {
+            actionBtn.textContent = action === 'uninstall' ? 'Uninstall' : (action === 'update' ? 'Update' : 'Install');
+          }, 2000);
+        }
+        actionBtn.disabled = false;
+      });
+
+      list.appendChild(item);
+    }
+
+    tabContent.appendChild(list);
+  }
+
+  // Initial render
+  renderInstalledTab();
 
   overlay.appendChild(popup);
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) overlay.remove();
   });
 
-  // Close on Escape
   const onKey = (e) => {
     if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); }
   };

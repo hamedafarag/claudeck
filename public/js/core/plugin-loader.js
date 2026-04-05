@@ -12,21 +12,13 @@
 const STORAGE_KEY = 'claudeck-enabled-plugins';
 const ORDER_KEY = 'claudeck-plugin-order';
 let availablePlugins = [];
+let marketplaceRegistry = null;
 const loadedPlugins = new Set();
 
 /** Maps plugin file name → tab ID registered by that plugin */
 const pluginTabIds = new Map();
 
-/** Plugin descriptions for the marketplace. order: lower = higher in the list */
-const pluginMeta = {
-  'claude-editor':    { description: 'Edit CLAUDE.md project instructions directly in the UI',    icon: '📝', order: 5 },
-  'event-stream':     { description: 'Real-time WebSocket event viewer with filtering and search', icon: '⚡', order: 10 },
-  'repos':            { description: 'Git repository and group management with tree view',        icon: '📁', order: 20 },
-  'linear':           { description: 'Linear issue tracking with settings and team management',   icon: '📋', order: 25 },
-  'tasks':            { description: 'Todo list with priority levels and brag tracking',           icon: '✅', order: 30 },
-  'tic-tac-toe':      { description: 'Classic tic-tac-toe game',                                   icon: '🎮', order: 90 },
-  'sudoku':           { description: 'Sudoku puzzle game',                                         icon: '🧩', order: 91 },
-};
+/** Fallback meta for plugins without manifest.json */
 const defaultMeta = { description: 'A tab-sdk plugin', icon: '🧩', order: 100 };
 
 export function getAvailablePlugins() {
@@ -45,7 +37,15 @@ export function setEnabledPluginNames(names) {
 }
 
 export function getPluginMeta(name) {
-  return pluginMeta[name] || defaultMeta;
+  const plugin = availablePlugins.find(p => p.name === name);
+  if (plugin?.manifest) {
+    return {
+      description: plugin.manifest.description || defaultMeta.description,
+      icon: plugin.manifest.icon || defaultMeta.icon,
+      order: defaultMeta.order,
+    };
+  }
+  return defaultMeta;
 }
 
 export function getPluginOrder() {
@@ -150,4 +150,89 @@ export async function loadPlugins() {
   } catch (err) {
     console.error('Plugin loader error:', err);
   }
+}
+
+// ── Marketplace ─────────────────────────────────────────
+
+export function getMarketplaceRegistry() {
+  return marketplaceRegistry;
+}
+
+/** Fetch the community plugin registry from the server (which proxies GitHub) */
+export async function fetchMarketplace(refresh = false) {
+  try {
+    const url = refresh ? '/api/marketplace?refresh=true' : '/api/marketplace';
+    const res = await fetch(url);
+    if (!res.ok) { console.warn('Marketplace fetch failed:', res.status); return null; }
+    marketplaceRegistry = await res.json();
+    return marketplaceRegistry;
+  } catch (err) {
+    console.error('Marketplace error:', err);
+    return null;
+  }
+}
+
+/** Install a community plugin and auto-enable it */
+export async function installMarketplacePlugin(plugin) {
+  const res = await fetch('/api/marketplace/install', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: plugin.id, repo: plugin.repo, source: plugin.source }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Install failed' }));
+    throw new Error(err.error);
+  }
+  const result = await res.json();
+
+  // Refresh local plugins list to include the newly installed plugin
+  const pluginsRes = await fetch('/api/plugins');
+  if (pluginsRes.ok) {
+    availablePlugins = await pluginsRes.json();
+  }
+
+  // Auto-enable the newly installed plugin
+  const enabled = getEnabledPluginNames();
+  if (!enabled.includes(plugin.id)) {
+    enabled.push(plugin.id);
+    setEnabledPluginNames(enabled);
+  }
+
+  // Load the plugin immediately
+  await loadPluginByName(plugin.id);
+
+  return result;
+}
+
+/** Uninstall a community plugin */
+export async function uninstallMarketplacePlugin(id) {
+  const res = await fetch('/api/marketplace/uninstall', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Uninstall failed' }));
+    throw new Error(err.error);
+  }
+
+  // Remove from enabled list
+  const enabled = getEnabledPluginNames().filter(n => n !== id);
+  setEnabledPluginNames(enabled);
+
+  // Clean up CSS link from DOM
+  const cssLink = document.head.querySelector(`link[data-plugin="${id}"]`);
+  if (cssLink) cssLink.remove();
+
+  // Clear loaded/tab tracking state
+  loadedPlugins.delete(id);
+  pluginTabIds.delete(id);
+
+  // Refresh local plugins list
+  const pluginsRes = await fetch('/api/plugins');
+  if (pluginsRes.ok) {
+    availablePlugins = await pluginsRes.json();
+  }
+
+  return await res.json();
 }

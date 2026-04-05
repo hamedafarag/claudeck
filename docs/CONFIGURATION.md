@@ -151,7 +151,7 @@ The `GET /api/plugins` endpoint merges both directories. Each plugin gets a `sou
 
 ### Plugin directory structure
 
-Each plugin is a directory with at minimum a `client.js` file:
+Each plugin is a directory with at minimum a `client.js` file. See [TAB-SDK.md](TAB-SDK.md) for the full SDK reference.
 
 ```
 plugins/my-plugin/

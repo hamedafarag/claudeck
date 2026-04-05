@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Each test needs a fresh module to avoid leaked state between tests.
 // We use dynamic import with cache-busting to get isolated store instances.
-let getState, setState, on;
+let getState, setState, on, off;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -10,6 +10,7 @@ beforeEach(async () => {
   getState = mod.getState;
   setState = mod.setState;
   on = mod.on;
+  off = mod.off;
 });
 
 describe("store", () => {
@@ -91,6 +92,59 @@ describe("store", () => {
       expect(listener).toHaveBeenNthCalledWith(1, 1);
       expect(listener).toHaveBeenNthCalledWith(2, 2);
       expect(listener).toHaveBeenNthCalledWith(3, 3);
+    });
+
+    it("returns an unsubscribe function", () => {
+      const unsub = on("unsub-key", vi.fn());
+      expect(typeof unsub).toBe("function");
+    });
+
+    it("unsubscribe stops the listener from firing", () => {
+      const listener = vi.fn();
+      const unsub = on("unsub-state", listener);
+      setState("unsub-state", "a");
+      expect(listener).toHaveBeenCalledOnce();
+
+      unsub();
+      setState("unsub-state", "b");
+      expect(listener).toHaveBeenCalledOnce(); // still 1
+    });
+
+    it("unsubscribe only removes the specific listener", () => {
+      const listenerA = vi.fn();
+      const listenerB = vi.fn();
+      const unsub = on("multi-unsub", listenerA);
+      on("multi-unsub", listenerB);
+
+      unsub();
+      setState("multi-unsub", "val");
+      expect(listenerA).not.toHaveBeenCalled();
+      expect(listenerB).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("off", () => {
+    it("removes a specific listener", () => {
+      const listener = vi.fn();
+      on("off-key", listener);
+      off("off-key", listener);
+      setState("off-key", "val");
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it("does not throw when removing from non-existent key", () => {
+      expect(() => off("no-key", vi.fn())).not.toThrow();
+    });
+
+    it("only removes the targeted listener", () => {
+      const listenerA = vi.fn();
+      const listenerB = vi.fn();
+      on("off-multi", listenerA);
+      on("off-multi", listenerB);
+      off("off-multi", listenerA);
+      setState("off-multi", "val");
+      expect(listenerA).not.toHaveBeenCalled();
+      expect(listenerB).toHaveBeenCalledOnce();
     });
   });
 });

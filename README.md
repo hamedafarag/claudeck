@@ -252,16 +252,15 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for the full guide.
 
 ## Plugins
 
-Claudeck includes 7 built-in plugins and supports user plugins via `~/.claudeck/plugins/`:
+Claudeck includes 3 built-in plugins, a community marketplace, and supports user plugins via `~/.claudeck/plugins/`:
 
 | Plugin | Description |
 |--------|-------------|
-| **Tasks** | Todo list with priority, archive, and brag tracking |
+| **Claude Editor** | Edit CLAUDE.md project instructions in-app |
 | **Linear** | Linear issue tracking with team management |
 | **Repos** | Repository management with tree view |
-| **Claude Editor** | Edit CLAUDE.md project instructions in-app |
-| **Event Stream** | Real-time WebSocket event viewer |
-| **Games** | Tic-tac-toe and Sudoku |
+
+**Community Marketplace** — browse, install, and update community plugins directly from the Plugin Marketplace tab. Plugins like Tasks, Event Stream, Sudoku, and Tic-Tac-Toe are available from the [marketplace](https://github.com/hamedafarag/claudeck-marketplace).
 
 **Create your own** — drop files in `~/.claudeck/plugins/<name>/` (persists across upgrades) with `client.js` and optionally `server.js`, `client.css`, `config.json`. No fork needed. See [CONFIGURATION.md](docs/CONFIGURATION.md#user-plugins) for details.
 
@@ -280,6 +279,7 @@ npx skills add https://github.com/hamedafarag/claudeck-skills
 | Document | Description |
 |----------|-------------|
 | [DOCUMENTATION.md](docs/DOCUMENTATION.md) | Full feature docs, API reference, database schema |
+| [TAB-SDK.md](docs/TAB-SDK.md) | Plugin SDK reference — ctx API, events, state, CSS tokens, examples |
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | User data directory, config files, plugin system |
 | [AGENT-ARCHITECTURE.md](docs/AGENT-ARCHITECTURE.md) | How agents, chains, DAGs, and orchestrator work |
 | [PLAN-sqlite-adapter.md](docs/PLAN-sqlite-adapter.md) | Database adapter pattern, async interface, multi-DB roadmap |
@@ -305,7 +305,7 @@ npm run test:perf     # WebSocket performance benchmarks
 | **panels/** | 150+ | 35% |
 | **server/** | 1,350+ | 95% |
 
-19 Web Components in `public/js/components/` — each is a self-contained Custom Element (Light DOM) that owns its HTML, testable with zero mocks.
+20 Web Components in `public/js/components/` — each is a self-contained Custom Element (Light DOM) that owns its HTML, testable with zero mocks.
 
 ### Performance Benchmarks
 

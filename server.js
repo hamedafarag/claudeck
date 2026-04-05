@@ -32,6 +32,7 @@ import notificationsRouter, { setVapidPublicKey } from "./server/routes/notifica
 import memoryRouter from "./server/routes/memory.js";
 import worktreesRouter from "./server/routes/worktrees.js";
 import skillsRouter from "./server/routes/skills.js";
+import marketplaceRouter, { setApp as setMarketplaceApp } from "./server/routes/marketplace.js";
 import { setupWebSocket } from "./server/ws-handler.js";
 import { setWss } from "./server/notification-logger.js";
 import { authMiddleware, verifyWsClient, isAuthEnabled, getToken, loginHandler, statusHandler } from "./server/auth.js";
@@ -129,6 +130,8 @@ app.use("/api/telegram", telegramRouter);
 app.use("/api/memory", memoryRouter);
 app.use("/api/worktrees", worktreesRouter);
 app.use("/api/skills", skillsRouter);
+app.use("/api/marketplace", marketplaceRouter);
+setMarketplaceApp(app);
 
 // Version endpoint
 import { readFileSync } from "fs";
@@ -154,12 +157,19 @@ app.get("/api/plugins", (req, res) => {
       if (!existsSync(join(dir, "client.js"))) continue;
       const hasCss = existsSync(join(dir, "client.css"));
       const hasServer = existsSync(join(dir, "server.js"));
+      // Read manifest.json if it exists
+      let manifest = null;
+      const manifestPath = join(dir, "manifest.json");
+      if (existsSync(manifestPath)) {
+        try { manifest = JSON.parse(readFileSync(manifestPath, "utf8")); } catch {}
+      }
       plugins.push({
         name,
         js: `plugins/${name}/client.js`,
         css: hasCss ? `plugins/${name}/client.css` : null,
         source: "builtin",
         apiBase: hasServer ? `/api/plugins/${name}` : null,
+        manifest,
       });
     }
   }
@@ -173,12 +183,20 @@ app.get("/api/plugins", (req, res) => {
       const hasCss = existsSync(join(dir, "client.css"));
       const allowUserServer = process.env.CLAUDECK_USER_SERVER_PLUGINS === "true";
       const hasServer = allowUserServer && existsSync(join(dir, "server.js"));
+      const fromMarketplace = existsSync(join(dir, ".marketplace"));
+      let manifest = null;
+      const manifestPath = join(dir, "manifest.json");
+      if (existsSync(manifestPath)) {
+        try { manifest = JSON.parse(readFileSync(manifestPath, "utf8")); } catch {}
+      }
       plugins.push({
         name: entry,
         js: `user-plugins/${entry}/client.js`,
         css: hasCss ? `user-plugins/${entry}/client.css` : null,
         source: "user",
+        fromMarketplace,
         apiBase: hasServer ? `/api/plugins/${entry}` : null,
+        manifest,
       });
     }
   }

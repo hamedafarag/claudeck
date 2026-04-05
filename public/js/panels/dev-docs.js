@@ -147,7 +147,7 @@ registerTab({
       <li>Existing shortcuts (e.g. <code>openRightPanel('my-tab')</code>) work automatically</li>
     </ul>
 
-    <div class="callout">See <code>plugins/event-stream/client.js</code> for a complete working example of a plugin tab.</div>
+    <div class="callout">See <code>plugins/claude-editor/client.js</code> for a complete working example of a plugin tab.</div>
   `,
 });
 
@@ -301,7 +301,7 @@ registerDocSection({
       <li>Import paths: use absolute paths (e.g. <code>/js/ui/tab-sdk.js</code>)</li>
     </ul>
 
-    <div class="callout">When in doubt, look at <code>plugins/event-stream/</code>, <code>plugins/repos/</code>, or <code>plugins/tasks/</code> as reference implementations. For full-stack with server routes, see <code>plugins/linear/</code>.</div>
+    <div class="callout">When in doubt, look at <code>plugins/claude-editor/</code> or <code>plugins/repos/</code> as reference implementations. For full-stack with server routes, see <code>plugins/linear/</code>. More examples are available in the <a href="https://github.com/hamedafarag/claudeck-marketplace" target="_blank">marketplace repo</a>.</div>
   `,
 });
 

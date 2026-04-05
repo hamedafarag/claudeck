@@ -2,6 +2,35 @@
 
 All notable changes to Claudeck are documented in this file.
 
+## [1.4.1] — 2026-04-05
+
+### Added
+- **Plugin Marketplace** — Community tab in Plugin Marketplace to browse, install, update, and uninstall plugins from the [claudeck-marketplace](https://github.com/hamedafarag/claudeck-marketplace) registry. Features server-side caching, built-in plugin detection, server plugin warnings, and auto-enable on install.
+- **Plugin Manifests** — All built-in plugins now include `manifest.json` with standardized metadata (id, name, version, description, author, icon, hasServer). Plugin metadata is read from manifests at runtime instead of hardcoded.
+- **Marketplace API** — New server routes: `GET /api/marketplace` (cached registry proxy), `POST /api/marketplace/install` (download + extract + hot-mount), `POST /api/marketplace/uninstall` (cleanup + route disable), `GET /api/marketplace/installed`.
+- **Tab SDK Enhancements** — `ctx.on()` and `ctx.onState()` now return unsubscribe functions; added `ctx.off()` for named removal. All subscriptions auto-cleaned on tab destroy via `ctx.dispose()`. Lifecycle hooks (`onActivate`, `onDeactivate`, `onDestroy`) now receive `ctx`. New: `ctx.pluginId`, `ctx.getTheme()`, `ctx.storage` (namespaced localStorage), `ctx.toast()` (temporary notifications). Core `events.js` and `store.js` modules now export `off()`.
+
+### Changed
+- **Moved 4 plugins to marketplace** — Tasks, Event Stream, Sudoku, and Tic-Tac-Toe are no longer shipped as built-in plugins. They are available from the community marketplace. 3 built-in plugins remain: Claude Editor, Linear, Repos.
+
+### Security
+- HTML-escape all user-supplied plugin metadata (name, description, author, icon) rendered via innerHTML to prevent XSS from malicious marketplace entries
+- Validate plugin IDs against `/^[a-z0-9][a-z0-9-]*$/` to prevent path traversal on install/uninstall
+- Tar extraction uses `--no-same-owner --no-same-permissions` flags
+- Semver-aware version comparison (prevents false "update available" on downgrades)
+- Hot-mounted server routes use wrapper pattern for clean swap/disable on uninstall
+
+### Fixed
+- **Memory optimizer** — `applyOptimization` called async db functions inside a synchronous `db.transaction()` without await, causing "existing is not iterable" error. Replaced with proper await calls.
+- **Memory tab count** — Header count now updates immediately on delete
+- **Opus 1M token limit** — Context gauge now shows correct 1M token limit for Opus model
+- **Assistant bot phantom sessions** — Bot no longer creates phantom sessions in the sidebar
+- **Chat label sync** — Chat box labels now sync with header dropdown values on init and change
+- **Settings modal** — Added assistant bot enable/disable toggle
+- 15 stale test assertions across 4 test files (UI label changes, missing mock methods, missing settings-modal mock)
+
+---
+
 ## [1.4.0] — 2026-03-31
 
 ### Added
