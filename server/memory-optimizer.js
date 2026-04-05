@@ -7,7 +7,7 @@
  */
 import { query } from "@anthropic-ai/claude-code";
 import { execPath } from "process";
-import { listMemories, createMemory, deleteMemory } from "../db.js";
+import { listMemories, getDb } from "../db.js";
 
 const VALID_CATEGORIES = new Set(["convention", "decision", "discovery", "warning"]);
 
@@ -252,21 +252,32 @@ export async function optimizeMemories(projectPath, onProgress = () => {}) {
  * @returns {{ deleted: number, created: number }}
  */
 export async function applyOptimization(projectPath, optimized) {
-  // 1. Delete all existing memories for this project
   const existing = await listMemories(projectPath);
-  for (const m of existing) {
-    await deleteMemory(m.id);
-  }
+  const db = getDb();
 
-  // 2. Insert optimized memories
-  let created = 0;
-  for (const { category, content } of optimized) {
-    if (content && content.trim()) {
-      const cat = VALID_CATEGORIES.has(category) ? category : "discovery";
-      await createMemory(projectPath, cat, content.trim(), null, "optimizer");
-      created++;
+  // Atomic transaction — deletes + inserts succeed or fail together
+  const applyTxn = db.transaction((existingRows, newRows) => {
+    const del = db.prepare(`DELETE FROM memories WHERE id = ?`);
+    const ins = db.prepare(
+      `INSERT OR IGNORE INTO memories (project_path, category, content, content_hash, source_session_id, source_agent_id)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    );
+
+    for (const m of existingRows) {
+      del.run(m.id);
     }
-  }
 
+    let created = 0;
+    for (const { category, content } of newRows) {
+      if (content && content.trim()) {
+        const cat = VALID_CATEGORIES.has(category) ? category : "discovery";
+        ins.run(projectPath, cat, content.trim(), null, null, "optimizer");
+        created++;
+      }
+    }
+    return created;
+  });
+
+  const created = applyTxn(existing, optimized);
   return { deleted: existing.length, created };
 }

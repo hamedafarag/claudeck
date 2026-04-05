@@ -357,18 +357,21 @@ describe("tab-sdk", () => {
 
     it("toast auto-removes after duration", async () => {
       vi.useFakeTimers();
-      initTabSDK();
-      let ctx;
-      registerTab({
-        id: "toast-duration",
-        title: "Test",
-        init(c) { ctx = c; return document.createElement("div"); },
-      });
-      ctx.toast("Bye!", { duration: 1000 });
-      expect(document.querySelector(".claudeck-toast")).not.toBeNull();
-      vi.advanceTimersByTime(1100);
-      expect(document.querySelector(".claudeck-toast")).toBeNull();
-      vi.useRealTimers();
+      try {
+        initTabSDK();
+        let ctx;
+        registerTab({
+          id: "toast-duration",
+          title: "Test",
+          init(c) { ctx = c; return document.createElement("div"); },
+        });
+        ctx.toast("Bye!", { duration: 1000 });
+        expect(document.querySelector(".claudeck-toast")).not.toBeNull();
+        vi.advanceTimersByTime(1100);
+        expect(document.querySelector(".claudeck-toast")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

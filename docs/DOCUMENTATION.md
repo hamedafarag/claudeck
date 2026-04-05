@@ -447,6 +447,7 @@ All MCP endpoints accept an optional `?project=<path>` query parameter. Without 
 | GET    | /api/plugins         | Auto-discover plugins from built-in + user directories |
 
 ### Marketplace
+
 | Method | Path                         | Description                              |
 | ------ | ---------------------------- | ---------------------------------------- |
 | GET    | /api/marketplace             | Fetch community plugin registry (cached 5 min, `?refresh=true` to bypass) |
@@ -1267,7 +1268,7 @@ Browse, search, install, and manage agent skills from the [SkillsMP](https://ski
 | /files           | Open Files tab in right panel  |
 | /git             | Open Git tab in right panel    |
 | /repos           | Open Repos tab in right panel  |
-| /events          | Open Events tab in right panel |
+| /events          | Open Events tab (community plugin — install from Plugin Marketplace) |
 | /mcp             | Open MCP server manager modal  |
 | /notifications   | Toggle browser notifications   |
 | /tips            | Toggle tips feed panel         |
