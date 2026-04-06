@@ -9,13 +9,16 @@ export function getMaxTurns() {
 }
 
 function init() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved && $.maxTurnsSelect) {
-    $.maxTurnsSelect.value = saved;
-  }
   $.maxTurnsSelect?.addEventListener('change', () => {
     localStorage.setItem(STORAGE_KEY, $.maxTurnsSelect.value);
   });
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved && $.maxTurnsSelect) {
+    $.maxTurnsSelect.value = saved;
+    queueMicrotask(() => {
+      $.maxTurnsSelect?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
 }
 
 init();

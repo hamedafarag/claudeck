@@ -1,0 +1,10 @@
+{
+  "id": "linear",
+  "name": "Linear",
+  "version": "1.0.0",
+  "description": "Linear issue tracking with settings and team management",
+  "author": "claudeck",
+  "icon": "📋",
+  "hasServer": true,
+  "minClaudeckVersion": "1.4.0"
+}

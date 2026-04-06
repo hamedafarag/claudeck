@@ -6,6 +6,7 @@ const STORAGE_KEY = "claudeck-max-turns";
 const mockMaxTurnsSelect = {
   value: "",
   addEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
 };
 
 vi.mock("../../../public/js/core/dom.js", () => ({
@@ -21,6 +22,7 @@ beforeEach(async () => {
   localStorage.clear();
   mockMaxTurnsSelect.value = "";
   mockMaxTurnsSelect.addEventListener = vi.fn();
+  mockMaxTurnsSelect.dispatchEvent = vi.fn();
 
   vi.doMock("../../../public/js/core/dom.js", () => ({
     $: {
@@ -61,6 +63,7 @@ describe("max-turns", () => {
       localStorage.setItem(STORAGE_KEY, "10");
       mockMaxTurnsSelect.value = "";
       mockMaxTurnsSelect.addEventListener = vi.fn();
+      mockMaxTurnsSelect.dispatchEvent = vi.fn();
 
       vi.doMock("../../../public/js/core/dom.js", () => ({
         $: {

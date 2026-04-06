@@ -72,16 +72,18 @@ describe("getSortedPlugins", () => {
   });
 
   it("falls back to meta.order for unsaved plugins", async () => {
+    // Without manifest data, all plugins get defaultMeta.order = 100
+    // so they remain in their original order
     mockJson.mockResolvedValueOnce([
-      { name: "tic-tac-toe", js: "ttt.js" },   // meta.order = 90
-      { name: "event-stream", js: "es.js" },    // meta.order = 10
-      { name: "repos", js: "repos.js" },        // meta.order = 20
+      { name: "tic-tac-toe", js: "ttt.js" },
+      { name: "event-stream", js: "es.js" },
+      { name: "repos", js: "repos.js" },
     ]);
     await mod.loadPlugins();
 
-    // No saved order
+    // No saved order — all have same default order (100), so original order is preserved
     const sorted = mod.getSortedPlugins();
-    expect(sorted.map((p) => p.name)).toEqual(["event-stream", "repos", "tic-tac-toe"]);
+    expect(sorted.map((p) => p.name)).toEqual(["tic-tac-toe", "event-stream", "repos"]);
   });
 
   it("saved-order plugins come before unsaved ones", async () => {
@@ -149,16 +151,33 @@ describe("loadPlugins", () => {
 });
 
 describe("getPluginMeta", () => {
-  it("returns known plugin metadata", () => {
+  it("returns manifest metadata when plugin has manifest", async () => {
+    mockJson.mockResolvedValueOnce([
+      { name: "event-stream", js: "es.js", manifest: { description: "Real-time WebSocket event viewer", icon: "⚡" } },
+    ]);
+    await mod.loadPlugins();
+
     const meta = mod.getPluginMeta("event-stream");
     expect(meta.description).toContain("WebSocket event viewer");
-    expect(meta.order).toBe(10);
+    expect(meta.icon).toBe("⚡");
+    expect(meta.order).toBe(100);
   });
 
   it("returns default metadata for unknown plugin", () => {
     const meta = mod.getPluginMeta("unknown-plugin");
     expect(meta.description).toBe("A tab-sdk plugin");
     expect(meta.order).toBe(100);
+  });
+
+  it("returns default metadata when plugin has no manifest", async () => {
+    mockJson.mockResolvedValueOnce([
+      { name: "no-manifest-plugin", js: "nm.js" },
+    ]);
+    await mod.loadPlugins();
+
+    const meta = mod.getPluginMeta("no-manifest-plugin");
+    expect(meta.description).toBe("A tab-sdk plugin");
+    expect(meta.icon).toBe("🧩");
   });
 });
 
@@ -447,5 +466,126 @@ describe("loadPlugins — edge cases", () => {
       expect.any(Error),
     );
     consoleSpy.mockRestore();
+  });
+});
+
+// ── Marketplace functions ───────────────────────────────────────────────────
+describe("fetchMarketplace", () => {
+  it("fetches /api/marketplace and caches result", async () => {
+    const registry = { plugins: [{ id: "test", name: "Test" }] };
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(registry) });
+
+    const result = await mod.fetchMarketplace();
+    expect(mockFetch).toHaveBeenCalledWith("/api/marketplace");
+    expect(result).toEqual(registry);
+    expect(mod.getMarketplaceRegistry()).toEqual(registry);
+  });
+
+  it("fetches with refresh=true when requested", async () => {
+    const registry = { plugins: [] };
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(registry) });
+
+    await mod.fetchMarketplace(true);
+    expect(mockFetch).toHaveBeenCalledWith("/api/marketplace?refresh=true");
+  });
+
+  it("returns null on fetch failure", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+    const result = await mod.fetchMarketplace();
+    expect(result).toBeNull();
+  });
+
+  it("returns null on network error", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("Network error"));
+    const result = await mod.fetchMarketplace();
+    expect(result).toBeNull();
+  });
+});
+
+describe("installMarketplacePlugin", () => {
+  it("sends POST with plugin id, repo, source and auto-enables", async () => {
+    const installResult = { ok: true, id: "my-plugin" };
+    const pluginsList = [{ name: "my-plugin", js: "user-plugins/my-plugin/client.js" }];
+
+    // First call: POST /api/marketplace/install
+    // Second call: GET /api/plugins (refresh)
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(installResult) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(pluginsList) });
+
+    const result = await mod.installMarketplacePlugin({
+      id: "my-plugin", repo: null, source: "./plugins/my-plugin",
+    });
+
+    expect(result).toEqual(installResult);
+    expect(mockFetch).toHaveBeenCalledWith("/api/marketplace/install", expect.objectContaining({
+      method: "POST",
+    }));
+
+    // Should auto-enable the plugin
+    expect(mod.getEnabledPluginNames()).toContain("my-plugin");
+  });
+
+  it("throws on server error", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: () => Promise.resolve({ error: "Plugin not found" }),
+    });
+
+    await expect(
+      mod.installMarketplacePlugin({ id: "bad", repo: null, source: null }),
+    ).rejects.toThrow("Plugin not found");
+  });
+
+  it("does not duplicate plugin in enabled list on reinstall", async () => {
+    // Pre-enable the plugin
+    mod.setEnabledPluginNames(["my-plugin"]);
+
+    const installResult = { ok: true, id: "my-plugin" };
+    const pluginsList = [{ name: "my-plugin", js: "user-plugins/my-plugin/client.js" }];
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(installResult) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(pluginsList) });
+
+    await mod.installMarketplacePlugin({ id: "my-plugin", source: "./plugins/my-plugin" });
+
+    const enabled = mod.getEnabledPluginNames();
+    expect(enabled.filter(n => n === "my-plugin")).toHaveLength(1);
+  });
+});
+
+describe("uninstallMarketplacePlugin", () => {
+  it("sends POST and removes plugin from enabled list", async () => {
+    // Pre-enable the plugin
+    mod.setEnabledPluginNames(["tasks", "my-plugin", "repos"]);
+
+    const uninstallResult = { ok: true, id: "my-plugin" };
+    const pluginsList = [{ name: "tasks", js: "tasks.js" }];
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(uninstallResult) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(pluginsList) });
+
+    const result = await mod.uninstallMarketplacePlugin("my-plugin");
+
+    expect(result).toEqual(uninstallResult);
+    expect(mockFetch).toHaveBeenCalledWith("/api/marketplace/uninstall", expect.objectContaining({
+      method: "POST",
+    }));
+
+    // Should remove from enabled list
+    expect(mod.getEnabledPluginNames()).toEqual(["tasks", "repos"]);
+  });
+
+  it("throws on server error", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: () => Promise.resolve({ error: "Not a community plugin" }),
+    });
+
+    await expect(
+      mod.uninstallMarketplacePlugin("bad-plugin"),
+    ).rejects.toThrow("Not a community plugin");
   });
 });

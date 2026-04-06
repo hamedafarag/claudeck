@@ -30,8 +30,19 @@ export function setState(key, val) {
   emit(key, val);
 }
 
+/** Subscribe to state changes for a key. Returns an unsubscribe function. */
 export function on(key, fn) {
   (listeners[key] ||= []).push(fn);
+  return () => {
+    const arr = listeners[key];
+    if (arr) listeners[key] = arr.filter(f => f !== fn);
+  };
+}
+
+/** Remove a specific listener for a key. */
+export function off(key, fn) {
+  const arr = listeners[key];
+  if (arr) listeners[key] = arr.filter(f => f !== fn);
 }
 
 function emit(key, val) {

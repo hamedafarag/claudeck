@@ -3,12 +3,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../../../public/js/core/events.js", () => ({
   emit: vi.fn(),
-  on: vi.fn(),
+  on: vi.fn(() => vi.fn()),
+  off: vi.fn(),
 }));
 
 vi.mock("../../../public/js/core/store.js", () => ({
   getState: vi.fn(),
-  on: vi.fn(),
+  on: vi.fn(() => vi.fn()),
+  off: vi.fn(),
 }));
 
 vi.mock("../../../public/js/core/api.js", () => ({}));
@@ -26,6 +28,9 @@ vi.mock("../../../public/js/core/plugin-loader.js", () => ({
   setTabIdResolver: vi.fn(),
   getSortedPlugins: vi.fn(() => []),
   setPluginOrder: vi.fn(),
+  fetchMarketplace: vi.fn(),
+  installMarketplacePlugin: vi.fn(),
+  uninstallMarketplacePlugin: vi.fn(),
 }));
 
 let registerTab, unregisterTab, getRegisteredTabs, initTabSDK;
@@ -51,11 +56,13 @@ beforeEach(async () => {
   }));
   vi.doMock("../../../public/js/core/events.js", () => ({
     emit: vi.fn(),
-    on: vi.fn(),
+    on: vi.fn(() => vi.fn()),
+    off: vi.fn(),
   }));
   vi.doMock("../../../public/js/core/store.js", () => ({
     getState: vi.fn(),
-    on: vi.fn(),
+    on: vi.fn(() => vi.fn()),
+    off: vi.fn(),
   }));
   vi.doMock("../../../public/js/core/api.js", () => ({}));
   vi.doMock("../../../public/js/core/plugin-loader.js", () => ({
@@ -71,6 +78,9 @@ beforeEach(async () => {
     setTabIdResolver: vi.fn(),
     getSortedPlugins: vi.fn(() => []),
     setPluginOrder: vi.fn(),
+    fetchMarketplace: vi.fn(),
+    installMarketplacePlugin: vi.fn(),
+    uninstallMarketplacePlugin: vi.fn(),
   }));
 
   const mod = await import("../../../public/js/ui/tab-sdk.js");
@@ -191,6 +201,229 @@ describe("tab-sdk", () => {
       // Tab button should exist in tab bar
       const btn = document.querySelector('.right-panel-tab[data-tab="early-tab"]');
       expect(btn).not.toBeNull();
+    });
+  });
+
+  describe("ctx — context object", () => {
+    it("init receives ctx with pluginId matching tab id", () => {
+      initTabSDK();
+      let receivedCtx;
+      registerTab({
+        id: "ctx-test",
+        title: "Ctx",
+        init(ctx) { receivedCtx = ctx; return document.createElement("div"); },
+      });
+      expect(receivedCtx.pluginId).toBe("ctx-test");
+    });
+
+    it("ctx.on returns an unsubscribe function", () => {
+      initTabSDK();
+      let receivedCtx;
+      registerTab({
+        id: "on-unsub",
+        title: "Test",
+        init(ctx) { receivedCtx = ctx; return document.createElement("div"); },
+      });
+      const unsub = receivedCtx.on("test", vi.fn());
+      expect(typeof unsub).toBe("function");
+    });
+
+    it("ctx.onState returns an unsubscribe function", () => {
+      initTabSDK();
+      let receivedCtx;
+      registerTab({
+        id: "onstate-unsub",
+        title: "Test",
+        init(ctx) { receivedCtx = ctx; return document.createElement("div"); },
+      });
+      const unsub = receivedCtx.onState("sessionId", vi.fn());
+      expect(typeof unsub).toBe("function");
+    });
+
+    it("ctx.getTheme returns a string", () => {
+      initTabSDK();
+      let theme;
+      registerTab({
+        id: "theme-test",
+        title: "Test",
+        init(ctx) { theme = ctx.getTheme(); return document.createElement("div"); },
+      });
+      expect(typeof theme).toBe("string");
+      expect(["dark", "light"]).toContain(theme);
+    });
+
+    it("ctx.getProjectPath returns a string", () => {
+      initTabSDK();
+      let path;
+      registerTab({
+        id: "project-test",
+        title: "Test",
+        init(ctx) { path = ctx.getProjectPath(); return document.createElement("div"); },
+      });
+      expect(typeof path).toBe("string");
+    });
+
+    it("ctx.getSessionId calls getState", () => {
+      initTabSDK();
+      let sid;
+      registerTab({
+        id: "session-test",
+        title: "Test",
+        init(ctx) { sid = ctx.getSessionId(); return document.createElement("div"); },
+      });
+      // getState is mocked, returns undefined
+      expect(sid).toBeUndefined();
+    });
+  });
+
+  describe("ctx.storage — namespaced localStorage", () => {
+    it("set and get round-trip a value", () => {
+      initTabSDK();
+      let storage;
+      registerTab({
+        id: "storage-test",
+        title: "Test",
+        init(ctx) { storage = ctx.storage; return document.createElement("div"); },
+      });
+      storage.set("items", [1, 2, 3]);
+      expect(storage.get("items")).toEqual([1, 2, 3]);
+    });
+
+    it("keys are scoped to plugin id", () => {
+      initTabSDK();
+      let storage;
+      registerTab({
+        id: "scoped-store",
+        title: "Test",
+        init(ctx) { storage = ctx.storage; return document.createElement("div"); },
+      });
+      storage.set("foo", "bar");
+      expect(localStorage.getItem("claudeck-plugin-scoped-store-foo")).toBe('"bar"');
+    });
+
+    it("get returns null for missing key", () => {
+      initTabSDK();
+      let storage;
+      registerTab({
+        id: "missing-key",
+        title: "Test",
+        init(ctx) { storage = ctx.storage; return document.createElement("div"); },
+      });
+      expect(storage.get("nonexistent")).toBeNull();
+    });
+
+    it("remove deletes a key", () => {
+      initTabSDK();
+      let storage;
+      registerTab({
+        id: "remove-key",
+        title: "Test",
+        init(ctx) { storage = ctx.storage; return document.createElement("div"); },
+      });
+      storage.set("temp", "data");
+      expect(storage.get("temp")).toBe("data");
+      storage.remove("temp");
+      expect(storage.get("temp")).toBeNull();
+    });
+
+    it("handles complex objects", () => {
+      initTabSDK();
+      let storage;
+      registerTab({
+        id: "complex-store",
+        title: "Test",
+        init(ctx) { storage = ctx.storage; return document.createElement("div"); },
+      });
+      const obj = { todos: [{ id: 1, text: "test", done: false }], count: 42 };
+      storage.set("data", obj);
+      expect(storage.get("data")).toEqual(obj);
+    });
+  });
+
+  describe("ctx.toast", () => {
+    it("appends a toast element to document.body", () => {
+      initTabSDK();
+      let ctx;
+      registerTab({
+        id: "toast-test",
+        title: "Test",
+        init(c) { ctx = c; return document.createElement("div"); },
+      });
+      ctx.toast("Hello!");
+      const toast = document.querySelector(".claudeck-toast");
+      expect(toast).not.toBeNull();
+      expect(toast.textContent).toBe("Hello!");
+    });
+
+    it("toast auto-removes after duration", async () => {
+      vi.useFakeTimers();
+      try {
+        initTabSDK();
+        let ctx;
+        registerTab({
+          id: "toast-duration",
+          title: "Test",
+          init(c) { ctx = c; return document.createElement("div"); },
+        });
+        ctx.toast("Bye!", { duration: 1000 });
+        expect(document.querySelector(".claudeck-toast")).not.toBeNull();
+        vi.advanceTimersByTime(1100);
+        expect(document.querySelector(".claudeck-toast")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  describe("ctx.dispose", () => {
+    it("is a function on ctx", () => {
+      initTabSDK();
+      let ctx;
+      registerTab({
+        id: "dispose-test",
+        title: "Test",
+        init(c) { ctx = c; return document.createElement("div"); },
+      });
+      expect(typeof ctx.dispose).toBe("function");
+    });
+
+    it("can be called without error", () => {
+      initTabSDK();
+      let ctx;
+      registerTab({
+        id: "dispose-safe",
+        title: "Test",
+        init(c) { ctx = c; return document.createElement("div"); },
+      });
+      expect(() => ctx.dispose()).not.toThrow();
+    });
+  });
+
+  describe("lifecycle hooks receive ctx", () => {
+    it("onDestroy receives ctx when unregistering", () => {
+      initTabSDK();
+      const destroySpy = vi.fn();
+      registerTab({
+        id: "destroy-ctx",
+        title: "Test",
+        init: () => document.createElement("div"),
+        onDestroy: destroySpy,
+      });
+      unregisterTab("destroy-ctx");
+      expect(destroySpy).toHaveBeenCalledWith(expect.objectContaining({ pluginId: "destroy-ctx" }));
+    });
+
+    it("unregisterTab auto-disposes ctx subscriptions", () => {
+      initTabSDK();
+      let ctx;
+      registerTab({
+        id: "auto-dispose",
+        title: "Test",
+        init(c) { ctx = c; return document.createElement("div"); },
+      });
+      const disposeSpy = vi.spyOn(ctx, "dispose");
+      unregisterTab("auto-dispose");
+      expect(disposeSpy).toHaveBeenCalled();
     });
   });
 });

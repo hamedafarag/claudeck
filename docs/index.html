@@ -173,7 +173,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=optional" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════
    TOKENS
@@ -1008,25 +1008,159 @@ body::after {
 .plugin-code-body .prop { color: var(--user); }
 .plugin-code-body .punc { color: var(--text-dim); }
 
-.plugin-grid {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  margin-top: 28px;
-}
-.plugin-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px;
-  background: var(--bg-card);
+/* ═══════════════════════════════════════════
+   MARKETPLACE CARD
+   ═══════════════════════════════════════════ */
+.mp-card {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
   border: 1px solid var(--border);
+  background: var(--bg-card);
+  transition: all .4s var(--ease-out);
+}
+.mp-card:hover {
+  border-color: rgba(51,209,122,.2);
+  box-shadow: 0 16px 48px rgba(0,0,0,.4), 0 0 0 1px rgba(51,209,122,.06);
+}
+.mp-card-glow {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--cyan), var(--purple));
+  opacity: .7;
+}
+.mp-card-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.mp-card-left {
+  padding: clamp(28px, 4vw, 40px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.mp-card-right {
+  padding: clamp(28px, 4vw, 40px);
+  background: rgba(255,255,255,.01);
+  border-left: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+}
+.mp-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--border-glow);
+  padding: 4px 14px;
   border-radius: 20px;
-  font-size: 13px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+.mp-badge-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+.mp-card-title {
+  font-family: var(--ff-display);
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+}
+.mp-card-desc {
+  font-size: 14px;
   color: var(--text-sec);
-  transition: all .2s;
+  line-height: 1.7;
+  margin-bottom: 28px;
+  max-width: 420px;
 }
-.plugin-chip:hover {
-  border-color: var(--text-dim);
+.mp-card-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Mini plugin preview grid */
+.mp-preview-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.mp-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all .25s var(--ease-out);
+}
+.mp-preview-item:hover {
+  border-color: rgba(51,209,122,.15);
+  transform: translateX(4px);
+}
+.mp-preview-icon {
+  font-size: 18px;
+  width: 32px; height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-dim);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.mp-preview-name {
+  font-family: var(--ff-display);
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text);
+  flex: 1;
 }
-.plugin-chip span { font-size: 15px; }
+.mp-preview-tag {
+  font-family: var(--ff-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--amber);
+  background: rgba(240,180,41,.08);
+  border: 1px solid rgba(240,180,41,.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.mp-preview-more {
+  border-style: dashed;
+  opacity: .5;
+}
+.mp-preview-more:hover { opacity: .8; }
+.mp-preview-more .mp-preview-icon {
+  background: transparent;
+  font-family: var(--ff-mono);
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 768px) {
+  .mp-card-inner { grid-template-columns: 1fr; }
+  .mp-card-right { border-left: none; border-top: 1px solid var(--border); }
+}
 
 /* ═══════════════════════════════════════════
    ARCHITECTURE
@@ -1796,13 +1930,62 @@ body::after {
     <!-- ═══════ PLUGINS ═══════ -->
     <section class="section" id="plugins">
       <div class="section-header reveal">
-        <div class="section-label">Extensible</div>
-        <h2 class="section-title">Build your own.<br>No fork needed.</h2>
-        <p class="section-desc">Drop files in <code style="font-family:var(--ff-mono);color:var(--accent);background:var(--accent-dim);padding:2px 8px;border-radius:4px;">~/.claudeck/plugins/</code> and you're live. Hot reload included.</p>
+        <div class="section-label">Plugins</div>
+        <h2 class="section-title">Extend everything.</h2>
+        <p class="section-desc">Browse community plugins from the marketplace, or build your own. Drop files in <code style="font-family:var(--ff-mono);color:var(--accent);background:var(--accent-dim);padding:2px 8px;border-radius:4px;">~/.claudeck/plugins/</code> and you're live.</p>
       </div>
 
-      <div class="plugin-split">
-        <div class="plugin-points reveal">
+      <!-- Marketplace card -->
+      <div class="mp-card reveal reveal-delay-1">
+        <div class="mp-card-glow"></div>
+        <div class="mp-card-inner">
+          <div class="mp-card-left">
+            <div class="mp-card-badge">
+              <span class="mp-badge-dot"></span>
+              marketplace
+            </div>
+            <h3 class="mp-card-title">Plugin Marketplace</h3>
+            <p class="mp-card-desc">Browse, preview, and install community-built plugins that snap into Claudeck as first-class tabs. Search by keyword, filter by type, preview in a sandbox.</p>
+            <div class="mp-card-actions">
+              <a href="https://marketplace.claudeck.app" target="_blank" rel="noopener" class="btn-primary" style="font-size:14px;padding:12px 28px;">
+                Browse Plugins
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
+              <a href="https://github.com/hamedafarag/claudeck-marketplace/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:14px;padding:12px 24px;">Contribute</a>
+            </div>
+          </div>
+          <div class="mp-card-right">
+            <div class="mp-preview-grid">
+              <div class="mp-preview-item">
+                <span class="mp-preview-icon">&#x2705;</span>
+                <span class="mp-preview-name">Tasks</span>
+              </div>
+              <div class="mp-preview-item">
+                <span class="mp-preview-icon">&#x26A1;</span>
+                <span class="mp-preview-name">Event Stream</span>
+              </div>
+              <div class="mp-preview-item">
+                <span class="mp-preview-icon">&#x1F3AE;</span>
+                <span class="mp-preview-name">Tic Tac Toe</span>
+              </div>
+              <div class="mp-preview-item">
+                <span class="mp-preview-icon">&#x1F9E9;</span>
+                <span class="mp-preview-name">Sudoku</span>
+              </div>
+              <div class="mp-preview-item mp-preview-more">
+                <span class="mp-preview-icon">+</span>
+                <span class="mp-preview-name">more coming</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Build your own -->
+      <div class="plugin-split" style="margin-top:clamp(40px, 6vw, 64px);">
+        <div class="plugin-points reveal reveal-delay-2">
+          <h3 style="font-family:var(--ff-display);font-size:20px;font-weight:700;color:#fff;margin-bottom:8px;">Build your own</h3>
+          <p style="font-size:14px;color:var(--text-sec);margin-bottom:20px;">No fork needed. Register a tab, add optional server routes, ship it.</p>
           <div class="plugin-point">
             <div class="plugin-point-num">1</div>
             <div>
@@ -1830,7 +2013,7 @@ body::after {
           </div>
         </div>
 
-        <div class="plugin-code reveal reveal-delay-2">
+        <div class="plugin-code reveal reveal-delay-3">
           <div class="plugin-code-header">client.js</div>
           <div class="plugin-code-body"><span class="kw">import</span> <span class="punc">{</span> <span class="fn">registerTab</span> <span class="punc">}</span> <span class="kw">from</span> <span class="str">'/js/ui/tab-sdk.js'</span><span class="punc">;</span>
 
@@ -1846,16 +2029,6 @@ body::after {
       <span class="punc">}</span>
     <span class="punc">});</span></div>
         </div>
-      </div>
-
-      <div class="plugin-grid reveal reveal-delay-3">
-        <div class="plugin-chip"><span>&#128203;</span> Tasks</div>
-        <div class="plugin-chip"><span>&#128279;</span> Linear</div>
-        <div class="plugin-chip"><span>&#128193;</span> Repos</div>
-        <div class="plugin-chip"><span>&#9998;</span> Claude Editor</div>
-        <div class="plugin-chip"><span>&#9889;</span> Event Stream</div>
-        <div class="plugin-chip"><span>&#127918;</span> Sudoku</div>
-        <div class="plugin-chip"><span>&#10006;</span> Tic-Tac-Toe</div>
       </div>
     </section>
 

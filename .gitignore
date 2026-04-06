@@ -3,6 +3,7 @@ data.db
 data.db-shm
 data.db-wal
 .env
+.DS_Store
 
 # Test coverage
 coverage/

@@ -53,12 +53,12 @@ describe("input-meta", () => {
 
   it("sets default model text when modelSelect value is empty", () => {
     // On init, modelSelect.value was ""
-    expect(elModel.textContent).toBe("default model");
+    expect(elModel.textContent).toBe("Auto");
   });
 
   it("sets permission label for confirmDangerous on init", () => {
     // On init, permModeSelect.value was "confirmDangerous"
-    expect(elPerm.textContent).toBe("confirm dangerous");
+    expect(elPerm.textContent).toBe("Confirm Writes");
   });
 
   it("sets turns label with count on init", () => {
@@ -75,25 +75,25 @@ describe("input-meta", () => {
   it("updates permission label when permModeSelect changes to bypass", () => {
     permModeSelect.value = "bypass";
     permModeSelect.dispatchEvent(new Event("change"));
-    expect(elPerm.textContent).toBe("bypass");
+    expect(elPerm.textContent).toBe("Bypass");
   });
 
   it("updates permission label when permModeSelect changes to confirmAll", () => {
     permModeSelect.value = "confirmAll";
     permModeSelect.dispatchEvent(new Event("change"));
-    expect(elPerm.textContent).toBe("confirm all");
+    expect(elPerm.textContent).toBe("Confirm All");
   });
 
   it("updates permission label when permModeSelect changes to plan", () => {
     permModeSelect.value = "plan";
     permModeSelect.dispatchEvent(new Event("change"));
-    expect(elPerm.textContent).toBe("plan only");
+    expect(elPerm.textContent).toBe("Plan Mode");
   });
 
   it("updates turns label to unlimited when value is 0", () => {
     maxTurnsSelect.value = "0";
     maxTurnsSelect.dispatchEvent(new Event("change"));
-    expect(elTurns.textContent).toBe("unlimited turns");
+    expect(elTurns.textContent).toBe("Unlimited");
   });
 
   it("updates turns label with specific count", () => {
@@ -102,13 +102,13 @@ describe("input-meta", () => {
     expect(elTurns.textContent).toBe("10 turns");
   });
 
-  it("reverts model text to default model when value cleared", () => {
+  it("reverts model text to Auto when value cleared", () => {
     modelSelect.value = "claude-opus";
     modelSelect.dispatchEvent(new Event("change"));
     expect(elModel.textContent).toBe("claude-opus");
 
     modelSelect.value = "";
     modelSelect.dispatchEvent(new Event("change"));
-    expect(elModel.textContent).toBe("default model");
+    expect(elModel.textContent).toBe("Auto");
   });
 });

@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-const mockTransaction = vi.fn((fn) => fn);
+const mockDelRun = vi.fn();
+const mockInsRun = vi.fn();
+const mockDb = {
+  prepare: vi.fn((sql) => {
+    if (sql.includes("DELETE")) return { run: mockDelRun };
+    return { run: mockInsRun };
+  }),
+  transaction: vi.fn((fn) => (...args) => fn(...args)),
+};
 vi.mock("../../../db.js", () => ({
   listMemories: vi.fn(() => []),
   createMemory: vi.fn(),
   deleteMemory: vi.fn(),
-  getDb: vi.fn(() => ({ transaction: mockTransaction })),
+  getDb: vi.fn(() => mockDb),
 }));
 
 vi.mock("@anthropic-ai/claude-code", () => ({
@@ -52,8 +60,8 @@ function makeMemory(id, content, category = "discovery") {
 describe("memory-optimizer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset transaction mock to call the function
-    mockTransaction.mockImplementation((fn) => fn);
+    // Reset transaction mock to execute the function
+    mockDb.transaction.mockImplementation((fn) => (...args) => fn(...args));
   });
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -552,13 +560,13 @@ describe("memory-optimizer", () => {
 
       const result = await applyOptimization("/tmp/project", optimized);
 
-      expect(deleteMemory).toHaveBeenCalledTimes(2);
-      expect(deleteMemory).toHaveBeenCalledWith(1);
-      expect(deleteMemory).toHaveBeenCalledWith(2);
+      expect(mockDelRun).toHaveBeenCalledTimes(2);
+      expect(mockDelRun).toHaveBeenCalledWith(1);
+      expect(mockDelRun).toHaveBeenCalledWith(2);
 
-      expect(createMemory).toHaveBeenCalledTimes(2);
-      expect(createMemory).toHaveBeenCalledWith("/tmp/project", "convention", "Use ESM imports", null, "optimizer");
-      expect(createMemory).toHaveBeenCalledWith("/tmp/project", "warning", "Do not use eval", null, "optimizer");
+      expect(mockInsRun).toHaveBeenCalledTimes(2);
+      expect(mockInsRun).toHaveBeenCalledWith("/tmp/project", "convention", "Use ESM imports", null, null, "optimizer");
+      expect(mockInsRun).toHaveBeenCalledWith("/tmp/project", "warning", "Do not use eval", null, null, "optimizer");
 
       expect(result).toEqual({ deleted: 2, created: 2 });
     });
@@ -574,7 +582,7 @@ describe("memory-optimizer", () => {
 
       const result = await applyOptimization("/tmp/project", optimized);
 
-      expect(createMemory).toHaveBeenCalledTimes(1);
+      expect(mockInsRun).toHaveBeenCalledTimes(1);
       expect(result.created).toBe(1);
     });
 
@@ -587,7 +595,7 @@ describe("memory-optimizer", () => {
 
       await applyOptimization("/tmp/project", optimized);
 
-      expect(createMemory).toHaveBeenCalledWith("/tmp/project", "discovery", "Some content here", null, "optimizer");
+      expect(mockInsRun).toHaveBeenCalledWith("/tmp/project", "discovery", "Some content here", null, null, "optimizer");
     });
 
     it("handles empty optimized array", async () => {
@@ -597,20 +605,9 @@ describe("memory-optimizer", () => {
 
       const result = await applyOptimization("/tmp/project", []);
 
-      expect(deleteMemory).toHaveBeenCalledTimes(1);
-      expect(createMemory).not.toHaveBeenCalled();
+      expect(mockDelRun).toHaveBeenCalledTimes(1);
+      expect(mockInsRun).not.toHaveBeenCalled();
       expect(result).toEqual({ deleted: 1, created: 0 });
-    });
-
-    it("runs within a database transaction", async () => {
-      listMemories.mockReturnValue([]);
-
-      await applyOptimization("/tmp/project", [
-        { category: "convention", content: "Test content" },
-      ]);
-
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
-      expect(mockTransaction).toHaveBeenCalledWith(expect.any(Function));
     });
 
     it("trims whitespace from content", async () => {
@@ -620,7 +617,34 @@ describe("memory-optimizer", () => {
         { category: "convention", content: "  Padded content  " },
       ]);
 
-      expect(createMemory).toHaveBeenCalledWith("/tmp/project", "convention", "Padded content", null, "optimizer");
+      expect(mockInsRun).toHaveBeenCalledWith("/tmp/project", "convention", "Padded content", null, null, "optimizer");
+    });
+
+    it("works with async listMemories", async () => {
+      listMemories.mockResolvedValue([
+        makeMemory(1, "Old memory"),
+      ]);
+
+      const result = await applyOptimization("/tmp/project", [
+        { category: "convention", content: "New memory" },
+      ]);
+
+      expect(mockDelRun).toHaveBeenCalledWith(1);
+      expect(mockInsRun).toHaveBeenCalledWith("/tmp/project", "convention", "New memory", null, null, "optimizer");
+      expect(result).toEqual({ deleted: 1, created: 1 });
+    });
+
+    it("propagates errors from listMemories", async () => {
+      listMemories.mockRejectedValue(new Error("db read failed"));
+
+      await expect(applyOptimization("/tmp/project", [])).rejects.toThrow("db read failed");
+    });
+
+    it("propagates errors from transaction", async () => {
+      listMemories.mockResolvedValue([makeMemory(1, "Old")]);
+      mockDelRun.mockImplementation(() => { throw new Error("db delete failed"); });
+
+      await expect(applyOptimization("/tmp/project", [])).rejects.toThrow("db delete failed");
     });
   });
 });

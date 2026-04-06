@@ -58,15 +58,23 @@ registerTab({
     // Build the UI innerHTML here...
 
     // ── Context API (ctx) ──
-    // ctx.getProjectPath()              — Current project path (from #project-select)
+    // ctx.pluginId                      — Plugin's ID string
+    // ctx.getProjectPath()              — Current project path
     // ctx.getSessionId()                — Current session ID
-    // ctx.on('projectChanged', fn)      — Fires when user switches project
-    // ctx.on('ws:message', fn)          — Live WebSocket stream messages
-    // ctx.onState('sessionId', fn)      — Session switch
+    // ctx.getTheme()                    — Current theme: 'dark' or 'light'
+    // ctx.on('projectChanged', fn)      — Fires when user switches project (returns unsub fn)
+    // ctx.on('ws:message', fn)          — Live WebSocket stream messages (returns unsub fn)
+    // ctx.onState('sessionId', fn)      — Session switch (returns unsub fn)
+    // ctx.off(event, fn)                — Remove an event listener
     // ctx.api                           — Full API module for fetch calls
+    // ctx.storage.get(key)              — Read from plugin-scoped localStorage
+    // ctx.storage.set(key, value)       — Write to plugin-scoped localStorage
+    // ctx.storage.remove(key)           — Remove from plugin-scoped localStorage
+    // ctx.toast(msg, opts)              — Show notification ({duration, type: 'info'|'success'|'error'})
     // ctx.showBadge(count)              — Show badge on tab button
     // ctx.clearBadge()                  — Hide badge
     // ctx.setTitle(text)                — Update tab button label
+    // ctx.dispose()                     — Unsubscribe all listeners (auto-called on destroy)
 
     // ── Project-scoped data ──
     // If your plugin loads data scoped to a project, follow this pattern:
@@ -88,9 +96,9 @@ registerTab({
     return root;  // must return an HTMLElement
   },
 
-  // onActivate()   { /* tab became visible */ },
-  // onDeactivate() { /* tab was hidden */ },
-  // onDestroy()    { /* cleanup */ },
+  // onActivate(ctx)   { /* tab became visible — ctx is passed */ },
+  // onDeactivate(ctx) { /* tab was hidden — ctx is passed */ },
+  // onDestroy(ctx)    { /* cleanup — ctx is passed; all subscriptions auto-disposed */ },
 });
 ```
 
@@ -159,8 +167,8 @@ Create `config.json` in the plugin directory with default values. It will be aut
 ## Available imports
 
 From `/js/core/`:
-- `store.js` — `getState(key)`, `setState(key, val)`, `onState(key, fn)`
-- `events.js` — `on(event, fn)`, `emit(event, data)`
+- `store.js` — `getState(key)`, `setState(key, val)`, `on(key, fn)` (returns unsub), `off(key, fn)`
+- `events.js` — `on(event, fn)` (returns unsub), `off(event, fn)`, `emit(event, data)`
 - `dom.js` — `$` (cached DOM query map)
 - `constants.js` — `CHAT_IDS`, `BOT_CHAT_ID`
 - `api.js` — all fetch helpers (`fetchSessions`, `fetchFileTree`, `execCommand`, etc.)
@@ -183,6 +191,8 @@ Now implement the plugin based on the user's description. Build a fully function
 - Project awareness via `ctx.getProjectPath()` and `ctx.on('projectChanged', ...)` if the plugin loads project-scoped data
 - Proper CSS styling matching the app's dark terminal aesthetic
 - Badge counts via `ctx.showBadge()` where meaningful
+- Persistent data via `ctx.storage.get/set` for client-side state
+- Toast notifications via `ctx.toast()` for user feedback
 
 **CRITICAL**: Never access the project select DOM element directly. Always use `ctx.getProjectPath()` and `ctx.on('projectChanged', fn)` from the tab SDK context.
 

@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-let emit, on;
+let emit, on, off;
 
 beforeEach(async () => {
   vi.resetModules();
   const mod = await import("../../../public/js/core/events.js");
   emit = mod.emit;
   on = mod.on;
+  off = mod.off;
 });
 
 describe("events", () => {
@@ -16,6 +17,60 @@ describe("events", () => {
       on("test-event", handler);
       emit("test-event");
       expect(handler).toHaveBeenCalledOnce();
+    });
+
+    it("returns an unsubscribe function", () => {
+      const handler = vi.fn();
+      const unsub = on("unsub-test", handler);
+      expect(typeof unsub).toBe("function");
+    });
+
+    it("unsubscribe stops the handler from firing", () => {
+      const handler = vi.fn();
+      const unsub = on("unsub-event", handler);
+      emit("unsub-event");
+      expect(handler).toHaveBeenCalledOnce();
+
+      unsub();
+      emit("unsub-event");
+      expect(handler).toHaveBeenCalledOnce(); // still 1, not 2
+    });
+
+    it("unsubscribe only removes the specific handler", () => {
+      const handlerA = vi.fn();
+      const handlerB = vi.fn();
+      const unsub = on("multi", handlerA);
+      on("multi", handlerB);
+
+      unsub();
+      emit("multi");
+      expect(handlerA).not.toHaveBeenCalled();
+      expect(handlerB).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("off", () => {
+    it("removes a specific handler", () => {
+      const handler = vi.fn();
+      on("off-test", handler);
+      off("off-test", handler);
+      emit("off-test");
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("does not throw when removing from non-existent event", () => {
+      expect(() => off("no-event", vi.fn())).not.toThrow();
+    });
+
+    it("only removes the targeted handler", () => {
+      const handlerA = vi.fn();
+      const handlerB = vi.fn();
+      on("off-multi", handlerA);
+      on("off-multi", handlerB);
+      off("off-multi", handlerA);
+      emit("off-multi");
+      expect(handlerA).not.toHaveBeenCalled();
+      expect(handlerB).toHaveBeenCalledOnce();
     });
   });
 

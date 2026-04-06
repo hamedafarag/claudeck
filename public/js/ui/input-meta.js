@@ -6,16 +6,23 @@ const elPerm  = document.getElementById("input-meta-perm");
 const elTurns = document.getElementById("input-meta-turns");
 
 const permLabels = {
-  bypass: "bypass",
-  confirmDangerous: "confirm dangerous",
-  confirmAll: "confirm all",
-  plan: "plan only",
+  bypass: "Bypass",
+  confirmDangerous: "Confirm Writes",
+  confirmAll: "Confirm All",
+  plan: "Plan Mode",
+};
+
+const modelLabels = {
+  "": "Auto",
+  sonnet: "Sonnet",
+  opus: "Opus",
+  haiku: "Haiku",
 };
 
 function updateModel() {
   if (!elModel) return;
   const val = $.modelSelect?.value || "";
-  elModel.textContent = val || "default model";
+  elModel.textContent = modelLabels[val] || val || "Auto";
 }
 
 function updatePerm() {
@@ -27,7 +34,7 @@ function updatePerm() {
 function updateTurns() {
   if (!elTurns) return;
   const val = $.maxTurnsSelect?.value || "30";
-  elTurns.textContent = val === "0" ? "unlimited turns" : `${val} turns`;
+  elTurns.textContent = val === "0" ? "Unlimited" : `${val} turns`;
 }
 
 // Also watch header dropdown display elements (used when dropdowns replace <select>)

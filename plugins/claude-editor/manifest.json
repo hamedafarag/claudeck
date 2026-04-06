@@ -1,0 +1,10 @@
+{
+  "id": "claude-editor",
+  "name": "CLAUDE.md Editor",
+  "version": "1.0.0",
+  "description": "Edit CLAUDE.md project instructions directly in the UI",
+  "author": "claudeck",
+  "icon": "📝",
+  "hasServer": false,
+  "minClaudeckVersion": "1.4.0"
+}
