@@ -577,10 +577,10 @@ function openMarketplace() {
 
       item.innerHTML = `
         <div class="marketplace-drag-handle" title="Drag to reorder">⠿</div>
-        <div class="marketplace-item-icon">${esc(meta.icon)}</div>
+        <div class="marketplace-item-icon">${esc(meta.icon || '🧩')}</div>
         <div class="marketplace-item-info">
           <div class="marketplace-item-name">${esc(formatPluginName(plugin.name))} ${sourceLabel}</div>
-          <div class="marketplace-item-desc">${esc(meta.description)}</div>
+          <div class="marketplace-item-desc">${esc(meta.description || '')}</div>
         </div>
         <div class="marketplace-item-status">
           ${loaded ? '<span class="marketplace-loaded">loaded</span>' : ''}
