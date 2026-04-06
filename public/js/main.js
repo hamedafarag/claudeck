@@ -15,7 +15,6 @@ import './components/shortcuts-modal.js';
 import './components/cost-dashboard-modal.js';
 import './components/bg-confirm-modal.js';
 import './components/permission-modal.js';
-import './components/linear-create-modal.js';
 import './components/telegram-modal.js';
 import './components/mcp-modal.js';
 import './components/settings-modal.js';

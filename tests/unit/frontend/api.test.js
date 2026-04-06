@@ -60,13 +60,6 @@ import {
   generateSummary,
   saveSystemPromptApi,
   execCommand,
-  fetchLinearIssues,
-  fetchLinearTeams,
-  fetchLinearTeamStates,
-  createLinearIssue,
-  fetchLinearConfig,
-  saveLinearConfig,
-  testLinearConnection,
   fetchTips,
   fetchRssFeed,
   fetchTodoCounts,
@@ -799,61 +792,6 @@ describe("Exec", () => {
   });
 });
 
-// ─── Linear ─────────────────────────────────────────────────────────
-
-describe("Linear", () => {
-  it("fetchLinearIssues calls correct URL", async () => {
-    await fetchLinearIssues();
-    expect(mockFetch).toHaveBeenCalledWith("/api/plugins/linear/issues");
-  });
-
-  it("fetchLinearTeams calls correct URL", async () => {
-    await fetchLinearTeams();
-    expect(mockFetch).toHaveBeenCalledWith("/api/plugins/linear/teams");
-  });
-
-  it("fetchLinearTeamStates encodes teamId", async () => {
-    await fetchLinearTeamStates("team/1");
-    expect(mockFetch).toHaveBeenCalledWith(
-      `/api/plugins/linear/teams/${encodeURIComponent("team/1")}/states`
-    );
-  });
-
-  it("createLinearIssue sends POST with body", async () => {
-    const data = { title: "Bug", description: "desc", teamId: "t1", stateId: "s1" };
-    await createLinearIssue(data);
-    expect(mockFetch).toHaveBeenCalledWith("/api/plugins/linear/issues", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-  });
-
-  it("createLinearIssue throws on error", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false });
-    await expect(createLinearIssue({})).rejects.toThrow("Failed to create issue");
-  });
-
-  it("fetchLinearConfig calls correct URL", async () => {
-    await fetchLinearConfig();
-    expect(mockFetch).toHaveBeenCalledWith("/api/plugins/linear/config");
-  });
-
-  it("saveLinearConfig sends PUT with config", async () => {
-    const config = { apiKey: "abc" };
-    await saveLinearConfig(config);
-    expect(mockFetch).toHaveBeenCalledWith("/api/plugins/linear/config", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config),
-    });
-  });
-
-  it("testLinearConnection sends POST", async () => {
-    await testLinearConnection();
-    expect(mockFetch).toHaveBeenCalledWith("/api/plugins/linear/test", { method: "POST" });
-  });
-});
 
 // ─── Tips ───────────────────────────────────────────────────────────
 

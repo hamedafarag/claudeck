@@ -197,7 +197,7 @@ User plugins are served from `/user-plugins/` URL path:
 - `~/.claudeck/plugins/my-plugin/client.js` → `http://localhost:9009/user-plugins/my-plugin/client.js`
 
 Built-in plugins are served from `/plugins/` URL path:
-- `plugins/linear/client.js` → `http://localhost:9009/plugins/linear/client.js`
+- `plugins/repos/client.js` → `http://localhost:9009/plugins/repos/client.js`
 
 ---
 

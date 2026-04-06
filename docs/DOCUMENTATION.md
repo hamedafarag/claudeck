@@ -65,7 +65,7 @@ browser ──────── WebSocket ──────── server.js �
    │   │   ├── dom.js (DOM refs)      ├── db.js (adapter proxy → db/sqlite.js)
    │   │   ├── constants.js           ├── config/ (default configs, copied to ~/.claudeck/)
    │   │   ├── utils.js               ├── plugins/ (full-stack plugins)
-   │   │   └── plugin-loader.js       │   ├── linear/ (client.js, server.js, config.json)
+   │   │   └── plugin-loader.js       │   ├── repos/ (client.js, server.js)
    │   ├── components/ (Web Components) │   ├── repos/ (client.js, server.js)
    │   ├── ui/   (shared UI modules)  │   ├── claude-editor/ (client.js, client.css)
    │   ├── features/ (chat, voice, welcome, tour) │   └── (community plugins via marketplace)
@@ -397,14 +397,6 @@ All endpoints except `GET /config` and `PUT /config` are gated behind a valid Sk
 | DELETE | /api/mcp/servers/:name  | Remove MCP server                      |
 
 All MCP endpoints accept an optional `?project=<path>` query parameter. Without it, they operate on `~/.claude/settings.json` (global). With it, they operate on `<project>/.claude/settings.json` (project-scoped).
-
-### Linear Integration
-| Method | Path                              | Description                                      |
-| ------ | --------------------------------- | ------------------------------------------------ |
-| GET    | /api/linear/issues                | List assigned open issues for the authenticated user |
-| GET    | /api/linear/teams                 | List Linear teams                                |
-| GET    | /api/linear/teams/:teamId/states  | List workflow states for a team                  |
-| POST   | /api/linear/issues                | Create a new issue (title, teamId, description, stateId) |
 
 ### Tips Feed
 | Method | Path                 | Description                              |
@@ -791,21 +783,11 @@ Background session behavior:
 
 The guard dialog intercepts session clicks, project switches, and the New Session button.
 
-### 25. Linear Integration
-Side panel for viewing and creating Linear issues directly from the app:
-- **Tasks panel** — top half of the Tasks tab; shows assigned open issues with priority, state, labels, due date
-- **Create issue** — modal with title, description, team selector, and workflow state (loaded dynamically per team)
-- **Auto-assign** — new issues auto-assigned via assignee email in Linear settings
-- 60-second client-side cache with manual refresh
-- Panel state (open/closed) persisted to `localStorage`
-- Configure via Linear tab in the right panel (API key, assignee email, enable toggle)
-
-### 26. Tabbed Right Panel (with Tab SDK)
+### 25. Tabbed Right Panel (with Tab SDK)
 The right side of the UI hosts a resizable tabbed panel with built-in and plugin tabs:
 - **Files** — file explorer
 - **Git** — git integration
 - **Repos** — repository management (built-in plugin)
-- **Linear** — issue tracking (built-in plugin)
 - **Claude Editor** — CLAUDE.md editor (built-in plugin)
 - **"+" button** — opens Plugin Marketplace (Installed tab for enable/disable/reorder, Community tab for browse/install/update)
 
@@ -819,7 +801,7 @@ The right side of the UI hosts a resizable tabbed panel with built-in and plugin
 - **Auto-discovery** — full-stack plugins live in `plugins/<name>/` (with `client.js`, optional `server.js`, `client.css`, `config.json`). User plugins go in `~/.claudeck/plugins/`. All discovered via `GET /api/plugins`
 - **Community marketplace** — browse, install, update, and uninstall community plugins from the [claudeck-marketplace](https://github.com/hamedafarag/claudeck-marketplace) registry via the Community tab
 - **Plugin creator skill** — install via `npx skills add https://github.com/hamedafarag/claudeck-skills`, then run `/claudeck-plugin-create <name> <description>` in Claude Code to scaffold plugins automatically
-- **Built-in plugins**: Claude Editor, Linear, Repos. Community plugins (Tasks, Event Stream, Sudoku, Tic-Tac-Toe) available via marketplace.
+- **Built-in plugins**: Claude Editor, Repos. Community plugins (Linear, Tasks, Event Stream, Sudoku, Tic-Tac-Toe) available via marketplace.
 - See [TAB-SDK.md](TAB-SDK.md) for the full SDK reference (ctx API, events, state keys, CSS tokens, examples).
 
 Panel state (open/closed), active tab, and width are persisted to `localStorage`. Resizable by dragging the left edge. Toggle via header button or `Cmd+B`.
@@ -1120,7 +1102,7 @@ Dedicated left sidebar panel for all agent-related features:
 
 ### 45. Local Todo List
 A persistent todo list in the bottom half of the Tasks tab, stored in SQLite:
-- **Split layout** — Tasks tab is split vertically: Linear issues on top, Todo list on bottom
+- **Split layout** — Tasks tab is split vertically with a draggable divider
 - **Draggable divider** — 6px drag handle between sections to adjust the split ratio; ratio persisted to `localStorage`
 - **Add todos** — click "+" button, type in the input bar, press Enter
 - **Toggle done** — checkbox marks items as done (strikethrough + dimmed)
@@ -1155,7 +1137,7 @@ A built-in marketplace UI for managing tab-sdk plugins:
 - **Install flow** — downloads GitHub tarball, extracts, patches server.js imports, writes `.marketplace` marker, hot-mounts server routes via wrapper pattern
 - **Uninstall flow** — removes plugin directory, disables server route wrapper, removes from enabled list, cleans up CSS/state
 - **Security** — plugin IDs validated against `/^[a-z0-9][a-z0-9-]*$/`, tar extraction with `--no-same-owner --no-same-permissions`, HTML-escaped metadata rendering, semver-aware version comparison
-- **Built-in plugins**: Claude Editor, Linear, Repos. Community plugins available via marketplace.
+- **Built-in plugins**: Claude Editor, Repos. Community plugins (including Linear) available via marketplace.
 
 ### 48. Mobile Responsive Layout
 Full mobile and tablet responsiveness with two breakpoints (CSS-first approach):
@@ -1513,7 +1495,6 @@ Claudeck/
 │       ├── files.js       File listing + content + tree + search
 │       ├── workflows.js   Workflow listing
 │       ├── exec.js        Shell command execution
-│       ├── linear.js      Linear API proxy (issues, teams, states)
 │       ├── mcp.js         MCP server CRUD (global + per-project)
 │       ├── repos.js       Repos CRUD (groups + repos)
 │       ├── notifications.js Push subscriptions + notification bell API (history, read, create)
@@ -1568,12 +1549,10 @@ Claudeck/
         ├── features/      chat, sessions, projects, input-history, home, welcome, tour, attachments, voice-input, easter-egg, etc.
         └── panels/        assistant-bot, tips-feed, dev-docs, file-explorer, git-panel, mcp-manager, skills-manager
 plugins/                   Full-stack plugins (client.js, server.js, config.json)
-    ├── linear/            Issues + settings with server-side API routes
     ├── repos/             Repository management with server-side routes
     ├── claude-editor/     CLAUDE.md editor (client-only)
-    ├── linear/            Linear issue tracking (full-stack)
     └── repos/             Repository management (full-stack)
-    # Additional plugins available via community marketplace
+    # Additional plugins (Linear, Tasks, etc.) available via community marketplace
 ```
 
 ---

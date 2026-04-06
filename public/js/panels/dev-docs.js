@@ -301,7 +301,7 @@ registerDocSection({
       <li>Import paths: use absolute paths (e.g. <code>/js/ui/tab-sdk.js</code>)</li>
     </ul>
 
-    <div class="callout">When in doubt, look at <code>plugins/claude-editor/</code> or <code>plugins/repos/</code> as reference implementations. For full-stack with server routes, see <code>plugins/linear/</code>. More examples are available in the <a href="https://github.com/hamedafarag/claudeck-marketplace" target="_blank">marketplace repo</a>.</div>
+    <div class="callout">When in doubt, look at <code>plugins/claude-editor/</code> or <code>plugins/repos/</code> as reference implementations. For full-stack plugins with server routes, see the <a href="https://github.com/hamedafarag/claudeck-marketplace" target="_blank">marketplace repo</a> (e.g. the Linear plugin).</div>
   `,
 });
 

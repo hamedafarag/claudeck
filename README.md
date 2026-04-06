@@ -133,7 +133,6 @@ User data lives in `~/.claudeck/` (config, database, plugins) — safe for NPX u
 ### Integrations
 
 - **MCP Manager** — Add/edit/remove MCP servers (global + per-project)
-- **Linear** — View and create issues from the sidebar
 - **Telegram** — Rich notifications + AFK approve/deny via inline keyboard
 - **Push Notifications** — Web-push with audio chime, works when browser is closed
 
@@ -252,15 +251,14 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for the full guide.
 
 ## Plugins
 
-Claudeck includes 3 built-in plugins, a community marketplace, and supports user plugins via `~/.claudeck/plugins/`:
+Claudeck includes 2 built-in plugins, a community marketplace, and supports user plugins via `~/.claudeck/plugins/`:
 
 | Plugin | Description |
 |--------|-------------|
 | **Claude Editor** | Edit CLAUDE.md project instructions in-app |
-| **Linear** | Linear issue tracking with team management |
 | **Repos** | Repository management with tree view |
 
-**Community Marketplace** — browse, install, and update community plugins directly from the Plugin Marketplace tab. Plugins like Tasks, Event Stream, Sudoku, and Tic-Tac-Toe are available from the [marketplace](https://github.com/hamedafarag/claudeck-marketplace).
+**Community Marketplace** — browse, install, and update community plugins directly from the Plugin Marketplace tab. Plugins like Linear, Tasks, Event Stream, Sudoku, and Tic-Tac-Toe are available from the [marketplace](https://github.com/hamedafarag/claudeck-marketplace).
 
 **Create your own** — drop files in `~/.claudeck/plugins/<name>/` (persists across upgrades) with `client.js` and optionally `server.js`, `client.css`, `config.json`. No fork needed. See [CONFIGURATION.md](docs/CONFIGURATION.md#user-plugins) for details.
 

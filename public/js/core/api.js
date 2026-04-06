@@ -474,49 +474,6 @@ export async function execCommand(command, cwd) {
   return res.json();
 }
 
-export async function fetchLinearIssues() {
-  const res = await fetch("/api/plugins/linear/issues");
-  return res.json();
-}
-
-export async function fetchLinearTeams() {
-  const res = await fetch("/api/plugins/linear/teams");
-  return res.json();
-}
-
-export async function fetchLinearTeamStates(teamId) {
-  const res = await fetch(`/api/plugins/linear/teams/${encodeURIComponent(teamId)}/states`);
-  return res.json();
-}
-
-export async function createLinearIssue({ title, description, teamId, stateId }) {
-  const res = await fetch("/api/plugins/linear/issues", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, description, teamId, stateId }),
-  });
-  if (!res.ok) throw new Error("Failed to create issue");
-  return res.json();
-}
-
-export async function fetchLinearConfig() {
-  const res = await fetch("/api/plugins/linear/config");
-  return res.json();
-}
-
-export async function saveLinearConfig(config) {
-  const res = await fetch("/api/plugins/linear/config", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(config),
-  });
-  return res.json();
-}
-
-export async function testLinearConnection() {
-  const res = await fetch("/api/plugins/linear/test", { method: "POST" });
-  return res.json();
-}
 
 // Tips
 export async function fetchTips() {

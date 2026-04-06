@@ -6,7 +6,6 @@ import { initTabSDK } from "./tab-sdk.js";
 const STORAGE_KEY = "claudeck-right-panel";
 const TAB_KEY = "claudeck-right-panel-tab";
 const WIDTH_KEY = "claudeck-right-panel-width";
-const OLD_LINEAR_KEY = "claudeck-linear-panel";
 const MIN_WIDTH = 200;
 const MAX_WIDTH_RATIO = 0.6; // 60vw
 
@@ -82,13 +81,6 @@ function applyTab(tabName) {
 }
 
 function initRightPanel() {
-  // Migrate old linear panel localStorage key
-  const oldState = localStorage.getItem(OLD_LINEAR_KEY);
-  if (oldState && !localStorage.getItem(STORAGE_KEY)) {
-    localStorage.setItem(STORAGE_KEY, oldState);
-    localStorage.removeItem(OLD_LINEAR_KEY);
-  }
-
   // Tab click handlers
   $.rightPanel.querySelectorAll(".right-panel-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
