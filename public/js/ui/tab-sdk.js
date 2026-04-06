@@ -704,7 +704,7 @@ function openMarketplace() {
     closeBtn.addEventListener('click', () => closeMarketplace());
     footer.appendChild(closeBtn);
 
-    const registry = await fetchMarketplace(true);
+    const registry = await fetchMarketplace();
     if (!overlay.isConnected || activeTab !== requestedTab) return;
     tabContent.innerHTML = '';
 
@@ -774,9 +774,9 @@ function openMarketplace() {
 
         try {
           if (action === 'uninstall') {
-            await uninstallMarketplacePlugin(plugin.id);
-            // Unregister tab after server confirms removal
+            // Resolve tab ID before uninstall clears plugin metadata
             const tabId = getPluginTabId(plugin.id);
+            await uninstallMarketplacePlugin(plugin.id);
             if (tabId) unregisterTab(tabId);
             plugin.installed = false;
             plugin.installedVersion = null;
