@@ -1,24 +1,4 @@
-/* ── Terminal Enhancements ────────────────────────────── */
-
-/* Subtle scanline overlay — dark mode only */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.025) 2px,
-    rgba(0, 0, 0, 0.025) 4px
-  );
-  pointer-events: none;
-  z-index: 9999;
-}
-
-html[data-theme="light"] body::after {
-  display: none;
-}
+/* ── Theme Enhancements ──────────────────────────────── */
 
 /* Active session glow effect */
 .session-list li.active {
@@ -87,6 +67,11 @@ html[data-theme="light"] body::after {
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-6px); }
+}
+
+@keyframes editorialShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }
 
 /* ── Scrollbar ────────────────────────────────────────── */

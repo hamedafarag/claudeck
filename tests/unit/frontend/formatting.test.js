@@ -18,6 +18,7 @@ import {
   renderMarkdown,
   highlightCodeBlocks,
   addCopyButtons,
+  wrapCodeLines,
 } from "../../../public/js/ui/formatting.js";
 
 describe("renderMarkdown", () => {
@@ -61,6 +62,20 @@ describe("renderMarkdown", () => {
       const result = renderMarkdown(input);
       expect(result).toContain("const x = 1;");
       expect(result).toContain("const y = 2;");
+    });
+
+    it("wraps code lines in code-line spans for line numbers", () => {
+      const input = "```js\nconst a = 1;\nconst b = 2;\n```";
+      const result = renderMarkdown(input);
+      expect(result).toContain('class="code-line"');
+      const lineSpans = result.match(/class="code-line"/g);
+      expect(lineSpans).toHaveLength(2);
+    });
+
+    it("handles single-line code blocks with code-line wrapping", () => {
+      const input = "```js\nreturn true;\n```";
+      const result = renderMarkdown(input);
+      expect(result).toContain('<span class="code-line">return true;</span>');
     });
   });
 
@@ -181,6 +196,24 @@ describe("renderMarkdown", () => {
       expect(result).toContain('href="http://a.com"');
       expect(result).toContain('href="http://b.com"');
     });
+
+    it("auto-links bare URLs", () => {
+      const result = renderMarkdown("Visit http://localhost:9009 to see it");
+      expect(result).toContain('href="http://localhost:9009"');
+      expect(result).toContain('class="md-link"');
+      expect(result).toContain('target="_blank"');
+    });
+
+    it("auto-links https URLs", () => {
+      const result = renderMarkdown("Open https://example.com/path?q=1 now");
+      expect(result).toContain('href="https://example.com/path?q=1"');
+    });
+
+    it("does not double-link markdown links", () => {
+      const result = renderMarkdown("[site](https://example.com)");
+      const hrefCount = (result.match(/href="https:\/\/example\.com"/g) || []).length;
+      expect(hrefCount).toBe(1);
+    });
   });
 
   describe("tables", () => {
@@ -254,6 +287,45 @@ describe("renderMarkdown", () => {
       const result = renderMarkdown("+ Foo\n+ Bar");
       expect(result).toContain('<ul class="md-list md-ul">');
       expect(result).toContain("<li>Foo</li>");
+    });
+  });
+
+  describe("task lists", () => {
+    it("renders a task list with checkboxes", () => {
+      const result = renderMarkdown("- [ ] Todo item\n- [x] Done item");
+      expect(result).toContain("md-task-list");
+      expect(result).toContain('type="checkbox"');
+      expect(result).toContain("md-checkbox");
+      expect(result).toContain("disabled");
+    });
+
+    it("renders unchecked checkbox without checked attribute", () => {
+      const result = renderMarkdown("- [ ] Unchecked");
+      expect(result).toContain('<input type="checkbox" class="md-checkbox"  disabled>');
+      expect(result).toContain("Unchecked");
+    });
+
+    it("renders checked checkbox with checked attribute", () => {
+      const result = renderMarkdown("- [x] Checked");
+      expect(result).toContain("checked");
+      expect(result).toContain('class="task-text-done"');
+    });
+
+    it("handles uppercase X in task list", () => {
+      const result = renderMarkdown("- [X] Done");
+      expect(result).toContain("checked");
+    });
+
+    it("does not capture regular list items as task lists", () => {
+      const result = renderMarkdown("- Regular item");
+      expect(result).not.toContain("md-task-list");
+      expect(result).toContain("md-ul");
+    });
+
+    it("renders mixed task list items", () => {
+      const result = renderMarkdown("- [ ] First\n- [x] Second\n- [ ] Third");
+      const checkboxes = result.match(/type="checkbox"/g);
+      expect(checkboxes).toHaveLength(3);
     });
   });
 
@@ -678,6 +750,42 @@ describe("renderMarkdown — nested formatting", () => {
   });
 });
 
+// ── renderMarkdown — placeholder protection ──────────────────────────
+describe("renderMarkdown — placeholder protection", () => {
+  it("does not apply bold formatting inside code blocks", () => {
+    const input = "```js\nconst x = **bold**;\n```";
+    const result = renderMarkdown(input);
+    expect(result).not.toContain("<strong>");
+    expect(result).toContain("**bold**");
+  });
+
+  it("does not apply italic formatting inside code blocks", () => {
+    const input = "```js\nconst x = *italic*;\n```";
+    const result = renderMarkdown(input);
+    expect(result).not.toContain("<em>");
+  });
+
+  it("does not apply inline code regex inside code blocks (template literals)", () => {
+    const input = "```js\nconst x = `hello ${name}`;\n```";
+    const result = renderMarkdown(input);
+    expect(result).not.toContain("inline-code");
+    expect(result).toContain("code-block-wrapper");
+  });
+
+  it("does not apply bold formatting inside inline code", () => {
+    const result = renderMarkdown("Use `**not bold**` here");
+    expect(result).toContain("inline-code");
+    expect(result).toContain("**not bold**");
+    expect(result).not.toContain("<strong>not bold</strong>");
+  });
+
+  it("does not apply strikethrough inside inline code", () => {
+    const result = renderMarkdown("Use `~~not struck~~` here");
+    expect(result).toContain("inline-code");
+    expect(result).not.toContain("<del>");
+  });
+});
+
 // ── renderMarkdown — code block detection edge cases ────────────────
 describe("renderMarkdown — code block edge cases", () => {
   it("renders mermaid code block with language label", () => {
@@ -733,5 +841,38 @@ describe("highlightCodeBlocks — error handling", () => {
     // Should not throw
     expect(() => highlightCodeBlocks(container)).not.toThrow();
     delete globalThis.hljs;
+  });
+});
+
+// ── wrapCodeLines ─────────────────────────────────────────────────
+describe("wrapCodeLines", () => {
+  it("wraps lines of code in code-line spans", () => {
+    const container = document.createElement("div");
+    container.innerHTML = '<pre><code>line 1\nline 2\nline 3</code></pre>';
+    wrapCodeLines(container);
+
+    const codeLines = container.querySelectorAll(".code-line");
+    expect(codeLines.length).toBe(3);
+    expect(codeLines[0].textContent).toBe("line 1");
+    expect(codeLines[2].textContent).toBe("line 3");
+  });
+
+  it("does not double-wrap lines that already have code-line spans", () => {
+    const container = document.createElement("div");
+    container.innerHTML = '<pre><code><span class="code-line">already wrapped</span></code></pre>';
+    wrapCodeLines(container);
+
+    const codeLines = container.querySelectorAll(".code-line");
+    expect(codeLines.length).toBe(1);
+  });
+
+  it("handles single-line code blocks", () => {
+    const container = document.createElement("div");
+    container.innerHTML = '<pre><code>single line</code></pre>';
+    wrapCodeLines(container);
+
+    const codeLines = container.querySelectorAll(".code-line");
+    expect(codeLines.length).toBe(1);
+    expect(codeLines[0].textContent).toBe("single line");
   });
 });

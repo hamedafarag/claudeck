@@ -31,8 +31,10 @@
   --font-display:  "Chakra Petch", "Rajdhani", "Exo 2", sans-serif;
   --font-sans:     "Outfit", "DM Sans", "Segoe UI", sans-serif;
   --font-mono:     "JetBrains Mono", "SF Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+  --font-editorial: "Source Serif 4", Georgia, "Times New Roman", serif;
 
   /* Spacing & Sizing */
+  --space-block:   12px;
   --radius:        4px;
   --radius-md:     8px;
   --radius-lg:     12px;

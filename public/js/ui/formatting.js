@@ -31,21 +31,37 @@ function getLangLabel(lang) {
 export function renderMarkdown(text) {
   let html = escapeHtml(text);
 
-  // ── Code blocks — with language header ──
+  // ── Placeholder system ──
+  // Extract code blocks and inline code into placeholders FIRST to protect
+  // their content from text-level regex passes (bold, italic, links, etc.)
+  const placeholders = [];
+  function placeholder(content) {
+    placeholders.push(content);
+    return `\x00PH${placeholders.length - 1}\x00`;
+  }
+
+  // ── Code blocks — extract to placeholders ──
   html = html.replace(
     /```(\w*)\n([\s\S]*?)```/g,
     (_, lang, code) => {
       const langClass = lang ? `language-${lang}` : "";
       const label = getLangLabel(lang);
       const headerHtml = label
-        ? `<div class="code-block-header"><span class="code-lang-label">${escapeHtml(label)}</span></div>`
+        ? `<div class="code-block-header"><span class="code-lang-label">${label}</span></div>`
         : "";
-      return `<div class="code-block-wrapper">${headerHtml}<pre><code class="${langClass}" data-lang="${lang}">${code}</code></pre></div>`;
+      const wrappedCode = code
+        .replace(/\n$/, "")
+        .split("\n")
+        .map(line => `<span class="code-line">${line}</span>`)
+        .join("\n");
+      return placeholder(`<div class="code-block-wrapper">${headerHtml}<pre><code class="${langClass}" data-lang="${lang}">${wrappedCode}</code></pre></div>`);
     }
   );
 
-  // ── Inline code ──
-  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+  // ── Inline code — extract to placeholders ──
+  html = html.replace(/`([^`]+)`/g, (_, code) => {
+    return placeholder(`<code class="inline-code">${code}</code>`);
+  });
 
   // ── Bold + Italic combined ──
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
@@ -69,7 +85,6 @@ export function renderMarkdown(text) {
   html = html.replace(/^---+$/gm, '<hr class="md-hr">');
 
   // ── Blockquotes ──
-  // Match consecutive lines starting with >
   html = html.replace(/(?:^&gt; (.*)$\n?)+/gm, (match) => {
     const lines = match.trim().split("\n").map(l => l.replace(/^&gt; ?/, "")).join("<br>");
     return `<blockquote class="md-blockquote">${lines}</blockquote>\n`;
@@ -78,8 +93,13 @@ export function renderMarkdown(text) {
   // ── Links ──
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="md-link" target="_blank" rel="noopener">$1</a>');
 
+  // ── Auto-link bare URLs (not already inside an <a> tag or href attribute) ──
+  html = html.replace(
+    /(?<!href="|">)(https?:\/\/[^\s<>"'`)\]]+)/g,
+    '<a href="$1" class="md-link" target="_blank" rel="noopener">$1</a>'
+  );
+
   // ── Tables ──
-  // Match table blocks: header row, separator row, then data rows
   html = html.replace(
     /(?:^\|(.+)\|$\n^\|[-| :]+\|$\n(?:^\|(.+)\|$\n?)*)/gm,
     (match) => {
@@ -89,7 +109,6 @@ export function renderMarkdown(text) {
       const parseRow = (row) =>
         row.split("|").filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
 
-      // Parse alignment from separator row
       const sepCells = parseRow(rows[1]);
       const aligns = sepCells.map(c => {
         if (c.startsWith(":") && c.endsWith(":")) return "center";
@@ -119,21 +138,42 @@ export function renderMarkdown(text) {
   );
 
   // ── Ordered lists ──
-  // Match consecutive lines starting with digits followed by . or )
   html = html.replace(/(?:^\d+[.)]\s+.+$\n?)+/gm, (match) => {
     const items = match.trim().split("\n").map(l => l.replace(/^\d+[.)]\s+/, ""));
     return '<ol class="md-list md-ol">' + items.map(i => `<li>${i}</li>`).join("") + "</ol>\n";
   });
 
+  // ── Task lists (before general unordered lists) ──
+  html = html.replace(/(?:^[-*+]\s+\[[ xX]\]\s+.+$\n?)+/gm, (match) => {
+    const items = match.trim().split("\n").map(l => {
+      const checked = /^[-*+]\s+\[x\]/i.test(l);
+      const text = l.replace(/^[-*+]\s+\[[ xX]\]\s+/, "");
+      const checkbox = `<input type="checkbox" class="md-checkbox" ${checked ? "checked" : ""} disabled>`;
+      const spanClass = checked ? ' class="task-text-done"' : "";
+      return `<li>${checkbox}<span${spanClass}>${text}</span></li>`;
+    });
+    return '<ul class="md-list md-task-list">' + items.join("") + "</ul>\n";
+  });
+
   // ── Unordered lists ──
-  // Match consecutive lines starting with -, *, or +
   html = html.replace(/(?:^[-*+]\s+.+$\n?)+/gm, (match) => {
     const items = match.trim().split("\n").map(l => l.replace(/^[-*+]\s+/, ""));
     return '<ul class="md-list md-ul">' + items.map(i => `<li>${i}</li>`).join("") + "</ul>\n";
   });
 
   // ── Line breaks ──
+  html = html.replace(/\n{3,}/g, "\n\n");
   html = html.replace(/\n/g, "<br>");
+
+  // Remove redundant <br> around block elements that already have CSS margins
+  html = html.replace(/(<br>)+(<(?:h[1-4]|ul|ol|div|table|blockquote|hr)[\s>])/g, "$2");
+  html = html.replace(/(<\/(?:h[1-4]|ul|ol|div|table|blockquote|hr)>)(<br>)+/g, "$1");
+  // Also clean <br> around placeholder tokens (code blocks are block-level)
+  html = html.replace(/(<br>)+(\x00PH\d+\x00)/g, "$2");
+  html = html.replace(/(\x00PH\d+\x00)(<br>)+/g, "$1");
+
+  // ── Restore placeholders ──
+  html = html.replace(/\x00PH(\d+)\x00/g, (_, i) => placeholders[parseInt(i)]);
 
   return html;
 }
@@ -143,9 +183,23 @@ export function highlightCodeBlocks(container) {
   container.querySelectorAll("pre code").forEach((block) => {
     if (block.dataset.highlighted === "yes") return;
     try {
-      // Highlight both language-tagged and untagged blocks (auto-detect)
       hljs.highlightElement(block);
     } catch { /* ignore unsupported languages */ }
+    // Re-wrap lines for CSS line numbering after highlight.js processes the block
+    wrapCodeLinesInBlock(block);
+  });
+}
+
+function wrapCodeLinesInBlock(block) {
+  if (block.querySelector(".code-line")) return;
+  const html = block.innerHTML;
+  const lines = html.split("\n");
+  block.innerHTML = lines.map(l => `<span class="code-line">${l}</span>`).join("\n");
+}
+
+export function wrapCodeLines(container) {
+  container.querySelectorAll("pre code").forEach((block) => {
+    wrapCodeLinesInBlock(block);
   });
 }
 

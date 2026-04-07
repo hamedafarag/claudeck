@@ -70,8 +70,8 @@
 .cli-output {
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  margin: 4px 0;
+  border-radius: var(--radius-lg);
+  margin: 6px 0;
   overflow: hidden;
 }
 
@@ -200,9 +200,9 @@
 .diff-view {
   background: var(--bg-deep);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  margin: 4px 0;
+  margin: 6px 0;
   font-family: var(--font-mono);
   font-size: 11px;
 }
