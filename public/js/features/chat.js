@@ -4,7 +4,7 @@ import { getState, setState } from '../core/store.js';
 import { CHAT_IDS, BOT_CHAT_ID } from '../core/constants.js';
 import { on } from '../core/events.js';
 import { commandRegistry, dismissAutocomplete, handleAutocompleteKeydown, handleSlashAutocomplete, registerCommand } from '../ui/commands.js';
-import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder, addSkillUsedMessage } from '../ui/messages.js';
+import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder, addSkillUsedMessage, exitWelcomeState, isWelcomeStateActive } from '../ui/messages.js';
 import { getPane, panes, _setChatFns, _setInputHistoryGetter } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats, loadAccountInfo } from './cost-dashboard.js';
@@ -155,6 +155,19 @@ export function sendMessage(pane) {
     }
   }
 
+  // Animate out of welcome state if active
+  if (isWelcomeStateActive()) {
+    exitWelcomeState().then(() => {
+      _doSend(text, pane);
+    });
+    return;
+  }
+  _doSend(text, pane);
+}
+
+function _doSend(text, pane) {
+  const cwd = $.projectSelect.value;
+  const ws = getState("ws");
   // Prepend attached files
   let fullMessage = text;
   const attachedFiles = getState("attachedFiles");

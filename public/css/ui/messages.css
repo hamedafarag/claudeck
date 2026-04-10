@@ -55,7 +55,96 @@
   display: none;
 }
 
-/* Whaly mascot empty state */
+/* ── Welcome State (centered chatbox) ─────────────────── */
+.chat-area-main.welcome-state {
+  justify-content: center;
+  align-items: center;
+}
+
+.chat-area-main.welcome-state .messages {
+  display: none;
+}
+
+.chat-area-main.welcome-state .input-waiting,
+.chat-area-main.welcome-state #image-preview-strip,
+.chat-area-main.welcome-state #toolbox-panel,
+.chat-area-main.welcome-state #workflow-panel {
+  display: none;
+}
+
+.chat-area-main.welcome-state .welcome-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: calc(var(--chat-max-w) + 48px);
+  padding: 0 24px;
+  animation: welcomeFadeIn 0.5s ease-out;
+}
+
+.chat-area-main.welcome-state .input-bar {
+  border-top: none;
+  padding-top: 0;
+  max-width: calc((var(--chat-max-w) + 48px) * 0.9);
+}
+
+.chat-area-main.welcome-state .input-bar::before {
+  display: none;
+}
+
+.chat-area-main:not(.welcome-state) .welcome-center {
+  display: none;
+}
+
+/* Welcome center content */
+.welcome-center .whaly-welcome-img {
+  width: 100px;
+  height: auto;
+  filter: drop-shadow(0 8px 24px rgba(51, 209, 122, 0.08));
+  animation: float 4s ease-in-out infinite;
+  transition: filter 0.3s;
+}
+
+.welcome-center:hover .whaly-welcome-img {
+  filter: drop-shadow(0 8px 32px rgba(51, 209, 122, 0.15));
+}
+
+.welcome-center .welcome-greeting {
+  color: var(--text-dim);
+  font-size: 16px;
+  font-family: var(--font-display);
+  text-align: center;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Transition animation: welcome state exiting */
+.chat-area-main.welcome-exit .welcome-center {
+  animation: welcomeFadeOut 0.3s ease-in forwards;
+}
+
+.chat-area-main.welcome-exit .input-bar {
+  animation: inputBarSlideDown 0.4s ease-out forwards;
+}
+
+@keyframes welcomeFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes welcomeFadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-20px); }
+}
+
+@keyframes inputBarSlideDown {
+  from { transform: translateY(0); }
+  to   { transform: translateY(40px); }
+}
+
+/* Whaly mascot empty state (used when messages exist but empty after clear) */
 .whaly-placeholder {
   display: flex;
   flex-direction: column;

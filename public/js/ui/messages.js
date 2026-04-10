@@ -6,9 +6,89 @@ import { getState, setState } from '../core/store.js';
 import { $ } from '../core/dom.js';
 import { getPane } from './parallel.js';
 
+const WELCOME_GREETINGS = [
+  "What can I help you build today?",
+  "Ready when you are!",
+  "Let's create something great together",
+  "What's on your mind?",
+  "Let's turn your ideas into code",
+  "What are we working on today?",
+  "Got a bug to squash or a feature to ship?",
+  "Your next big idea starts here",
+  "Let's make something awesome",
+  "How can I help you today?",
+  "What challenge are we tackling today?",
+  "Let's get things done together",
+];
+
+function getRandomGreeting() {
+  return WELCOME_GREETINGS[Math.floor(Math.random() * WELCOME_GREETINGS.length)];
+}
+
+function getChatAreaMain() {
+  return document.querySelector('.chat-area-main');
+}
+
+export function showWelcomeState() {
+  const chatMain = getChatAreaMain();
+  if (!chatMain) return;
+  // Create the welcome center element if it doesn't exist
+  let welcomeEl = chatMain.querySelector('.welcome-center');
+  if (!welcomeEl) {
+    welcomeEl = document.createElement('div');
+    welcomeEl.className = 'welcome-center';
+    welcomeEl.innerHTML = `<img class="whaly-welcome-img" src="/icons/whaly.png" alt="Whaly" draggable="false"><div class="welcome-greeting">${getRandomGreeting()}</div>`;
+    // Insert before the input-bar
+    const inputBar = chatMain.querySelector('.input-bar');
+    if (inputBar) {
+      chatMain.insertBefore(welcomeEl, inputBar);
+    } else {
+      chatMain.appendChild(welcomeEl);
+    }
+  } else {
+    // Update greeting text
+    const greetingEl = welcomeEl.querySelector('.welcome-greeting');
+    if (greetingEl) greetingEl.textContent = getRandomGreeting();
+  }
+  chatMain.classList.remove('welcome-exit');
+  chatMain.classList.add('welcome-state');
+}
+
+export function exitWelcomeState() {
+  const chatMain = getChatAreaMain();
+  if (!chatMain || !chatMain.classList.contains('welcome-state')) return Promise.resolve();
+
+  return new Promise(resolve => {
+    chatMain.classList.add('welcome-exit');
+
+    const onEnd = () => {
+      chatMain.classList.remove('welcome-state', 'welcome-exit');
+      resolve();
+    };
+    // Listen for the fade-out animation on the welcome center
+    const welcomeEl = chatMain.querySelector('.welcome-center');
+    if (welcomeEl) {
+      welcomeEl.addEventListener('animationend', onEnd, { once: true });
+    } else {
+      onEnd();
+    }
+  });
+}
+
+export function isWelcomeStateActive() {
+  const chatMain = getChatAreaMain();
+  return chatMain?.classList.contains('welcome-state') || false;
+}
+
 export function showWhalyPlaceholder(pane) {
   pane = pane || getPane(null);
   removeWhalyPlaceholder(pane);
+  // Use welcome state for the main (non-parallel) pane when the DOM supports it
+  const parallelMode = getState("parallelMode");
+  if (!parallelMode && getChatAreaMain()) {
+    showWelcomeState();
+  }
+  // Always add the placeholder into the messages div (tests + parallel mode rely on this)
   const el = document.createElement("div");
   el.className = "whaly-placeholder";
   el.innerHTML = `<img src="/icons/whaly.png" alt="Whaly" draggable="false"><div class="whaly-text">~ start chatting with claude ~</div><div class="whaly-hint">Type a message or select a prompt template</div>`;
@@ -24,6 +104,9 @@ export function removeWhalyPlaceholder(pane) {
 export function addUserMessage(text, pane, images = [], filePaths = []) {
   pane = pane || getPane(null);
   removeWhalyPlaceholder(pane);
+  // Exit welcome state immediately (no animation — message renders right away)
+  const chatMain = getChatAreaMain();
+  if (chatMain) chatMain.classList.remove('welcome-state', 'welcome-exit');
   pane.currentAssistantMsg = null;
   const div = document.createElement("div");
   div.className = "msg msg-user";
@@ -343,6 +426,9 @@ export function renderMessagesIntoPane(messages, pane) {
     showWhalyPlaceholder(pane);
     return;
   }
+  // Exit welcome state when loading existing messages
+  const chatMain = getChatAreaMain();
+  if (chatMain) chatMain.classList.remove('welcome-state', 'welcome-exit');
   // Track last assistant message ID for fork button placement
   let lastAssistantMsgEl = null;
   let lastAssistantMsgId = null;
