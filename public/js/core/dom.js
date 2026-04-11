@@ -165,6 +165,13 @@ export const $ = {
   bgSessionIndicator: document.getElementById("bg-session-indicator"),
   bgSessionBadge: document.getElementById("bg-session-badge"),
 
+  // Message queue
+  queueStopModal: document.getElementById("queue-stop-modal"),
+  queueStopAll: document.getElementById("queue-stop-all"),
+  queueStopSkip: document.getElementById("queue-stop-skip"),
+  queueStopPause: document.getElementById("queue-stop-pause"),
+  queueStopPreview: document.getElementById("queue-stop-preview"),
+
   // Telegram
   telegramBtn: document.getElementById("telegram-settings-btn"),
   telegramModal: document.getElementById("telegram-modal"),

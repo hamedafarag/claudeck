@@ -5,6 +5,7 @@ import { CHAT_IDS, BOT_CHAT_ID } from '../core/constants.js';
 import { on } from '../core/events.js';
 import { commandRegistry, dismissAutocomplete, handleAutocompleteKeydown, handleSlashAutocomplete, registerCommand } from '../ui/commands.js';
 import { addUserMessage, appendAssistantText, appendToolIndicator, appendToolResult, showThinking, removeThinking, addResultSummary, addStatus, showWhalyPlaceholder, addSkillUsedMessage, exitWelcomeState, isWelcomeStateActive } from '../ui/messages.js';
+import { enqueueMessage, pauseQueue, resumeQueue, fireNextQueued, handleStopWithQueue } from './message-queue.js';
 import { getPane, panes, _setChatFns, _setInputHistoryGetter } from '../ui/parallel.js';
 import { loadSessions } from './sessions.js';
 import { loadStats, loadAccountInfo } from './cost-dashboard.js';
@@ -100,6 +101,15 @@ export function sendMessage(pane) {
   const text = pane.messageInput.value.trim();
   const cwd = $.projectSelect.value;
 
+  // Queue message if currently streaming (don't queue slash commands)
+  if (pane.isStreaming && text && !text.startsWith('/')) {
+    enqueueMessage(text, pane);
+    pane.messageInput.value = "";
+    pane.messageInput.style.height = "auto";
+    dismissAutocomplete(pane);
+    return;
+  }
+
   if (!text || !cwd) {
     if (text && text.startsWith("/")) {
       const match = text.match(/^\/(\S+)\s*(.*)/s);
@@ -155,6 +165,11 @@ export function sendMessage(pane) {
     }
   }
 
+  // Resume queue if responding to a question
+  if (pane._queuePaused && pane._queuePauseReason === 'question') {
+    resumeQueue(pane);
+  }
+
   // Animate out of welcome state if active
   if (isWelcomeStateActive()) {
     exitWelcomeState().then(() => {
@@ -165,7 +180,7 @@ export function sendMessage(pane) {
   _doSend(text, pane);
 }
 
-function _doSend(text, pane) {
+export function _doSend(text, pane) {
   const cwd = $.projectSelect.value;
   const ws = getState("ws");
   // Prepend attached files
@@ -248,6 +263,11 @@ function _doSend(text, pane) {
 
 export function stopGeneration(pane) {
   pane = pane || getPane(null);
+  // Show 3-option dialog if queue has items
+  if (pane._messageQueue?.length > 0) {
+    handleStopWithQueue(pane);
+    return;
+  }
   const ws = getState("ws");
   if (ws && ws.readyState === WebSocket.OPEN) {
     const payload = { type: "abort" };
@@ -289,6 +309,13 @@ export function finishStreamingHandler(pane) {
   if (sid) {
     import('./sessions.js').then(({ loadMessages }) => loadMessages(sid));
   }
+
+  // Auto-fire next queued message (deferred to let state settle)
+  queueMicrotask(() => {
+    if (pane._messageQueue?.length > 0 && !pane._queuePaused) {
+      fireNextQueued(pane);
+    }
+  });
 }
 
 // Register the chat functions with parallel.js to break circular dependency
@@ -456,6 +483,10 @@ function handleServerMessage(msg) {
       finishStreamingHandler(pane);
       if (isQuestionText(rawText)) {
         showWaitingForInput(pane);
+        // Pause queue when Claude asks a question
+        if (pane._messageQueue?.length > 0) {
+          pauseQueue(pane, 'question');
+        }
       }
       break;
     }
@@ -468,6 +499,10 @@ function handleServerMessage(msg) {
     case "error":
       finishStreamingHandler(pane);
       addStatus("Error: " + msg.error, true, pane);
+      // Pause queue on error
+      if (pane._messageQueue?.length > 0) {
+        pauseQueue(pane, 'error');
+      }
       break;
 
     case "workflow_started":

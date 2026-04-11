@@ -25,6 +25,9 @@ export function initSinglePane() {
     currentAssistantMsg: null,
     autocompleteEl: document.getElementById("slash-autocomplete"),
     _autocompleteIndex: -1,
+    _messageQueue: [],
+    _queuePaused: false,
+    _queuePauseReason: null,
   });
 }
 
@@ -88,6 +91,9 @@ export function createChatPane(chatId, index) {
     statusEl: header.querySelector(".chat-pane-status"),
     autocompleteEl: paneAutocomplete,
     _autocompleteIndex: -1,
+    _messageQueue: [],
+    _queuePaused: false,
+    _queuePauseReason: null,
   };
 
   paneSendBtn.addEventListener("click", () => sendMessage(state));

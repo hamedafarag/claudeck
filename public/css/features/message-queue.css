@@ -1,0 +1,348 @@
+/* ── Message Queue ────────────────────────────────────── */
+
+/* Chip strip container (above textarea) */
+.mq-chip-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px 8px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.mq-chip-strip:empty,
+.mq-chip-strip.hidden {
+  display: none;
+}
+
+/* Individual chip */
+.mq-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 10px;
+  background: linear-gradient(135deg, var(--accent-dim), rgba(51, 209, 122, 0.04));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  color: var(--text);
+  max-width: 320px;
+  animation: mqChipIn 0.2s var(--ease-out-expo);
+  transition: all 0.2s var(--ease-smooth);
+  cursor: default;
+  position: relative;
+}
+
+.mq-chip:hover {
+  border-color: var(--accent-mid);
+  background: linear-gradient(135deg, rgba(51, 209, 122, 0.1), var(--accent-dim));
+  box-shadow: 0 2px 12px rgba(51, 209, 122, 0.08);
+}
+
+.mq-chip.dragging {
+  opacity: 0.35;
+  transform: scale(0.96);
+}
+
+@keyframes mqChipIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Queue step number */
+.mq-chip-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-mid);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Drag handle */
+.mq-chip-handle {
+  cursor: grab;
+  opacity: 0.25;
+  font-size: 11px;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+  color: var(--text-secondary);
+}
+
+.mq-chip:hover .mq-chip-handle {
+  opacity: 0.5;
+}
+
+.mq-chip-handle:hover {
+  opacity: 0.9 !important;
+  color: var(--accent);
+}
+
+.mq-chip-handle:active {
+  cursor: grabbing;
+}
+
+/* Chip text (truncated) */
+.mq-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+/* Chip action buttons */
+.mq-chip-edit,
+.mq-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px 3px;
+  line-height: 1;
+  opacity: 0;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  font-size: 12px;
+  border-radius: 3px;
+}
+
+.mq-chip:hover .mq-chip-edit,
+.mq-chip:hover .mq-chip-remove {
+  opacity: 0.6;
+}
+
+.mq-chip-edit:hover {
+  opacity: 1 !important;
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.mq-chip-remove:hover {
+  opacity: 1 !important;
+  color: var(--error);
+  background: rgba(237, 51, 59, 0.08);
+}
+
+/* Drop indicator (placeholder during drag) */
+.mq-drop-indicator {
+  width: 2px;
+  height: 28px;
+  background: var(--accent);
+  border-radius: 1px;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: mqChipIn 0.1s ease-out;
+}
+
+/* Queue count badge */
+.mq-chip-count {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  opacity: 0.5;
+  white-space: nowrap;
+  margin-left: auto;
+  letter-spacing: 0.05em;
+}
+
+/* Paused indicator */
+.mq-queue-paused {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--warning);
+  opacity: 0.85;
+  white-space: nowrap;
+  margin-left: auto;
+  letter-spacing: 0.03em;
+}
+
+.mq-resume-btn {
+  background: none;
+  border: 1px solid var(--accent-mid);
+  color: var(--accent);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 2px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-smooth);
+  letter-spacing: 0.03em;
+}
+
+.mq-resume-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* ── Inline Editor Popover ───────────────────────────── */
+.mq-editor-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  width: 340px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--border-subtle);
+  padding: 10px;
+  animation: mqEditorIn 0.2s var(--ease-out-expo);
+}
+
+@keyframes mqEditorIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mq-editor-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  resize: vertical;
+  outline: none;
+  min-height: 60px;
+  max-height: 150px;
+  line-height: 1.6;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.mq-editor-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-dim);
+}
+
+.mq-editor-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mq-editor-hint {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.mq-editor-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.mq-editor-save,
+.mq-editor-cancel {
+  font-size: 11px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  padding: 4px 14px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-smooth);
+}
+
+.mq-editor-save {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent-mid);
+}
+
+.mq-editor-save:hover {
+  background: var(--accent-mid);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.mq-editor-cancel {
+  background: none;
+  color: var(--text-secondary);
+}
+
+.mq-editor-cancel:hover {
+  background: var(--bg-secondary);
+  border-color: var(--text-dim);
+}
+
+/* ── Stop Confirmation Modal ─────────────────────────── */
+.queue-stop-modal {
+  max-width: 440px;
+}
+
+.queue-stop-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.queue-stop-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.queue-stop-terminate {
+  color: var(--error) !important;
+  border-color: var(--error) !important;
+}
+
+.queue-stop-terminate:hover {
+  background: rgba(237, 51, 59, 0.1) !important;
+}
+
+.mq-queue-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  margin-bottom: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.mq-queue-preview:empty {
+  display: none;
+}
+
+.mq-queue-preview-item {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  padding: 2px 8px;
+  background: var(--accent-dim);
+  border-radius: 3px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
