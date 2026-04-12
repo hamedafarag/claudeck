@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /AGENT-ARCHITECTURE.md
+Disallow: /COMPETITIVE-ANALYSIS.md
+Disallow: /CONFIGURATION.md
+Disallow: /CROSS-PLATFORM-AUDIT.md
+Disallow: /DOCUMENTATION.md
+Disallow: /ORCHESTRATOR-ANALYSIS.md
+Disallow: /PLAN-message-queue.md
+Disallow: /PLAN-sqlite-adapter.md
+Disallow: /RECOMMENDATIONS.md
+Disallow: /SESSION-BROADCAST-IMPLEMENTATION.md
+Disallow: /TAB-SDK.md
+Disallow: /wstack-integration.md
+Disallow: /og-card-generator.html
+
+Sitemap: https://claudeck.app/sitemap.xml
